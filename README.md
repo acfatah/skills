@@ -52,10 +52,23 @@ skills/
                      contract)
 ```
 
-Each skill carries its own version in the H1 title of its `SKILL.md` (e.g. 
-`# Windows Screenshots v1.0.0`).  Versions are per-skill and deliberately
-kept in exactly one place, so a single repository tag never has to speak for
-all of them.
+## Versioning
+
+Versioning here is deliberately the simplest thing that works: each
+skill carries its own `vX.Y.Z` in the H1 title of its `SKILL.md` (e.g.
+`# Windows Screenshots v1.0.0`), and bumping a version means editing
+that one number. Nothing else to update.
+
+Versions are per-skill and kept in exactly one place, so a single
+repository tag never has to speak for all of them.
+
+There is no CHANGELOG. The commit history is the change history - a
+version bump rides in the same commit as the change that caused it, so
+the log for a skill's folder reads as its release notes:
+
+```bash
+git log --oneline -- skills/windows-screenshots
+```
 
 ## License
 
