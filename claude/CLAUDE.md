@@ -201,8 +201,7 @@ user can decide whether to commit or continue working.
   comments above the changed code.
 - Subject line imperative, ≤ 72 chars; body wrapped at 72, explaining what
   changed and why.
-- Put the suggestion in a fenced block, and end it with two empty lines to
-  separate it from the conversation.
+- Put the suggestion in a fenced block, so it can be copied verbatim.
 - When executing a plan, also write the final message into that plan (see
   Commit message in plans above). For the plan-mode
   file, edit `~/.claude/plans/<slug>.md`, not the symlink.
