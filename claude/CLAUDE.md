@@ -184,9 +184,11 @@ Handle these cases:
 
 ## Pull Request
 
-When asked to suggest PR, write the suggestion to 
-`.scratch/PR_SUMMARY-<task>.md`. It should include PR title and comprehensive 
-PR description. The file should be untracked.
+When asked to suggest a PR, write the suggestion to
+`.scratch/PR_SUMMARY-<task>.md`. It should include a PR title and a
+comprehensive PR description, ending with the PR attribution line the
+harness specifies, unless the user or the repo says otherwise. The file
+should be untracked.
 
 ## Writing Commit
 
@@ -203,7 +205,10 @@ user can decide whether to commit or continue working.
   changed and why.
 - Put the suggestion in a fenced block, so it can be copied verbatim.
 - When executing a plan, also write the final message into that plan (see
-  Commit message in plans above). For the plan-mode
-  file, edit `~/.claude/plans/<slug>.md`, not the symlink.
+  Commit message in plans above). For the plan-mode file, edit
+  `~/.claude/plans/<slug>.md`, not the symlink.
+- End every suggested message with the commit attribution trailer the
+  harness specifies (e.g. `Co-Authored-By: Claude …`), including messages
+  written into plans, unless the user or the repo says otherwise.
 
 
