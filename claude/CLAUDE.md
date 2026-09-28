@@ -196,8 +196,10 @@ Never run `git commit` unless the user explicitly asks. The user reviews
 changes first. Plan approval, "proceed", "go ahead", or bypass-permissions
 mode are not requests to commit.
 
-Always suggest a comprehensive commit message after every change set, so the
-user can decide whether to commit or continue working.
+Always suggest a comprehensive commit message after every change set to
+files in a git repository, so the user can decide whether to commit or
+continue working. Skip it when nothing committable changed: files outside
+any repo, or only ignored files such as `.scratch/`.
 
 - Put the rationale in the commit message, not in long multiline inline
   comments above the changed code.
