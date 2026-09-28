@@ -13,8 +13,10 @@ paragraphs are hard to follow. Optimize for scanning, not just brevity:
 - Add tips/gotchas only when non-obvious and relevant, in their own
   short section at the end.
 
-Limit lines around 80 characters except for pretext or code. Insert line 
-breaks with correct indents so line stays between 80 characters.
+Keep chat output lines under about 80 characters: break long prose
+lines, and indent continuation lines to match. Never break code blocks,
+commands, tables, URLs, or file paths; let those run long so they
+copy-paste correctly.
 
 Before writing to `.scratch/` in a git repo, make sure it is ignored: unless
 `git check-ignore -q .scratch/` succeeds, append `.scratch/` to
