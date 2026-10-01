@@ -24,8 +24,9 @@ Before writing to `.scratch/` in a git repo, make sure it is ignored: unless
 
 ## Plan documents
 
-These rules apply to the plan-mode plan file, and to any `PLAN*.md` / `TODO.md`
-you are executing against. Do not commit them unless asked.
+These rules apply to the plan-mode plan file, any `.md` under a
+`.claude/plans/` directory, and any `PLAN*.md` or `TODO.md` you are executing
+against. Do not commit them unless asked.
 
 ### Plan file location
 
@@ -38,7 +39,7 @@ something:
 
     mkdir -p <target>/.claude/plans
     ln -sfn ~/.claude/plans/<slug>.md \
-      <target>/.claude/plans/PLAN_IN_PROGRESS-<topic>.md
+      <target>/.claude/plans/<topic>.md
 
 - Choose the target by which files the plan edits. A plan spanning several
   repos, or touching only workspace-level tooling, belongs at the workspace
@@ -48,6 +49,9 @@ something:
   transliterate it.
 - `ln -sfn`, not `ln -sf`. Without `-n`, a rerun against an existing link
   that resolves to a directory nests a second link inside it.
+- The link target must be absolute; the unquoted `~` form expands to one. A
+  relative target breaks as soon as the link moves into a state directory
+  (see Plan states below).
 - The link is read-only by construction. Read, `cat`, and `grep` follow it,
   but Write and Edit refuse with `Refusing to write through symlink`. Always
   edit `~/.claude/plans/<slug>.md` and let the link show the change. Do not
@@ -69,18 +73,9 @@ something:
 
 ### Progress marking
 
-When a plan starts, rename it to mark it in progress: `PLAN-*.md` 
-becomes `PLAN_IN_PROGRESS-*.md`, and a bare `PLAN.md` becomes 
-`PLAN_IN_PROGRESS.md`. Keep the rest of the name unchanged.
-
-    PLAN-loader_rewrite.md  ->  PLAN_IN_PROGRESS-loader_rewrite.md
-    PLAN.md                 ->  PLAN_IN_PROGRESS.md
-
-Use `git mv` if the file is tracked, else plain `mv`. Plans are usually
-untracked (see above), and `git mv` fails on untracked files.
-
-The plan-mode plan file needs no rename at start: its symlink is created
-already carrying the `PLAN_IN_PROGRESS-` prefix.
+A plan's name never encodes its state; the directory it sits in does. An
+active plan sits at the top level of its directory, so starting a plan moves
+and renames nothing.
 
 When a step is finished *and verified*, edit the plan document and append a
 completion stamp to that step's heading:
@@ -97,23 +92,47 @@ completion stamp to that step's heading:
 - Never back-date a step you did not just finish. If a step was already done
   before this session, leave it alone.
 
-### Completing a plan
+### Plan states
 
-When every step in a plan file is finished and verified, rename it to mark it
-complete: `PLAN_IN_PROGRESS-*.md` becomes `PLAN_COMPLETED-*.md`, and a bare
-`PLAN_IN_PROGRESS.md` becomes `PLAN_COMPLETED.md`. Keep the rest of the name
-unchanged.
+State directories are siblings of the plan, inside the directory it
+currently sits in: `.claude/plans/completed/`, `docs/completed/`, or
+`./completed/` for a plan at the repository root.
 
-    PLAN_IN_PROGRESS-loader_rewrite.md  ->  PLAN_COMPLETED-loader_rewrite.md
-    PLAN_IN_PROGRESS.md                 ->  PLAN_COMPLETED.md
+| Directory | Meaning | When to move |
+|---|---|---|
+| top level | active | default; move back here on resume |
+| `completed/` | every step stamped and verified | after the last completion stamp |
+| `paused/` | started, deliberately on hold | when the user shelves it for now |
+| `superseded/` | replaced by a newer plan | when the replacement is written |
+| `archived/` | abandoned or obsolete, not replaced | when the user drops it |
 
-- Rename only after the last step has its completion stamp; a plan with any
-  unstamped heading is not done.
-- `TODO.md` is never renamed; it keeps its name whatever its state.
-- For the plan-mode plan file, rename the symlink and leave its target
-  alone. `git mv` does not apply there, the link is untracked.
-- Use `git mv` if the file is tracked, so history follows it; else plain `mv`.
-- Update any references to the old filename in other documents.
+    mkdir -p <dir>/completed && mv <dir>/<topic>.md <dir>/completed/
+
+- **Keep the filename.** Use `git mv` if the file is tracked, so history
+  follows it; else plain `mv`. Plans are usually untracked, and `git mv`
+  fails on untracked files.
+- **Move the symlink, never its target.** The plan-mode file stays in
+  `~/.claude/plans/`. With an absolute target the moved link stays valid;
+  check with `test -e`.
+- **Completed means stamped.** Move to `completed/` only after the last step
+  has its completion stamp; a plan with any unstamped heading is not done.
+- **The user decides** `paused/`, `superseded/` and `archived/`. Move there
+  only when asked.
+- **Add a reason line** under the title when moving to `paused/`,
+  `superseded/` or `archived/`, with the time from `date`:
+  `> Paused 2026-09-30 14:02: waiting on the API key`. For `superseded/`,
+  name the replacement's path, and link back from the new plan. Edit the
+  real file, not the symlink.
+- **Resume** a paused plan by moving it back to the top level. Nothing else
+  changes.
+- **Name collision:** if the destination already holds that name (common for
+  a bare `PLAN.md`), append today's date: `PLAN-2026-09-30.md`.
+- `TODO.md` never moves, whatever its state.
+- Update any references to the old path in other documents.
+- **Legacy names:** an untracked `PLAN_IN_PROGRESS-<topic>.md` or
+  `PLAN_COMPLETED-<topic>.md` is migrated when found: strip the prefix, and
+  move a completed one into `completed/` (bare `PLAN_COMPLETED.md` becomes
+  `completed/PLAN.md`). Leave tracked ones alone.
 
 ### Line width
 
@@ -157,7 +176,7 @@ A plan with phases gets one commit per phase:
   the single message at the end of the plan.
 - Stop at every phase boundary. Show the phase's commit message and wait.
   Do not start the next phase until the user says so.
-- Rename the plan to `PLAN_COMPLETED` only when every phase is stamped.
+- Move the plan to `completed/` only when every phase is stamped.
 
 Handle these cases:
 
