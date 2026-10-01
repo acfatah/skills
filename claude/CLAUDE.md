@@ -201,6 +201,61 @@ Handle these cases:
   Keep a dropped phase and strike it through:
   `## ~~Phase 3. ...~~ (dropped: <reason>)`.
 
+### Roadmap plans
+
+A roadmap is a phased plan whose phases each get their own plan-mode
+session. Use this when the user asks for a roadmap. The user starts every
+session and every plan mode; never plan or start the next phase on your
+own.
+
+Keep one directory per roadmap. Each file is a symlink to its own
+plan-mode file, per Plan file location:
+
+    <target>/.claude/plans/<topic>/roadmap.md
+    <target>/.claude/plans/<topic>/phase_2_<subject>.md
+
+- A fresh session gets a new `<slug>`, so a phase plan never overwrites
+  the roadmap.
+- Plan states apply to the whole `<topic>/` directory, not single files:
+  `mv .claude/plans/<topic> .claude/plans/completed/`.
+
+**The roadmap is the only memory a fresh session gets.** The chat is gone,
+so the roadmap must hold:
+
+- `## Goal` and `## Decisions`: each choice, its reason, and the options
+  rejected. Write these while planning the roadmap, not afterwards.
+- The `git status --short` baseline from Phased plans.
+- One `## Phase N. <title>` per phase, one commit each, with scope and
+  done-criteria. No `Step N.M` items yet; the phase plan writes those.
+- Under each finished phase, `### Phase N outcome`: what actually changed
+  (`git diff --stat`), deviations from the plan, surprises, and any new
+  decisions. Later phases rely on this instead of the old chat.
+
+**Writing the roadmap.** After it is approved, symlink it as
+`roadmap.md` and stop. Do not start Phase 1 in the same session.
+
+**Planning phase N** (user asks, in plan mode, in a fresh session):
+
+1. Read `roadmap.md`: Decisions and every earlier outcome. Read an earlier
+   phase plan only when an outcome points to it.
+2. Run the baseline check from Phased plans before planning.
+3. Write the phase plan: a `## Context` section quoting the decisions and
+   outcomes it depends on, then `### Step N.M` items, then
+   `### Phase N commit message`.
+4. If the phase is too big for one commit, propose splitting it into
+   `Phase 2a` and `Phase 2b` and plan only the first.
+5. After approval, symlink it as `phase_N_<subject>.md`, link it from the
+   roadmap's Phase N heading, then implement. Plan mode can only write
+   the plan file, so roadmap edits wait until after approval.
+
+**Finishing phase N:**
+
+- Stamp each step in the phase plan, then the Phase N heading in the
+  roadmap.
+- Write `### Phase N outcome` in the roadmap before stopping.
+- Stop, show the phase's commit message, and wait, per Phased plans.
+- Phase plans stay in `<topic>/` until the whole roadmap is complete.
+
 ## Pull Request
 
 When asked to suggest a PR, write the suggestion to
