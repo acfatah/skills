@@ -247,6 +247,21 @@ so the roadmap must hold:
   (`git diff --stat`), deviations from the plan, surprises, and any new
   decisions. Later phases rely on this instead of the old chat.
 
+**Frontmatter.** Every `roadmap.md` opens with YAML frontmatter:
+
+    ---
+    created: 2026-10-06 09:47
+    updated: 2026-10-06 09:47
+    ---
+
+- Set both when the roadmap is first written. Get the time from
+  `date '+%Y-%m-%d %H:%M'`, never from memory.
+- Refresh `updated` on every edit to the roadmap: completion stamps,
+  outcomes, links to phase plans, and state notes. One `date` call
+  covers a batch of edits.
+- Never change `created`.
+- Edit the plan-mode file, not the symlink, per Plan file location.
+
 **Writing the roadmap.** After it is approved, symlink it as
 `roadmap.md` and stop. Do not start Phase 1 in the same session.
 
