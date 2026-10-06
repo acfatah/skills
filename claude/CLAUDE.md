@@ -66,8 +66,8 @@ something:
   and `info/exclude` is shared with the main checkout. Track it only when
   asked.
 - Nothing travels with the branch. A reviewer, CI, or a fresh clone sees
-  nothing. When a plan must outlive its worktree, copy the finished file
-  out deliberately at that point; that copy is a record, not the plan.
+  nothing. Completing a plan replaces its link with a real copy (see Plan
+  states below); that copy is a record, not the plan.
 - A project `CLAUDE.md` may pin the exact destination directory. Where one
   does, it wins over this section.
 
@@ -106,14 +106,28 @@ currently sits in: `.claude/plans/completed/`, `docs/completed/`, or
 | `superseded/` | replaced by a newer plan | when the replacement is written |
 | `archived/` | abandoned or obsolete, not replaced | when the user drops it |
 
-    mkdir -p <dir>/completed && mv <dir>/<topic>.md <dir>/completed/
+    mkdir -p <dir>/paused && mv <dir>/<topic>.md <dir>/paused/
 
 - **Keep the filename.** Use `git mv` if the file is tracked, so history
   follows it; else plain `mv`. Plans are usually untracked, and `git mv`
   fails on untracked files.
-- **Move the symlink, never its target.** The plan-mode file stays in
-  `~/.claude/plans/`. With an absolute target the moved link stays valid;
-  check with `test -e`.
+- **Move the symlink, never its target**, for `paused/`, `superseded/` and
+  `archived/`. The plan-mode file stays in `~/.claude/plans/`. With an
+  absolute target the moved link stays valid; check with `test -e`.
+- **Copy, don't move, into `completed/`.** Claude Code deletes files in
+  `~/.claude/plans/` once they are older than `cleanupPeriodDays` (default
+  30), so a link in `completed/` would soon dangle. Replace the link with a
+  real copy of its target, then remove the old link:
+
+      mkdir -p <dir>/completed
+      src=$(readlink -f <dir>/<topic>.md)
+      cp "$src" <dir>/completed/<topic>.md && rm <dir>/<topic>.md
+
+  Then record the link in the copy, as a line under the title, with the
+  time from `date`:
+  `> Completed 2026-09-30 14:02. Copied from ~/.claude/plans/<slug>.md`.
+  The copy is now the record; never edit the plan-mode file afterwards. A
+  plan that is a real file rather than a symlink just moves, as above.
 - **Completed means stamped.** Move to `completed/` only after the last step
   has its completion stamp; a plan with any unstamped heading is not done.
 - **The user decides** `paused/`, `superseded/` and `archived/`. Move there
@@ -217,7 +231,9 @@ plan-mode file, per Plan file location:
 - A fresh session gets a new `<slug>`, so a phase plan never overwrites
   the roadmap.
 - Plan states apply to the whole `<topic>/` directory, not single files:
-  `mv .claude/plans/<topic> .claude/plans/completed/`.
+  `mv .claude/plans/<topic> .claude/plans/completed/`. On completion, then
+  replace every link inside it with a copy of its target, as Plan states
+  describes, recording each link in its copy.
 
 **The roadmap is the only memory a fresh session gets.** The chat is gone,
 so the roadmap must hold:
