@@ -18,7 +18,7 @@ What it does:
 ## Install
 
 ```bash
-npx skills add acfatah/skills -s plans-and-roadmaps -a claude-code -g -y
+bunx skills add acfatah/skills -s plans-and-roadmaps -a claude-code -g -y
 ```
 
 For local development, link the folder instead:

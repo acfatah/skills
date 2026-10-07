@@ -13,13 +13,13 @@ What it does:
 ## Install
 
 ```bash
-npx skills add acfatah/skills -s windows-screenshots
+bunx skills add acfatah/skills -s windows-screenshots
 ```
 
 Or directly for a specific agent, globally:
 
 ```bash
-npx skills add acfatah/skills -s windows-screenshots -a claude-code -g -y
+bunx skills add acfatah/skills -s windows-screenshots -a claude-code -g -y
 ```
 
 ## Configuration
@@ -52,7 +52,7 @@ Bump rules (semver-ish):
 - minor - new commands, sections, or platform coverage
 - major - a change to the config or behavior contract (e.g. renaming the `SCREENSHOTS` env var)
 
-Release flow: edit the H1 version in the same commit as the change, `git push`, then consumers refresh with `bunx skills update -g` (or `npx skills update -g`).
+Release flow: edit the H1 version in the same commit as the change, `git push`, then consumers refresh with `bunx skills update -g` (or `bunx skills update -g`).
 
 ## License
 

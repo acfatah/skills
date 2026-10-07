@@ -16,30 +16,43 @@ problem‑solving.
 | [windows-screenshots](skills/windows-screenshots) | Locate, list, and read Windows screenshots (Win+PrtScn, Snipping Tool) from WSL or native Windows shells. |
 | [plans-and-roadmaps](skills/plans-and-roadmaps) | Rules for plan documents: file location, progress stamps, state directories, phased plans, and multi-session roadmaps. |
 
+## Tooling Choices
+
+These skills are opinionated, and so is the tooling around them:
+
+- **Package runner: [Bun](https://bun.sh).** Every command here uses
+  `bunx`, not `npx`; install Bun first. `npx` should work as a drop-in,
+  but it is not what I use or test with.
+- **Agent: [Claude Code](https://claude.com/claude-code).** Install
+  commands target it with `-a claude-code`, and some skills reference
+  Claude Code paths such as `~/.claude/`.
+- **Model: Claude Opus 5.5.** The skills are written and tested against
+  it. Other agents and models may work, but are not tested.
+
 ## Install
 
 Pick interactively from the skills in this repository:
 
 ```bash
-npx skills add acfatah/skills
+bunx skills add acfatah/skills
 ```
 
 Or install one directly, globally, for a specific agent:
 
 ```bash
-npx skills add acfatah/skills -s windows-screenshots -a claude-code -g -y
+bunx skills add acfatah/skills -s windows-screenshots -a claude-code -g -y
 ```
 
 List what is available without installing:
 
 ```bash
-npx skills add acfatah/skills --list
+bunx skills add acfatah/skills --list
 ```
 
 Update installed skills:
 
 ```bash
-npx skills update -g
+bunx skills update -g
 ```
 
 ## Layout
