@@ -14,6 +14,7 @@ problem‑solving.
 | Skill | Description |
 |---|---|
 | [windows-screenshots](skills/windows-screenshots) | Locate, list, and read Windows screenshots (Win+PrtScn, Snipping Tool) from WSL or native Windows shells. |
+| [plans-and-roadmaps](skills/plans-and-roadmaps) | Rules for plan documents: file location, progress stamps, state directories, phased plans, and multi-session roadmaps. |
 
 ## Install
 
@@ -75,9 +76,9 @@ git log --oneline -- skills/windows-screenshots
 ## Claude Code instructions
 
 [`claude/CLAUDE.md`](claude/CLAUDE.md) holds my global instructions for
-Claude Code: response style, plan documents, phased plans, PR and commit
-conventions. Claude Code loads it from `~/.claude/CLAUDE.md`, so link it
-there:
+Claude Code: response style, line width, PR and commit conventions, and
+a pointer to the `plans-and-roadmaps` skill. Claude Code loads it from
+`~/.claude/CLAUDE.md`, so link it there:
 
 ```bash
 ln -sfn "$PWD/claude/CLAUDE.md" ~/.claude/CLAUDE.md
@@ -85,39 +86,8 @@ ln -sfn "$PWD/claude/CLAUDE.md" ~/.claude/CLAUDE.md
 
 This replaces any existing `~/.claude/CLAUDE.md`, so back that up first.
 
-### Roadmap workflow
-
-For work too big for one session: plan a roadmap once, then plan each
-phase in its own fresh plan-mode session. The roadmap file carries the
-context between sessions.
-
-1. **Plan the roadmap.** Enter plan mode (Shift+Tab) and ask:
-   "Make a roadmap for X." After approval Claude links it and stops.
-2. **Plan a phase.** In a fresh session, enter plan mode and ask:
-   "Plan phase 2 of .claude/plans/<topic>/roadmap.md."
-3. **Build it.** After approval Claude implements the phase, records its
-   outcome in the roadmap, and stops with a commit message.
-4. **Repeat** until every phase is stamped. The whole folder then moves
-   to `completed/`.
-
-Each roadmap gets one folder of symlinks to the plan-mode files:
-
-```
-.claude/plans/<topic>/
-├── roadmap.md               goal, decisions, phases, outcomes
-├── phase_1_<subject>.md     detailed plan for phase 1
-└── phase_2_<subject>.md
-```
-
-Gotchas:
-
-- **Only what's written down survives.** A fresh session sees the
-  roadmap, not the old chat. Make sure decisions and outcomes land there.
-- **Plan mode can't edit the roadmap.** Roadmap updates happen after you
-  approve a phase plan.
-
-The full rules are in the "Roadmap plans" section of
-[`claude/CLAUDE.md`](claude/CLAUDE.md).
+For plan documents, phased plans and the roadmap workflow, see the
+[`plans-and-roadmaps`](skills/plans-and-roadmaps) skill.
 
 ## License
 
