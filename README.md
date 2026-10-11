@@ -13,9 +13,9 @@ problem‑solving.
 
 | Skill | Description |
 |---|---|
-| [windows-screenshots](skills/windows-screenshots) | Locate, list, and read Windows screenshots (Win+PrtScn, Snipping Tool) from WSL or native Windows shells. |
-| [plans-and-roadmaps](skills/plans-and-roadmaps) | Rules for plan documents: file location, progress stamps, state directories, phased plans, and multi-session roadmaps. |
 | [issue-tracker](skills/issue-tracker) | Track issues as local files in `.claude/issues/`, with triage, milestones, sub-issues, and promotion to GitHub Issues and Projects. |
+| [plans-and-roadmaps](skills/plans-and-roadmaps) | Rules for plan documents: file location, progress stamps, state directories, phased plans, and multi-session roadmaps. |
+| [windows-screenshots](skills/windows-screenshots) | Locate, list, and read Windows screenshots (Win+PrtScn, Snipping Tool) from WSL or native Windows shells. |
 
 ## Tooling Choices
 
