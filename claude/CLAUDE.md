@@ -38,6 +38,12 @@ file, `.claude/plans/*.md`, `PLAN*.md`, `TODO.md`), load the
 plan-mode file in `~/.claude/plans/`, and commit plans only when
 asked.
 
+## Issues
+
+When you notice an issue unrelated to the current task, mention it in
+one line and offer to log it. To log, triage, or promote issues, load
+the `issue-tracker` skill.
+
 ## Line width
 
 Hard-wrap new markdown documents at 80 columns. In an existing file, follow
