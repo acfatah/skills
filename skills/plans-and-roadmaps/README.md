@@ -7,11 +7,13 @@ split into phased plans and multi-session roadmaps.
 
 What it does:
 
-- Keeps the plan-mode file in `~/.claude/plans/` and symlinks it into the
-  target repo under a meaningful name.
+- Leaves the plan-mode file where plan mode puts it and symlinks it into
+  the target repo under a meaningful name, never over an existing file.
+  A plan already inside the repo (`plansDirectory`) is not linked.
 - Stamps finished steps with a real timestamp from `date`.
 - Marks state by directory: `completed/`, `paused/`, `superseded/`,
-  `archived/`.
+  `archived/`. A plan leaving the top level becomes a real copy, so
+  Claude Code's cleanup of `~/.claude/plans/` cannot break it.
 - Ends every plan, or every phase, with a suggested commit message.
 - Carries context between sessions through a roadmap file.
 

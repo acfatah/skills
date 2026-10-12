@@ -1,9 +1,9 @@
 ---
 name: plans-and-roadmaps
-description: Rules for plan documents and roadmaps: where plan files live, progress stamps, state directories, phased plans, multi-session roadmaps. Load before writing, executing, stamping, or moving a plan: the plan-mode file, any .md under .claude/plans/, or a PLAN*.md / TODO.md being executed.
+description: "Rules for plan documents and roadmaps: where plan files live, progress stamps, state directories, phased plans, multi-session roadmaps. Load before writing, executing, stamping, or moving a plan: the plan-mode file, any .md under .claude/plans/, or a PLAN*.md / TODO.md being executed."
 ---
 
-# Plans and Roadmaps v1.0.0
+# Plans and Roadmaps v1.1.0
 
 These rules apply to the plan-mode plan file, any `.md` under a
 `.claude/plans/` directory, and any `PLAN*.md` or `TODO.md` you are executing
@@ -148,10 +148,12 @@ itself (see Plan file location):
   a bare `PLAN.md`), append today's date: `PLAN-2026-09-30.md`.
 - `TODO.md` never moves, whatever its state.
 - Update any references to the old path in other documents.
-- **Legacy names:** an untracked `PLAN_IN_PROGRESS-<topic>.md` or
-  `PLAN_COMPLETED-<topic>.md` is migrated when found: strip the prefix, and
-  move a completed one into `completed/` (bare `PLAN_COMPLETED.md` becomes
-  `completed/PLAN.md`). Leave tracked ones alone.
+- **Legacy names:** when you find an untracked
+  `PLAN_IN_PROGRESS-<topic>.md` or `PLAN_COMPLETED-<topic>.md`, name it
+  and propose migrating it: strip the prefix, and move a completed one
+  into `completed/` (bare `PLAN_COMPLETED.md` becomes
+  `completed/PLAN.md`). Migrate only after the user agrees. Leave tracked
+  ones alone.
 
 ## Commit message in plans
 
@@ -162,8 +164,9 @@ can be copied verbatim.
 - Draft it when writing the plan, from the intended changes.
 - After execution, revise it to match what actually changed (check
   `git diff --stat`); a plan-time draft often drifts from the real diff.
-- The message is a suggestion, not an instruction to commit. See Writing
-  Commit in the global `CLAUDE.md`.
+- The message is a suggestion, not an instruction to commit. Never run
+  `git commit` unless the user explicitly asks; plan approval, "proceed"
+  and "go ahead" are not requests to commit.
 - Skip the commit message when the plan's changes land outside any git
   repo.
 
