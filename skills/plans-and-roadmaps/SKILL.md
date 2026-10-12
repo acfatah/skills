@@ -11,25 +11,38 @@ against. Do not commit them unless asked.
 
 ## Plan file location
 
-Never move or rename the plan-mode plan file. It stays at
-`~/.claude/plans/<slug>.md`, which is the only path Claude Code knows; move
-it and a later turn reports that no plan exists and offers to write a new
-one. Instead, once a plan is approved, symlink it into the repository,
-worktree, or sub-repo that the plan targets, under a name that means
-something (a roadmap is copied instead; see Roadmap plans):
+Never move or rename the plan-mode plan file. It stays at the path plan
+mode gives you, by default `~/.claude/plans/<slug>.md`; move it and a later
+turn reports that no plan exists and offers to write a new one. Below,
+`~/.claude/plans/<slug>.md` stands for that path, wherever it is. Once a
+plan is approved, symlink it into the repository, worktree, or sub-repo
+that the plan targets, under a name that means something (a roadmap is
+copied instead; see Roadmap plans). Never overwrite what is already there:
 
     mkdir -p <target>/.claude/plans
-    ln -sfn ~/.claude/plans/<slug>.md \
-      <target>/.claude/plans/<topic>.md
+    link=<target>/.claude/plans/<topic>.md
+    if test -e "$link" || test -L "$link"; then
+      echo "taken: $link"
+    else
+      ln -s ~/.claude/plans/<slug>.md "$link"
+    fi
 
 - Choose the target by which files the plan edits. A plan spanning several
   repos, or touching only workspace-level tooling, belongs at the workspace
   root instead.
-- `<topic>` is the plan's subject in snake_case. The generated `<slug>` is
-  random words (`atomic-toasting-oasis`) and carries no meaning, so do not
-  transliterate it.
-- `ln -sfn`, not `ln -sf`. Without `-n`, a rerun against an existing link
-  that resolves to a directory nests a second link inside it.
+- **Plan already in the target.** If the plan-mode path is already inside
+  the target (the user set `plansDirectory`), skip linking and the
+  `info/exclude` step: the file is where it belongs, and the user chose
+  whether it is tracked. Never move or rename it while active. Where a
+  later rule copies a link's target (state moves, finishing a phase), copy
+  this file the same way and leave the original in place.
+- `<topic>` is the plan's subject in snake_case. The generated `<slug>` may
+  start with words from the prompt, but it is not a topic name; choose
+  `<topic>` yourself and do not transliterate the slug.
+- **On `taken`:** if the name is already a link to this same plan-mode
+  file, the step is done. Otherwise ask the user; with their OK, use the
+  date suffix from Plan states (`<topic>-2026-09-30.md`). Do not add `-f`
+  to `ln`: it would replace a real file and lose it.
 - The link target must be absolute; the unquoted `~` form expands to one. A
   relative target breaks as soon as the link moves into a state directory
   (see Plan states below).
@@ -88,7 +101,8 @@ currently sits in: `.claude/plans/completed/`, `docs/completed/`, or
 | `superseded/` | replaced by a newer plan | when the replacement is written |
 | `archived/` | abandoned or obsolete, not replaced | when the user drops it |
 
-A plan that is a real file just moves:
+A plan that is a real file just moves, unless it is the plan-mode file
+itself (see Plan file location):
 
     mkdir -p <dir>/paused && mv <dir>/<topic>.md <dir>/paused/
 
