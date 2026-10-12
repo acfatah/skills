@@ -15,6 +15,8 @@ What it does:
   `archived/`. A plan leaving the top level becomes a real copy, so
   Claude Code's cleanup of `~/.claude/plans/` cannot break it.
 - Ends every plan, or every phase, with a suggested commit message.
+- Writes a short stop instruction into every phased plan and roadmap, so
+  the rules hold even if approval clears the context.
 - Carries context between sessions through a roadmap file.
 
 ## Install
@@ -61,5 +63,9 @@ Gotchas:
   roadmap, not the old chat. Make sure decisions and outcomes land there.
 - **Plan mode can't edit the roadmap.** Roadmap updates happen after you
   approve a phase plan, and go straight to `roadmap.md`.
+- **Prefer plain approval for roadmaps.** With
+  `showClearContextOnPlanAccept` on, plan approval can offer "Yes, clear
+  context and …". That starts work from the plan alone, without this skill.
+  The plan's own stop line usually covers it, but plain approval is safer.
 
 The full rules are in [`SKILL.md`](SKILL.md).

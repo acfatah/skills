@@ -3,7 +3,7 @@ name: plans-and-roadmaps
 description: "Rules for plan documents and roadmaps: where plan files live, progress stamps, state directories, phased plans, multi-session roadmaps. Load before writing, executing, stamping, or moving a plan: the plan-mode file, any .md under .claude/plans/, or a PLAN*.md / TODO.md being executed."
 ---
 
-# Plans and Roadmaps v1.1.0
+# Plans and Roadmaps v1.1.1
 
 These rules apply to the plan-mode plan file, any `.md` under a
 `.claude/plans/` directory, and any `PLAN*.md` or `TODO.md` you are executing
@@ -185,6 +185,14 @@ A plan with phases gets one commit per phase:
   the single message at the end of the plan.
 - Stop at every phase boundary. Show the phase's commit message and wait.
   Do not start the next phase until the user says so.
+- **Write the stop rule into the plan.** Approval can clear the context and
+  start work from the plan alone, without this skill. So every phased plan
+  carries this line under its title, with the real plan-mode path (a
+  roadmap and its phase plans use their own lines; see Roadmap plans):
+
+      > Phased plan: stop after each phase, show its commit message, and wait. Plan file: ~/.claude/plans/<slug>.md
+
+  The line stays true for the plan's whole life; never remove it.
 - Move the plan to `completed/` only when every phase is stamped.
 
 Handle these cases:
@@ -237,6 +245,11 @@ Keep one directory per roadmap:
 **The roadmap is the only memory a fresh session gets.** The chat is gone,
 so the roadmap must hold:
 
+- Under the title, the line that makes approval safe without this skill
+  (see Phased plans), with the real paths:
+
+      > Roadmap: after approval, copy ~/.claude/plans/<slug>.md to <target>/.claude/plans/<topic>/roadmap.md and stop. Do not start Phase 1.
+
 - `## Goal` and `## Decisions`: each choice, its reason, and the options
   rejected. Write these while planning the roadmap, not afterwards.
 - The `git status --short` baseline from Phased plans.
@@ -273,7 +286,9 @@ into `<topic>/roadmap.md`, never over an existing file or link:
     fi
 
 - On `taken`, ask the user what to do; never overwrite.
-- Add a line under the title: `> Copied from ~/.claude/plans/<slug>.md`.
+- In `roadmap.md`, replace the `> Roadmap: after approval …` line with
+  `> Copied from ~/.claude/plans/<slug>.md`. Left in place, it would tell
+  every later session to copy and stop again.
 - Git-ignore `.claude/plans/` as Plan file location describes.
 - From now on, edit `roadmap.md` directly. Re-entering plan mode in this
   session rewrites only the old plan-mode file, which nothing reads any
@@ -285,9 +300,12 @@ into `<topic>/roadmap.md`, never over an existing file or link:
 1. Read `roadmap.md`: Decisions and every earlier outcome. Read an earlier
    phase plan only when an outcome points to it.
 2. Run the baseline check from Phased plans before planning.
-3. Write the phase plan: a `## Context` section quoting the decisions and
-   outcomes it depends on, then `### Step N.M` items, then
-   `### Phase N commit message`.
+3. Write the phase plan: under the title, the line below with real paths;
+   then a `## Context` section quoting the decisions and outcomes it depends
+   on, then `### Step N.M` items, then `### Phase N commit message`.
+
+       > Roadmap phase N of <target>/.claude/plans/<topic>/roadmap.md: after approval, link this plan as phase_N_<subject>.md, implement, write the Phase N outcome there, and stop. Plan file: ~/.claude/plans/<slug>.md
+
 4. If the phase is too big for one commit, propose splitting it into
    `Phase 2a` and `Phase 2b` and plan only the first.
 5. After approval, symlink it as `phase_N_<subject>.md`, link to it under
@@ -305,9 +323,9 @@ into `<topic>/roadmap.md`, never over an existing file or link:
        src=$(readlink -f "$p")
        cp "$src" "$p.tmp" && mv "$p.tmp" "$p"
 
-   `mv` replaces the link itself, not its target. Add
-   `> Copied from ~/.claude/plans/<slug>.md` under the title. Later edits,
-   such as a revised commit message, go to the copy.
+   `mv` replaces the link itself, not its target. Replace the
+   `> Roadmap phase N …` line with `> Copied from ~/.claude/plans/<slug>.md`.
+   Later edits, such as a revised commit message, go to the copy.
 4. Stop, show the phase's commit message, and wait, per Phased plans.
 
 Phase plans stay in `<topic>/`, as real files, until the whole roadmap is
