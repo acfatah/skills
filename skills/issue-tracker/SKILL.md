@@ -25,8 +25,32 @@ the user in control: you propose, the user decides.
 
 ## Location
 
-Issues live in `.claude/issues/` at the repo root. Outside a git repo, ask
-the user where to put them before creating anything.
+Issues live in `.claude/issues/` under the **issues root**. Find the root
+once per session, and use its absolute path for every read, write, move,
+and search:
+
+```bash
+if [ "$(git rev-parse --absolute-git-dir)" != "$(git rev-parse --path-format=absolute --git-common-dir)" ]; then
+  git worktree list --porcelain | sed -n '1s/^worktree //p'
+else
+  git rev-parse --show-toplevel
+fi
+```
+
+- **Normal checkout or submodule:** the root is its top folder.
+- **Linked worktree** (`EnterWorktree`, or a subagent run with
+  `isolation: "worktree"`): the root is the main checkout. Never create
+  `.claude/issues/` inside the worktree. Ignored files are not checked out
+  there, and the harness can delete an unchanged-looking worktree, issues
+  and all. Writing outside the worktree may show a permission prompt;
+  that is expected.
+- **Tracked issues in a worktree:** if the project tracks its issues, tell
+  the user the issue goes to the main checkout, not this branch.
+- **Bare repo:** if the first entry of `git worktree list --porcelain` is
+  followed by a `bare` line, there is no main checkout. Ask the user where
+  to put the issues.
+- **Outside a git repo,** ask the user where to put them before creating
+  anything.
 
 ```
 .claude/issues/
@@ -46,7 +70,7 @@ the user where to put them before creating anything.
 ### Gitignore
 
 - **Ignore by default.** On first use, run
-  `git check-ignore -q .claude/issues/`. If it fails, append
+  `git -C <root> check-ignore -q .claude/issues/`. If it fails, append
   `.claude/issues/` to `git rev-parse --git-path info/exclude`, leaving the
   tracked `.gitignore` untouched. Issues hold paths, error output, and rough
   notes that must not leak into a public repo.
