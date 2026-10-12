@@ -11,12 +11,12 @@ against. Do not commit them unless asked.
 
 ## Plan file location
 
-Never move or copy the plan-mode plan file. It stays at
+Never move or rename the plan-mode plan file. It stays at
 `~/.claude/plans/<slug>.md`, which is the only path Claude Code knows; move
 it and a later turn reports that no plan exists and offers to write a new
 one. Instead, once a plan is approved, symlink it into the repository,
 worktree, or sub-repo that the plan targets, under a name that means
-something:
+something (a roadmap is copied instead; see Roadmap plans):
 
     mkdir -p <target>/.claude/plans
     ln -sfn ~/.claude/plans/<slug>.md \
@@ -200,18 +200,22 @@ session. Use this when the user asks for a roadmap. The user starts every
 session and every plan mode; never plan or start the next phase on your
 own.
 
-Keep one directory per roadmap. Each file is a symlink to its own
-plan-mode file, per Plan file location:
+Keep one directory per roadmap:
 
     <target>/.claude/plans/<topic>/roadmap.md
     <target>/.claude/plans/<topic>/phase_2_<subject>.md
 
-- A fresh session gets a new `<slug>`, so a phase plan never overwrites
-  the roadmap.
+- `roadmap.md` is a **real file**, copied from its plan-mode file on
+  approval. It never depends on `~/.claude/plans/` after that.
+- `phase_N_<subject>.md` is a **link** to its plan-mode file while the
+  phase runs, per Plan file location, and a real copy once the phase
+  finishes.
 - Plan states apply to the whole `<topic>/` directory, not single files:
-  `mv .claude/plans/<topic> .claude/plans/completed/`. On completion, then
-  replace every link inside it with a copy of its target, as Plan states
-  describes, recording each source path in its copy.
+  `mv .claude/plans/<topic> .claude/plans/completed/`. Finished phases are
+  already copies, so nothing is left to copy. If a phase link remains
+  (the roadmap is paused or dropped mid-phase), replace it with a copy
+  first, as Plan states describes. Add the state line to `roadmap.md`
+  only.
 
 **The roadmap is the only memory a fresh session gets.** The chat is gone,
 so the roadmap must hold:
@@ -238,10 +242,26 @@ so the roadmap must hold:
   outcomes, links to phase plans, and state notes. One `date` call
   covers a batch of edits.
 - Never change `created`.
-- Edit the plan-mode file, not the symlink, per Plan file location.
+- `roadmap.md` is a real file; edit it directly.
 
-**Writing the roadmap.** After it is approved, symlink it as
-`roadmap.md` and stop. Do not start Phase 1 in the same session.
+**Writing the roadmap.** After it is approved, copy the plan-mode file
+into `<topic>/roadmap.md`, never over an existing file or link:
+
+    dir=<target>/.claude/plans/<topic>
+    mkdir -p "$dir"
+    if test -e "$dir/roadmap.md" || test -L "$dir/roadmap.md"; then
+      echo "taken: $dir/roadmap.md"
+    else
+      cp ~/.claude/plans/<slug>.md "$dir/roadmap.md"
+    fi
+
+- On `taken`, ask the user what to do; never overwrite.
+- Add a line under the title: `> Copied from ~/.claude/plans/<slug>.md`.
+- Git-ignore `.claude/plans/` as Plan file location describes.
+- From now on, edit `roadmap.md` directly. Re-entering plan mode in this
+  session rewrites only the old plan-mode file, which nothing reads any
+  more; never edit it, as Plan states describes.
+- Stop. Do not start Phase 1 in the same session.
 
 **Planning phase N** (user asks, in plan mode, in a fresh session):
 
@@ -253,14 +273,25 @@ so the roadmap must hold:
    `### Phase N commit message`.
 4. If the phase is too big for one commit, propose splitting it into
    `Phase 2a` and `Phase 2b` and plan only the first.
-5. After approval, symlink it as `phase_N_<subject>.md`, link it from the
-   roadmap's Phase N heading, then implement. Plan mode can only write
-   the plan file, so roadmap edits wait until after approval.
+5. After approval, symlink it as `phase_N_<subject>.md`, link to it under
+   the Phase N heading in `roadmap.md`, then implement. Plan mode can only
+   write the plan file, so roadmap edits wait until after approval.
 
 **Finishing phase N:**
 
-- Stamp each step in the phase plan, then the Phase N heading in the
-  roadmap.
-- Write `### Phase N outcome` in the roadmap before stopping.
-- Stop, show the phase's commit message, and wait, per Phased plans.
-- Phase plans stay in `<topic>/` until the whole roadmap is complete.
+1. Stamp each step in the phase plan (through its plan-mode file, while
+   it is still a link), then the Phase N heading in `roadmap.md`.
+2. Write `### Phase N outcome` in `roadmap.md`.
+3. Replace the phase link with a real copy, in place:
+
+       p=<target>/.claude/plans/<topic>/phase_N_<subject>.md
+       src=$(readlink -f "$p")
+       cp "$src" "$p.tmp" && mv "$p.tmp" "$p"
+
+   `mv` replaces the link itself, not its target. Add
+   `> Copied from ~/.claude/plans/<slug>.md` under the title. Later edits,
+   such as a revised commit message, go to the copy.
+4. Stop, show the phase's commit message, and wait, per Phased plans.
+
+Phase plans stay in `<topic>/`, as real files, until the whole roadmap is
+complete.

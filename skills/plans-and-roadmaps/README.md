@@ -34,7 +34,8 @@ phase in its own fresh plan-mode session. The roadmap file carries the
 context between sessions.
 
 1. **Plan the roadmap.** Enter plan mode (Shift+Tab) and ask:
-   "Make a roadmap for X." After approval Claude links it and stops.
+   "Make a roadmap for X." After approval Claude copies it into the repo
+   and stops.
 2. **Plan a phase.** In a fresh session, enter plan mode and ask:
    "Plan phase 2 of .claude/plans/<topic>/roadmap.md."
 3. **Build it.** After approval Claude implements the phase, records its
@@ -42,11 +43,12 @@ context between sessions.
 4. **Repeat** until every phase is stamped. The whole folder then moves
    to `completed/`.
 
-Each roadmap gets one folder of symlinks to the plan-mode files:
+Each roadmap gets one folder. The roadmap is a real file; a phase plan is
+a link while it runs and a copy once done:
 
 ```
 .claude/plans/<topic>/
-├── roadmap.md               goal, decisions, phases, outcomes
+├── roadmap.md               real file: goal, decisions, phases, outcomes
 ├── phase_1_<subject>.md     detailed plan for phase 1
 └── phase_2_<subject>.md
 ```
@@ -56,6 +58,6 @@ Gotchas:
 - **Only what's written down survives.** A fresh session sees the
   roadmap, not the old chat. Make sure decisions and outcomes land there.
 - **Plan mode can't edit the roadmap.** Roadmap updates happen after you
-  approve a phase plan.
+  approve a phase plan, and go straight to `roadmap.md`.
 
 The full rules are in [`SKILL.md`](SKILL.md).
