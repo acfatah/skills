@@ -59,6 +59,9 @@ Gotchas:
   issues, always need your agreement.
 - **Sync is one-way.** Once promoted, an issue lives on GitHub; the local
   file is a closed record with the link.
+- **Worktrees share one issue list.** Inside a git worktree, Claude logs
+  issues in the main checkout's `.claude/issues/`, so they survive when
+  the worktree is removed.
 
 The full rules are in [`SKILL.md`](SKILL.md) and
 [`references/github.md`](references/github.md).
