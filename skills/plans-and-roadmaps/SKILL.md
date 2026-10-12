@@ -48,8 +48,8 @@ something:
   asked. Skip the `info/exclude` step when the target is not inside a git
   repo.
 - Nothing travels with the branch. A reviewer, CI, or a fresh clone sees
-  nothing. Completing a plan replaces its link with a real copy (see Plan
-  states below); that copy is a record, not the plan.
+  nothing. Moving a plan out of the top level replaces its link with a
+  real copy (see Plan states below); that copy is a record, not the plan.
 - A project `CLAUDE.md` may pin the exact destination directory. Where one
   does, it wins over this section.
 
@@ -88,6 +88,8 @@ currently sits in: `.claude/plans/completed/`, `docs/completed/`, or
 | `superseded/` | replaced by a newer plan | when the replacement is written |
 | `archived/` | abandoned or obsolete, not replaced | when the user drops it |
 
+A plan that is a real file just moves:
+
     mkdir -p <dir>/paused && mv <dir>/<topic>.md <dir>/paused/
 
 - **Untracked plans only.** State moves apply to untracked plans. For a
@@ -95,34 +97,39 @@ currently sits in: `.claude/plans/completed/`, `docs/completed/`, or
 - **Keep the filename.** Use `git mv` if the file is tracked, so history
   follows it; else plain `mv`. Plans are usually untracked, and `git mv`
   fails on untracked files.
-- **Move the symlink, never its target**, for `paused/`, `superseded/` and
-  `archived/`. The plan-mode file stays in `~/.claude/plans/`. With an
-  absolute target the moved link stays valid; check with `test -e`.
-- **Copy, don't move, into `completed/`.** Claude Code deletes files in
+- **Leaving the top level makes a real file.** Claude Code deletes files in
   `~/.claude/plans/` once they are older than `cleanupPeriodDays` (default
-  30), so a link in `completed/` would soon dangle. Replace the link with a
-  real copy of its target, then remove the old link:
+  30), so a link in any state directory would soon dangle. On every move
+  out of the top level, replace a link with a real copy of its target,
+  then remove the link:
 
-      mkdir -p <dir>/completed
+      mkdir -p <dir>/<state>
       src=$(readlink -f <dir>/<topic>.md)
-      cp "$src" <dir>/completed/<topic>.md && rm <dir>/<topic>.md
+      cp "$src" <dir>/<state>/<topic>.md && rm <dir>/<topic>.md
 
-  Then record the source path in the copy, as a line under the title,
-  with the time from `date`:
-  `> Completed 2026-09-30 14:02. Copied from ~/.claude/plans/<slug>.md`.
-  The copy is now the record; never edit the plan-mode file afterwards. A
-  plan that is a real file rather than a symlink just moves, as above.
+- **After copying, never edit the old plan-mode file.** The copy is the
+  plan now. Edits to `~/.claude/plans/<slug>.md` show up nowhere and are
+  lost at cleanup.
 - **Completed means stamped.** Move to `completed/` only after the last step
   has its completion stamp; a plan with any unstamped heading is not done.
 - **The user decides** `paused/`, `superseded/` and `archived/`. Move there
   only when asked.
-- **Add a reason line** under the title when moving to `paused/`,
-  `superseded/` or `archived/`, with the time from `date`:
-  `> Paused 2026-09-30 14:02: waiting on the API key`. For `superseded/`,
-  name the replacement's path, and link back from the new plan. Edit the
-  real file, not the symlink.
-- **Resume** a paused plan by moving it back to the top level. Nothing else
-  changes.
+- **Add a state line** under the title on every move out of the top level,
+  with the time from `date`. Write it into the copy, after copying. When
+  the plan was a link, end the line with its source path; omit that part
+  for a plan that was already a real file:
+
+      > Completed 2026-09-30 14:02. Copied from ~/.claude/plans/<slug>.md
+      > Paused 2026-09-30 14:02: waiting on the API key. Copied from ~/.claude/plans/<slug>.md
+
+  For `paused/`, `superseded/` and `archived/`, give the reason. For
+  `superseded/`, name the replacement's path, and link back from the new
+  plan.
+- **Resume** a plan by moving its copy back to the top level as a real
+  file, and edit it directly from then on; it has no plan-mode file any
+  more. To re-plan it in plan mode instead, first move the old copy to
+  `superseded/` with a state line naming the new plan, then link the new
+  plan-mode file as Plan file location describes.
 - **Name collision:** if the destination already holds that name (common for
   a bare `PLAN.md`), append today's date: `PLAN-2026-09-30.md`.
 - `TODO.md` never moves, whatever its state.
