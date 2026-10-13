@@ -62,6 +62,9 @@ Gotchas:
 - **Worktrees share one issue list.** Inside a git worktree, Claude logs
   issues in the main checkout's `.claude/issues/`, so they survive when
   the worktree is removed.
+- **A `CLAUDE.md` can pick the folder.** Where no single repo fits, such
+  as a workspace of worktrees over bare clones, name the issues folder in
+  a `CLAUDE.md` that loads there. Claude uses it as-is, with no questions.
 
 The full rules are in [`SKILL.md`](SKILL.md) and
 [`references/github.md`](references/github.md).
