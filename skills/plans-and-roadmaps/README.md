@@ -9,7 +9,7 @@ What it does:
 
 - Leaves the plan-mode file where plan mode puts it and symlinks it into
   the target repo under a meaningful name, never over an existing file.
-  A plan already inside the repo (`plansDirectory`) is not linked.
+  Links work the same wherever `plansDirectory` puts the file.
 - Stamps finished steps with a real timestamp from `date`.
 - Marks state by directory: `completed/`, `paused/`, `superseded/`,
   `archived/`. A plan leaving the top level becomes a real copy, so
@@ -67,5 +67,8 @@ Gotchas:
   `showClearContextOnPlanAccept` on, plan approval can offer "Yes, clear
   context and …". That starts work from the plan alone, without this skill.
   The plan's own stop line usually covers it, but plain approval is safer.
+- **Give `plansDirectory` its own folder.** Point it at something like
+  `.claude/plan-mode`, not `.claude/plans/`, or plan-mode files mix with
+  the plans. Claude Code never cleans a relocated folder; prune it by hand.
 
 The full rules are in [`SKILL.md`](SKILL.md).

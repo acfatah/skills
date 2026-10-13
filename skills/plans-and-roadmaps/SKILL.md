@@ -3,7 +3,7 @@ name: plans-and-roadmaps
 description: "Rules for plan documents and roadmaps: where plan files live, progress stamps, state directories, phased plans, multi-session roadmaps. Load before writing, executing, stamping, or moving a plan: the plan-mode file, any .md under .claude/plans/, or a PLAN*.md / TODO.md being executed."
 ---
 
-# Plans and Roadmaps v1.1.1
+# Plans and Roadmaps v1.2.0
 
 These rules apply to the plan-mode plan file, any `.md` under a
 `.claude/plans/` directory, and any `PLAN*.md` or `TODO.md` you are executing
@@ -30,12 +30,16 @@ copied instead; see Roadmap plans). Never overwrite what is already there:
 - Choose the target by which files the plan edits. A plan spanning several
   repos, or touching only workspace-level tooling, belongs at the workspace
   root instead.
-- **Plan already in the target.** If the plan-mode path is already inside
-  the target (the user set `plansDirectory`), skip linking and the
-  `info/exclude` step: the file is where it belongs, and the user chose
-  whether it is tracked. Never move or rename it while active. Where a
-  later rule copies a link's target (state moves, finishing a phase), copy
-  this file the same way and leave the original in place.
+- **Link wherever the plan-mode file lives.** A `plansDirectory` setting
+  can put it inside the repo; link it the same way, with its absolute path.
+  Never move or rename it while active.
+- **Plan-mode directory is the state root.** If the plan-mode file sits
+  directly in `<target>/.claude/plans/` or one of its state directories,
+  its slug files mix with the plans and never get cleaned up. Tell the
+  user once and suggest a separate directory, such as
+  `"plansDirectory": ".claude/plan-mode"`, or removing the setting. If they
+  keep it, still link: slug-named files there are plan-mode files, and only
+  topic-named entries count as plans.
 - `<topic>` is the plan's subject in snake_case. The generated `<slug>` may
   start with words from the prompt, but it is not a topic name; choose
   `<topic>` yourself and do not transliterate the slug.
@@ -60,6 +64,10 @@ copied instead; see Roadmap plans). Never overwrite what is already there:
   and `info/exclude` is shared with the main checkout. Track it only when
   asked. Skip the `info/exclude` step when the target is not inside a git
   repo.
+- **In-repo plan-mode directory.** When the plan-mode file is inside the
+  target repo but outside `.claude/plans/`, check its directory too. If
+  `git ls-files` shows it tracked, leave it alone. If it is untracked and
+  `git check-ignore -q` fails, ask before adding it to `info/exclude`.
 - Nothing travels with the branch. A reviewer, CI, or a fresh clone sees
   nothing. Moving a plan out of the top level replaces its link with a
   real copy (see Plan states below); that copy is a record, not the plan.
@@ -113,7 +121,9 @@ itself (see Plan file location):
   fails on untracked files.
 - **Leaving the top level makes a real file.** Claude Code deletes files in
   `~/.claude/plans/` once they are older than `cleanupPeriodDays` (default
-  30), so a link in any state directory would soon dangle. On every move
+  30), so a link in any state directory would soon dangle. A
+  `plansDirectory` inside the repo is not cleaned up, but copy anyway, so
+  the record never depends on a file the user may prune. On every move
   out of the top level, replace a link with a real copy of its target,
   then remove the link:
 
