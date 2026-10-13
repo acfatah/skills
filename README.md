@@ -1,5 +1,18 @@
 # Skills
 
+<p>
+  <a href="./LICENSE">
+    <img
+      alt="License"
+      src="https://img.shields.io/github/license/acfatah/skills?style=flat-square"
+    ></a>
+  <a href="https://github.com/acfatah/skills/commits/main">
+    <img
+      alt="Last commit"
+      src="https://img.shields.io/github/last-commit/acfatah/skills?display_timestamp=committer&style=flat-square"
+    ></a>
+</p>
+
 ## Introduction
 
 This repository contains my agent skills - modular capabilities that I use
