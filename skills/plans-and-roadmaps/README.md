@@ -14,6 +14,8 @@ What it does:
 - Marks state by directory: `completed/`, `paused/`, `superseded/`,
   `archived/`. A plan leaving the top level becomes a real copy, so
   Claude Code's cleanup of `~/.claude/plans/` cannot break it.
+- Freezes an idle linked plan into a real file before that cleanup, and
+  says so plainly when a link is already broken.
 - Ends every plan, or every phase, with a suggested commit message.
 - Writes a short stop instruction into every phased plan and roadmap, so
   the rules hold even if approval clears the context.
@@ -70,5 +72,10 @@ Gotchas:
 - **Give `plansDirectory` its own folder.** Point it at something like
   `.claude/plan-mode`, not `.claude/plans/`, or plan-mode files mix with
   the plans. Claude Code never cleans a relocated folder; prune it by hand.
+- **Plan-mode files expire.** Claude Code deletes files in
+  `~/.claude/plans/` after about `cleanupPeriodDays` (default 30), and
+  the docs don't say whether an edit resets the clock. Shelving a plan?
+  Say "pause it" so it is copied into `paused/`, or raise
+  `cleanupPeriodDays`.
 
 The full rules are in [`SKILL.md`](SKILL.md).

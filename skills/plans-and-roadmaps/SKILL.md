@@ -3,7 +3,7 @@ name: plans-and-roadmaps
 description: "Rules for plan documents and roadmaps: where plan files live, progress stamps, state directories, phased plans, multi-session roadmaps. Load before writing, executing, stamping, or moving a plan: the plan-mode file, any .md under .claude/plans/, or a PLAN*.md / TODO.md being executed."
 ---
 
-# Plans and Roadmaps v1.2.0
+# Plans and Roadmaps v1.3.0
 
 These rules apply to the plan-mode plan file, any `.md` under a
 `.claude/plans/` directory, and any `PLAN*.md` or `TODO.md` you are executing
@@ -71,6 +71,8 @@ copied instead; see Roadmap plans). Never overwrite what is already there:
 - Nothing travels with the branch. A reviewer, CI, or a fresh clone sees
   nothing. Moving a plan out of the top level replaces its link with a
   real copy (see Plan states below); that copy is a record, not the plan.
+  An idle link is also frozen into a real file in place, before cleanup
+  (see Check the link first).
 - A project `CLAUDE.md` may pin the exact destination directory. Where one
   does, it wins over this section.
 
@@ -151,9 +153,11 @@ itself (see Plan file location):
   plan.
 - **Resume** a plan by moving its copy back to the top level as a real
   file, and edit it directly from then on; it has no plan-mode file any
-  more. To re-plan it in plan mode instead, first move the old copy to
-  `superseded/` with a state line naming the new plan, then link the new
-  plan-mode file as Plan file location describes.
+  more. A frozen plan (see Check the link first) is already a real file
+  at the top level, so it simply continues. To re-plan it in plan mode
+  instead, first move the old copy to `superseded/` with a state line
+  naming the new plan, then link the new plan-mode file as Plan file
+  location describes.
 - **Name collision:** if the destination already holds that name (common for
   a bare `PLAN.md`), append today's date: `PLAN-2026-09-30.md`.
 - `TODO.md` never moves, whatever its state.
@@ -164,6 +168,45 @@ itself (see Plan file location):
   into `completed/` (bare `PLAN_COMPLETED.md` becomes
   `completed/PLAN.md`). Migrate only after the user agrees. Leave tracked
   ones alone.
+
+### Check the link first
+
+Cleanup also reaches active plans: a linked plan, or a running roadmap
+phase link, left idle for a month loses its plan-mode file. So whenever
+you start work on, stamp, or resume a plan that is a link, check it
+first:
+
+- **Broken link** (`test -L` true, `test -e` false): the plan-mode file
+  was cleaned up. Tell the user the plan text is gone, and that session
+  transcripts age out under the same rule, so they cannot restore it.
+  Leave the link, and do not write a new plan unless asked. Offer to
+  re-plan it in plan mode, then replace the dangling link with the new
+  one.
+- **Old link or target:** freeze the plan in place into a real file, and
+  tell the user once:
+
+      link=<dir>/<topic>.md
+      src=$(readlink -f "$link")
+      if test -n "$(find "$link" "$src" -mtime +20)"; then
+        cp "$src" "$link.tmp" && mv "$link.tmp" "$link"
+      fi
+
+  The docs do not say which timestamp cleanup uses. `find` without `-L`
+  tests the link's own mtime, set at approval and never changed, since
+  edits go through to the target; the target's mtime covers the last
+  edit. Checking both covers either clock. `mv` replaces the link itself,
+  not its target. Works with GNU and BSD `find`.
+- **Add a state line** under the title of a frozen plan, with the time
+  from `date`. Edit the frozen file directly from then on, as after
+  Resume; never edit the old plan-mode file again.
+
+      > Frozen 2026-10-13 14:02 before plan-mode cleanup. Copied from ~/.claude/plans/<slug>.md
+
+- **Threshold:** 20 days leaves margin under the default
+  `cleanupPeriodDays` of 30. If the user's setting is known to differ,
+  freeze at two thirds of it. Do not parse settings files to find out.
+- **Skip both checks** for a link whose target is inside the repo: an
+  in-repo `plansDirectory` is never cleaned up.
 
 ## Commit message in plans
 
@@ -327,7 +370,8 @@ into `<topic>/roadmap.md`, never over an existing file or link:
 1. Stamp each step in the phase plan (through its plan-mode file, while
    it is still a link), then the Phase N heading in `roadmap.md`.
 2. Write `### Phase N outcome` in `roadmap.md`.
-3. Replace the phase link with a real copy, in place:
+3. Replace the phase link with a real copy, in place. This is the freeze
+   from Check the link first, without the age test:
 
        p=<target>/.claude/plans/<topic>/phase_N_<subject>.md
        src=$(readlink -f "$p")
