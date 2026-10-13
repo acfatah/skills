@@ -3,7 +3,7 @@ name: issue-tracker
 description: Issue tracking in local .claude/issues/ files, with GitHub as a second step. Load when logging or capturing an issue (bug, idea, feedback, task), triaging issues, starting, blocking, closing, or reopening one, managing sub-issues or milestones, recording a security finding, or promoting an issue to GitHub Issues or a GitHub Project.
 ---
 
-# Issue Tracker v1.0.0
+# Issue Tracker v1.1.0
 
 Track issues while you work: every issue starts as a local file, and moves
 to GitHub only when it must be shared. Capture fast, triage later, and keep
@@ -87,6 +87,12 @@ fi
 - `NNNN` is a zero-padded counter. **Next number** = the highest number in
   any folder, including `closed/` and `security/`, plus 1. Numbers are never
   reused.
+- **One issue at a time.** Create issue files one after another, never in
+  parallel tool calls; each new number depends on the files before it.
+- **Check after writing.** List `NNNN-*` files across all folders. If
+  another file shares your number, rename yours to the next free number,
+  update its `id` and any `## Sub-issues` mirror line that names it, and
+  check again.
 - The slug is 2–5 lowercase words from the title, joined with hyphens.
 
 ### Frontmatter
@@ -234,6 +240,9 @@ When you notice an issue **unrelated to the current task**:
 When the user asks you to log an issue, of any type, log it in `triage/`
 directly. Fill `type` and `priority` when the user states them, and leave
 them empty otherwise.
+
+**Subagents don't write issue files.** A subagent reports the issue in its
+result; the main agent mentions or logs it as above.
 
 ### Triage
 
