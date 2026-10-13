@@ -3,7 +3,7 @@ name: issue-tracker
 description: Issue tracking in local .claude/issues/ files, with GitHub as a second step. Load when logging or capturing an issue (bug, idea, feedback, task), triaging issues, starting, blocking, closing, or reopening one, managing sub-issues or milestones, recording a security finding, or promoting an issue to GitHub Issues or a GitHub Project.
 ---
 
-# Issue Tracker v1.1.0
+# Issue Tracker v1.2.0
 
 Track issues while you work: every issue starts as a local file, and moves
 to GitHub only when it must be shared. Capture fast, triage later, and keep
@@ -25,9 +25,18 @@ the user in control: you propose, the user decides.
 
 ## Location
 
-Issues live in `.claude/issues/` under the **issues root**. Find the root
-once per session, and use its absolute path for every read, write, move,
-and search:
+Issues live in `.claude/issues/` under the **issues root**, unless a
+`CLAUDE.md` declares a folder.
+
+- **Declared folder wins.** If a loaded `CLAUDE.md` names an issues folder,
+  use it in place of `<root>/.claude/issues/`, with the same layout inside.
+  Skip root detection, and skip the gitignore step when the folder is
+  outside a git repo.
+- **Follow its conventions**, such as repository labels, GitHub targets, or
+  a format reference that wins on conflict.
+
+Otherwise, find the root once per session, and use its absolute path for
+every read, write, move, and search:
 
 ```bash
 if [ "$(git rev-parse --absolute-git-dir)" != "$(git rev-parse --path-format=absolute --git-common-dir)" ]; then
@@ -47,10 +56,10 @@ fi
 - **Tracked issues in a worktree:** if the project tracks its issues, tell
   the user the issue goes to the main checkout, not this branch.
 - **Bare repo:** if the first entry of `git worktree list --porcelain` is
-  followed by a `bare` line, there is no main checkout. Ask the user where
-  to put the issues.
-- **Outside a git repo,** ask the user where to put them before creating
-  anything.
+  followed by a `bare` line, there is no main checkout. Unless a folder is
+  declared, ask the user where to put the issues.
+- **Outside a git repo,** unless a folder is declared, ask the user where
+  to put them before creating anything.
 
 ```
 .claude/issues/

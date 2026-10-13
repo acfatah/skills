@@ -3,6 +3,9 @@
 GitHub detail for the [`issue-tracker`](../SKILL.md) skill. Every write here
 needs the user's agreement first.
 
+A `CLAUDE.md` that declares the issues folder may also name the target
+repository for each issue; follow it.
+
 ## Requirements
 
 - `gh` is installed and logged in: `gh auth status`.
