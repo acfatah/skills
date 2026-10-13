@@ -1,5 +1,18 @@
 # Skills
 
+<p>
+  <a href="./LICENSE">
+    <img
+      alt="License"
+      src="https://img.shields.io/github/license/acfatah/skills?style=flat-square"
+    ></a>
+  <a href="https://github.com/acfatah/skills/commits/main">
+    <img
+      alt="Last commit"
+      src="https://img.shields.io/github/last-commit/acfatah/skills?display_timestamp=committer&style=flat-square"
+    ></a>
+</p>
+
 ## Introduction
 
 This repository contains my agent skills - modular capabilities that I use
@@ -15,6 +28,7 @@ problem‑solving.
 |---|---|
 | [issue-tracker](skills/issue-tracker) | Track issues as local files in `.claude/issues/`, with triage, milestones, sub-issues, and promotion to GitHub Issues and Projects. |
 | [plans-and-roadmaps](skills/plans-and-roadmaps) | Rules for plan documents: file location, progress stamps, state directories, phased plans, and multi-session roadmaps. |
+| [readme-badges](skills/readme-badges) | Add, audit, or repair a README's badge block: shields.io and qlty badges in one HTML format, each verified before writing. |
 | [windows-screenshots](skills/windows-screenshots) | Locate, list, and read Windows screenshots (Win+PrtScn, Snipping Tool) from WSL or native Windows shells. |
 
 ## Tooling Choices
