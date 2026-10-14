@@ -31,6 +31,19 @@ problem‑solving.
 | [readme-badges](skills/readme-badges) | Add, audit, or repair a README's badge block: shields.io and qlty badges in one HTML format, each verified before writing. |
 | [windows-screenshots](skills/windows-screenshots) | Locate, list, and read Windows screenshots (Win+PrtScn, Snipping Tool) from WSL or native Windows shells. |
 
+## Workflows
+
+Claude Code workflow scripts: multi-agent orchestrations run with the
+Workflow tool, not skills.
+
+| Workflow | Description |
+|---|---|
+| [webapp-security-audit](workflows/webapp-security-audit) | Full-stack web app security audit: recon, one finder per vulnerability class, adversarial verification, attack-chain synthesis. Its README includes the audit playbook. |
+
+The skills CLI does not install workflows. Each workflow is a single
+file that you download into `~/.claude/workflows/`; its README has the
+command.
+
 ## Tooling Choices
 
 These skills are opinionated, and so is the tooling around them:
@@ -75,6 +88,10 @@ bunx skills update -g
 ```
 claude/
 └── CLAUDE.md        global Claude Code instructions (see below)
+workflows/
+└── <name>/
+    ├── <name>.js    Claude Code workflow script; symlink this file
+    └── README.md    install, usage, and background
 skills/
 └── <skill-name>/
     ├── SKILL.md     required - frontmatter `name` must match the folder 
@@ -100,6 +117,9 @@ the log for a skill's folder reads as its release notes:
 ```bash
 git log --oneline -- skills/windows-screenshots
 ```
+
+Workflows follow the same single-place rule. A workflow's version is
+the `VERSION` constant in its `.js` file, the one file users install.
 
 ## Claude Code instructions
 
