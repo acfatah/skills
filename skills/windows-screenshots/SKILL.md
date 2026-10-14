@@ -3,7 +3,7 @@ name: windows-screenshots
 description: Locate, list, and read the user's Windows screenshots (Win+PrtScn, Snipping Tool) from WSL or native Windows shells; the folder location comes from the SCREENSHOTS environment variable. Use whenever the user mentions a screenshot they took or wants one found, viewed, compared, or attached - "look at my screenshot", "check the latest screenshot", "list today's screenshots", "the screenshot I just took", "find that capture from yesterday" - even if they say "screen capture", "snip", or "the image I just captured" instead of "screenshot".
 ---
 
-# Windows Screenshots v1.0.0
+# Windows Screenshots v1.0.1
 
 Windows screenshots (Win+PrtScn, Snipping Tool) save to the user's Screenshots folder, usually OneDrive-managed. This skill locates and reads them from WSL or native Windows.
 
@@ -29,7 +29,7 @@ SHOTS="$SCREENSHOTS"
 
 ## Setup: SCREENSHOTS unset or folder missing
 
-Do not give up - auto-detect candidates, checking OneDrive first (Windows commonly redirects Pictures there):
+Auto-detect candidates, checking OneDrive first (Windows commonly redirects Pictures there):
 
 ```bash
 # WSL
