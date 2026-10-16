@@ -5,25 +5,52 @@ way to handle plan documents: where plan files live, how finished steps
 are stamped, which directory marks a plan's state, and how big work is
 split into phased plans and multi-session roadmaps.
 
-What it does:
+## What it is
 
-- Leaves the plan-mode file where plan mode puts it and symlinks it into
-  the target repo under a meaningful name, never over an existing file.
-  Links work the same wherever `plansDirectory` puts the file.
-- Stamps finished steps with a real timestamp from `date`.
-- Marks state by directory: `completed/`, `paused/`, `superseded/`,
+- **Leaves the plan-mode file** where plan mode puts it and symlinks it
+  into the target repo under a meaningful name, never over an existing
+  file. Links work the same wherever `plansDirectory` puts the file.
+- **Stamps finished steps** with a real timestamp from `date`.
+- **Marks state by directory:** `completed/`, `paused/`, `superseded/`,
   `archived/`. A plan leaving the top level becomes a real copy, so
   Claude Code's cleanup of `~/.claude/plans/` cannot break it.
-- Freezes an idle linked plan into a real file before that cleanup, and
-  says so plainly when a link is already broken.
-- Ends every plan, or every phase, with a suggested commit message.
-- Honours a plan's Auto-commit run mode (see
+- **Freezes an idle linked plan** into a real file before that cleanup,
+  and says so plainly when a link is already broken.
+- **Ends every plan, or every phase,** with a suggested commit message.
+- **Honours a plan's Auto-commit run mode** (see
   [`auto-commit`](../auto-commit)) by committing each phase instead of
   waiting. This needs the `auto-commit` skill installed; without it, the
   plan runs in Pause and Claude says why.
-- Writes a short stop instruction into every phased plan and roadmap, so
-  the rules hold even if approval clears the context.
-- Carries context between sessions through a roadmap file.
+- **Writes a short stop instruction** into every phased plan and roadmap,
+  so the rules hold even if approval clears the context.
+- **Carries context between sessions** through a roadmap file.
+
+## What it is not
+
+- **Not an issue tracker.** It governs plan documents only: the plan-mode
+  file, `.claude/plans/`, `PLAN*.md`, `TODO.md`. Bugs and ideas found
+  along the way belong in [`issue-tracker`](../issue-tracker).
+- **Not a committer.** It writes a suggested commit message; it commits
+  only when you ask or the plan's run mode is Auto-commit, whose
+  safeguards live in `auto-commit`.
+- **Not a self-starter.** It never plans or starts the next phase; you
+  start every session and every plan mode.
+- **Not a way to share plans.** Plans are git-ignored local files and are
+  never committed unless you ask; a reviewer, CI, or fresh clone sees
+  nothing.
+
+## When not to use
+
+- **A quick change with no plan** → just ask. The skill only acts on plan
+  documents.
+- **Logging a side issue** → use `issue-tracker`.
+- **Committing every phase without stopping** → turn on `auto-commit`;
+  this skill only honours its run-mode line.
+- **Sharing a plan with reviewers** → put it in the PR description or a
+  tracked doc.
+
+**Negative example:** "Fix the typo in the README" will not load it; there
+is no plan to manage.
 
 ## Install
 
@@ -37,7 +64,49 @@ For local development, link the folder instead:
 ln -sfn "$PWD/skills/plans-and-roadmaps" ~/.claude/skills/plans-and-roadmaps
 ```
 
-## Roadmap workflow
+## Usage
+
+### How it loads
+
+- **As a side effect of planning.** Claude loads it before writing,
+  executing, stamping, or moving a plan; you rarely name it.
+- **Reliably, with a `CLAUDE.md` pointer.** Its two rules hold even when
+  the skill does not load:
+
+  ```markdown
+  ## Plan documents
+
+  Before writing, executing, stamping, or moving any plan (plan-mode
+  file, `.claude/plans/*.md`, `PLAN*.md`, `TODO.md`), load the
+  `plans-and-roadmaps` skill. Two rules hold even without it: keep the
+  plan-mode file in `~/.claude/plans/`, and commit plans only when
+  asked.
+  ```
+
+- **By name, always.** `/plans-and-roadmaps …` or "use the
+  plans-and-roadmaps skill".
+- **The plan carries its own stop line,** so approval that clears the
+  context still stops at each phase.
+- **What Claude asks back:** when a link name or `roadmap.md` is taken;
+  before moving a tracked plan; when an earlier phase was left
+  uncommitted (commit it, or combine the phases); before migrating legacy
+  `PLAN_IN_PROGRESS-*` names.
+
+### Example prompts
+
+- **Plan:** "Make this a phased plan, one commit per phase." Ask in plan
+  mode.
+- **Roadmap:** "Make a roadmap for moving to Postgres." / "Plan phase 2
+  of .claude/plans/postgres/roadmap.md."
+- **Run:** "Implement the plan." Claude stamps each step as it finishes.
+- **Shelve:** "Pause this plan: waiting on the API key." / "Drop the
+  cache plan, it's obsolete." It moves to `paused/` or `archived/` only
+  when you ask; a linked plan becomes a real copy.
+- **Resume:** "Resume the paused cache plan."
+- **Finish:** "/plans-and-roadmaps move the finished plan to completed."
+  Claude moves it only when every step is stamped.
+
+### Walkthrough
 
 For work too big for one session: plan a roadmap once, then plan each
 phase in its own fresh plan-mode session. The roadmap file carries the
