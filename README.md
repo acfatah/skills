@@ -106,8 +106,8 @@ git log --oneline -- skills/windows-screenshots
 
 [`claude/CLAUDE.md`](claude/CLAUDE.md) holds my global instructions for
 Claude Code: response style, line width, PR and commit conventions, and
-a pointer to the `plans-and-roadmaps` skill. Claude Code loads it from
-`~/.claude/CLAUDE.md`, so link it there:
+pointers to the `plans-and-roadmaps`, `auto-commit` and `issue-tracker`
+skills. Claude Code loads it from `~/.claude/CLAUDE.md`, so link it there:
 
 ```bash
 ln -sfn "$PWD/claude/CLAUDE.md" ~/.claude/CLAUDE.md
@@ -116,7 +116,11 @@ ln -sfn "$PWD/claude/CLAUDE.md" ~/.claude/CLAUDE.md
 This replaces any existing `~/.claude/CLAUDE.md`, so back that up first.
 
 For plan documents, phased plans and the roadmap workflow, see the
-[`plans-and-roadmaps`](skills/plans-and-roadmaps) skill.
+[`plans-and-roadmaps`](skills/plans-and-roadmaps) skill. To let Claude
+commit each finished change or phase instead of waiting, see the
+[`auto-commit`](skills/auto-commit) skill. For logging and triaging
+issues as local files, see the [`issue-tracker`](skills/issue-tracker)
+skill.
 
 ## License
 
