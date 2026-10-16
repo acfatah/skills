@@ -69,11 +69,19 @@ comprehensive PR description, ending with the PR attribution line the
 harness specifies, unless the user or the repo says otherwise. The file
 should be untracked.
 
+## Auto-commit mode
+
+Before approving or executing a plan, or when the user asks for several
+distinct changes, load the `auto-commit` skill. Two rules hold even
+without it: Pause is the default, and Auto-commit never pushes.
+
 ## Writing Commit
 
-Never run `git commit` unless the user explicitly asks. The user reviews
-changes first. Plan approval, "proceed", "go ahead", or bypass-permissions
-mode are not requests to commit.
+Never run `git commit` unless the user explicitly asks, or chose
+Auto-commit mode for the current plan or session (see the
+`auto-commit` skill). The user reviews changes first. Plan approval,
+"proceed", "go ahead", or bypass-permissions mode are not requests to
+commit.
 
 Always suggest a comprehensive commit message once a logical change to
 files in a git repository is finished, so the user can decide whether to

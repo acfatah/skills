@@ -26,6 +26,7 @@ problem‑solving.
 
 | Skill | Description |
 |---|---|
+| [auto-commit](skills/auto-commit) | Opt-in Auto-commit mode: commit each finished change or phase with its message and continue, stopping on gaps. Never pushes. |
 | [issue-tracker](skills/issue-tracker) | Track issues as local files in `.claude/issues/`, with triage, milestones, sub-issues, and promotion to GitHub Issues and Projects. |
 | [plans-and-roadmaps](skills/plans-and-roadmaps) | Rules for plan documents: file location, progress stamps, state directories, phased plans, and multi-session roadmaps. |
 | [readme-badges](skills/readme-badges) | Add, audit, or repair a README's badge block: shields.io and qlty badges in one HTML format, each verified before writing. |
@@ -125,8 +126,8 @@ the `VERSION` constant in its `.js` file, the one file users install.
 
 [`claude/CLAUDE.md`](claude/CLAUDE.md) holds my global instructions for
 Claude Code: response style, line width, PR and commit conventions, and
-a pointer to the `plans-and-roadmaps` skill. Claude Code loads it from
-`~/.claude/CLAUDE.md`, so link it there:
+pointers to the `plans-and-roadmaps`, `auto-commit` and `issue-tracker`
+skills. Claude Code loads it from `~/.claude/CLAUDE.md`, so link it there:
 
 ```bash
 ln -sfn "$PWD/claude/CLAUDE.md" ~/.claude/CLAUDE.md
@@ -135,7 +136,11 @@ ln -sfn "$PWD/claude/CLAUDE.md" ~/.claude/CLAUDE.md
 This replaces any existing `~/.claude/CLAUDE.md`, so back that up first.
 
 For plan documents, phased plans and the roadmap workflow, see the
-[`plans-and-roadmaps`](skills/plans-and-roadmaps) skill.
+[`plans-and-roadmaps`](skills/plans-and-roadmaps) skill. To let Claude
+commit each finished change or phase instead of waiting, see the
+[`auto-commit`](skills/auto-commit) skill. For logging and triaging
+issues as local files, see the [`issue-tracker`](skills/issue-tracker)
+skill.
 
 ## License
 

@@ -3,7 +3,7 @@ name: plans-and-roadmaps
 description: "Rules for plan documents and roadmaps: where plan files live, progress stamps, state directories, phased plans, multi-session roadmaps. Load before writing, executing, stamping, or moving a plan: the plan-mode file, any .md under .claude/plans/, or a PLAN*.md / TODO.md being executed."
 ---
 
-# Plans and Roadmaps v1.3.0
+# Plans and Roadmaps v1.4.0
 
 These rules apply to the plan-mode plan file, any `.md` under a
 `.claude/plans/` directory, and any `PLAN*.md` or `TODO.md` you are executing
@@ -218,7 +218,8 @@ can be copied verbatim.
 - After execution, revise it to match what actually changed (check
   `git diff --stat`); a plan-time draft often drifts from the real diff.
 - The message is a suggestion, not an instruction to commit. Never run
-  `git commit` unless the user explicitly asks; plan approval, "proceed"
+  `git commit` unless the user explicitly asks, or the plan's run-mode line
+  says Auto-commit (see the `auto-commit` skill); plan approval, "proceed"
   and "go ahead" are not requests to commit.
 - Skip the commit message when the plan's changes land outside any git
   repo.
@@ -238,6 +239,13 @@ A plan with phases gets one commit per phase:
   the single message at the end of the plan.
 - Stop at every phase boundary. Show the phase's commit message and wait.
   Do not start the next phase until the user says so.
+- **Auto-commit run mode.** When the plan carries
+  `> Run mode: Auto-commit` under its title, commit the phase with its
+  message and continue to the next one, stopping only as the `auto-commit`
+  skill says. The `> Phased plan:` stop line stays; the run-mode line sits
+  under it and overrides only the waiting. If the `auto-commit` skill is
+  not installed, treat the line as Pause: stop and wait as usual, and tell
+  the user once why. Its safeguards live only in that skill.
 - **Write the stop rule into the plan.** Approval can clear the context and
   start work from the plan alone, without this skill. So every phased plan
   carries this line under its title, with the real plan-mode path (a
@@ -258,7 +266,8 @@ Handle these cases:
   messages into the later phase's section, with a body that lists both
   phases, and mark the earlier section `(merged into Phase N)`. The extra
   changes may instead be the user's unrelated edits, so ask; never assume
-  which it is.
+  which it is. In Auto-commit run mode, such changes are a hard gap: stop
+  and ask the same way, and never commit them.
 - **Phase too small for its own commit.** Mark the heading
   `(no separate commit)` when writing the plan, and omit its message
   section. The next phase's message covers both, and its body names each
@@ -380,7 +389,9 @@ into `<topic>/roadmap.md`, never over an existing file or link:
    `mv` replaces the link itself, not its target. Replace the
    `> Roadmap phase N …` line with `> Copied from ~/.claude/plans/<slug>.md`.
    Later edits, such as a revised commit message, go to the copy.
-4. Stop, show the phase's commit message, and wait, per Phased plans.
+4. Stop, show the phase's commit message, and wait, per Phased plans. In
+   Auto-commit run mode, commit the phase with its message first, then
+   stop. Never plan or start the next phase.
 
 Phase plans stay in `<topic>/`, as real files, until the whole roadmap is
 complete.
