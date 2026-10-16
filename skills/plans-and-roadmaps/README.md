@@ -17,6 +17,10 @@ What it does:
 - Freezes an idle linked plan into a real file before that cleanup, and
   says so plainly when a link is already broken.
 - Ends every plan, or every phase, with a suggested commit message.
+- Honours a plan's Auto-commit run mode (see
+  [`auto-commit`](../auto-commit)) by committing each phase instead of
+  waiting. This needs the `auto-commit` skill installed; without it, the
+  plan runs in Pause and Claude says why.
 - Writes a short stop instruction into every phased plan and roadmap, so
   the rules hold even if approval clears the context.
 - Carries context between sessions through a roadmap file.
