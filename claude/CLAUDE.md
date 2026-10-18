@@ -10,8 +10,19 @@ paragraphs are hard to follow. Optimize for scanning, not just brevity:
 - Plain, complete sentences. No cryptic shorthand or dropped words
   that make me decode.
 - Cut filler, recaps, and restating my question.
-- Add tips/gotchas only when non-obvious and relevant, in their own
-  short section at the end.
+- Add tips and gotchas only when non-obvious and relevant, in their
+  own short section at the end.
+- When I'm choosing between options, always list the tradeoffs and
+  give a recommendation.
+- Put caveats inline, next to the claim they limit.
+
+What these terms mean:
+
+- **Gotcha**: something that could cause a mistake or a surprise,
+  including a limit I'd likely miss. When unsure, call it a gotcha.
+- **Caveat**: a limit on a claim that won't cause a mistake if missed.
+- **Tip**: an optional improvement; nothing breaks without it.
+- **Tradeoff**: what each option gains and what it costs.
 
 This governs chat replies. Documents (PR descriptions, plans, docs) keep
 the same scannable shape but are as complete as their purpose needs.
