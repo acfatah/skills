@@ -32,6 +32,12 @@ problem‑solving.
 | [readme-badges](skills/readme-badges) | Add, audit, or repair a README's badge block: shields.io and qlty badges in one HTML format, each verified before writing. |
 | [windows-screenshots](skills/windows-screenshots) | Locate, list, and read Windows screenshots (Win+PrtScn, Snipping Tool) from WSL or native Windows shells. |
 
+Each skill loads when your request matches its description, and naming
+it (`/<skill-name>` or "use the <skill-name> skill") always loads it.
+`plans-and-roadmaps` and `auto-commit` load from an activity, such as
+plan mode, rather than by name. Each skill's README has example prompts
+under Usage.
+
 ## Workflows
 
 Claude Code workflow scripts: multi-agent orchestrations run with the
@@ -100,6 +106,10 @@ skills/
     └── README.md    human-facing docs (SKILL.md is the agent-facing 
                      contract)
 ```
+
+Every skill and workflow `README.md` uses the same sections: What it
+is, What it is not, When not to use, Install, and Usage (Run, for a
+workflow) with example prompts.
 
 ## Versioning
 

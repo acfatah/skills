@@ -1,31 +1,68 @@
 # Webapp Security Audit
 
-A Claude Code workflow script, not a skill, that audits the source of a whole web application. It maps the attack surface, runs one finder agent per vulnerability class, tries to refute every finding, then chains the survivors into attack paths. It uses many sub-agents, so read the cost section before you run it.
+A Claude Code workflow script, not a skill, that audits the source of a whole
+web application. It maps the attack surface, runs one finder agent per
+vulnerability class, tries to refute every finding, then chains the survivors
+into attack paths. It uses many sub-agents, so read the cost section before
+you run it.
 
 ## What it is
 
 - **A static audit** that reads the source of a whole app or subsystem.
-- **Recon first**, then 11 parallel finders, one per vulnerability class: `authz`, `authn`, `injection`, `xss`, `csrf-cors`, `ssrf-files`, `data-exposure`, `secrets-config`, `deserialization`, `deps` and `infra`.
-- **Adversarial verification:** every finding faces a refuter, and Critical or High findings face a second judge. When the two disagree, the finding is flagged as a split verdict.
-- **Synthesis:** an attack-chain agent links findings into attack paths, and a coverage critic lists what the audit missed.
-- **A JSON result** in the Claude Code session: version, findings, refuted findings, attack chains, coverage gaps, injection suspects and stats.
+- **Recon first**, then 11 parallel finders, one per vulnerability class:
+  `authz`, `authn`, `injection`, `xss`, `csrf-cors`, `ssrf-files`,
+  `data-exposure`, `secrets-config`, `deserialization`, `deps` and `infra`.
+- **Adversarial verification:** every finding faces a refuter, and Critical
+  or High findings face a second judge. When the two disagree, the finding is
+  flagged as a split verdict.
+- **Synthesis:** an attack-chain agent links findings into attack paths, and
+  a coverage critic lists what the audit missed.
+- **A JSON result** in the Claude Code session: version, findings, refuted
+  findings, attack chains, coverage gaps, injection suspects and stats.
 
 ## What it is not
 
-- **Not a diff review.** For a branch, use `/security-review` or `/code-review`.
-- **Not a skill.** It never triggers by itself; it runs only when you ask for it.
-- **Not runtime testing, DAST or a pentest.** It never runs the app. See layer 3 of the playbook below.
-- **Not a replacement for deterministic scanners** such as semgrep, gitleaks, `npm audit` or `pip-audit`.
-- **Not proof of security.** "No findings" is not evidence that there are no vulnerabilities.
+- **Not a diff review.** For a branch, use `/security-review` or
+  `/code-review`.
+- **Not a skill.** It never triggers by itself; it runs only when you ask for
+  it.
+- **Not runtime testing, DAST or a pentest.** It never runs the app. See
+  layer 3 of the playbook below.
+- **Not a replacement for deterministic scanners** such as semgrep,
+  gitleaks, `npm audit` or `pip-audit`.
+- **Not proof of security.** "No findings" is not evidence that there are no
+  vulnerabilities.
 - **Not a fixer.** It reports problems; it does not patch code.
-- **Not a report file.** Ask Claude to write the JSON up as a report afterwards.
+- **Not a report file.** Ask Claude to write the JSON up as a report
+  afterwards.
+
+## When not to use
+
+- **Reviewing a branch or PR** → `/security-review` or `/code-review`; this
+  audits the whole app.
+- **Testing the running app** → layer 3 of the playbook: the
+  `agent-browser` skill against your own staging.
+- **Every PR, or a routine check** → too costly; run it before a launch,
+  after a big auth or data-access change, or quarterly.
+- **Deterministic coverage** of dependencies or secrets → scanners such as
+  semgrep, gitleaks, `npm audit` or `pip-audit`.
+
+**Negative example:** "Review my branch for security issues" should not run
+it; that is `/security-review`.
 
 ## Cost: this is an expensive job
 
-- **Agent count:** 1 recon + 11 finders + 1 refuter per finding (after dedup) + 1 confirmer per surviving Critical or High finding + 2 synthesis agents. That is 14 + N + M agents.
-- **One real run:** 20 agents, about 13 minutes, about 46M cache-read tokens, 3.9M cache-write tokens and 244k output tokens. Larger apps cost more.
-- **When to run it:** before a launch, after a big change to auth or data access, or quarterly. Not on every PR.
-- **Keep it cheap:** narrow `target` or `scope` to the highest-risk service, pass `stack` and `deployment` so recon guesses less, and check your plan's usage limits first.
+- **Agent count:** 1 recon + 11 finders + 1 refuter per finding (after
+  dedup) + 1 confirmer per surviving Critical or High finding + 2 synthesis
+  agents. That is 14 + N + M agents.
+- **One real run:** 20 agents, about 13 minutes, about 46M cache-read
+  tokens, 3.9M cache-write tokens and 244k output tokens. Larger apps cost
+  more.
+- **When to run it:** before a launch, after a big change to auth or data
+  access, or quarterly. Not on every PR.
+- **Keep it cheap:** narrow `target` or `scope` to the highest-risk service,
+  pass `stack` and `deployment` so recon guesses less, and check your plan's
+  usage limits first.
 
 ## Install
 
@@ -36,13 +73,18 @@ mkdir -p ~/.claude/workflows
 curl -fsSL https://raw.githubusercontent.com/acfatah/skills/main/workflows/webapp-security-audit/webapp-security-audit.js -o ~/.claude/workflows/webapp-security-audit.js
 ```
 
-- **Verify:** start a new Claude Code session and ask it to run the workflow.
-- **Update:** run the same `curl` command again. The file is a copy, so it does not update by itself.
-- **Check the installed version:** `grep -m1 "VERSION" ~/.claude/workflows/webapp-security-audit.js`
+- **Verify:** start a new Claude Code session and ask it to run the
+  workflow.
+- **Update:** run the same `curl` command again. The file is a copy, so it
+  does not update by itself.
+- **Check the installed version:**
+  `grep -m1 "VERSION" ~/.claude/workflows/webapp-security-audit.js`
 - **Pin a version:** replace `main` in the URL with a commit SHA.
 - **Uninstall:** `rm ~/.claude/workflows/webapp-security-audit.js`
-- **Read the script before you run it.** It starts many agents with shell access in your repo.
-- **With a local clone of this repo,** symlink the `.js` file into `~/.claude/workflows/` instead, so `git pull` updates it.
+- **Read the script before you run it.** It starts many agents with shell
+  access in your repo.
+- **With a local clone of this repo,** symlink the `.js` file into
+  `~/.claude/workflows/` instead, so `git pull` updates it.
 
 ## Run
 
@@ -59,16 +101,49 @@ Optional args, all free text:
 | `stack` | none | Stack hint for recon |
 | `deployment` | unknown | Deployment shape; severity ratings depend on it |
 
-Run it on a clean git tree. The read-only rule is a prompt instruction, not enforced, so a clean tree lets you spot and undo any stray edit.
+Run it on a clean git tree. The read-only rule is a prompt instruction, not
+enforced, so a clean tree lets you spot and undo any stray edit.
+
+### How it loads
+
+- **Only on request.** It is a workflow, not a skill: it never starts by
+  itself.
+- **By name, always.** "Run the webapp-security-audit workflow …", or
+  `/webapp-security-audit …`.
+- **Args from your request.** Name the path, scope, stack and deployment;
+  all are optional, with the defaults in the table above. A bare path as the
+  whole argument becomes `target`.
+
+### Example prompts
+
+- **Whole app:** "Run the webapp-security-audit workflow." It audits `.`
+  with the default scope.
+- **One service:** "Run the webapp-security-audit workflow on
+  ./services/api, scoped to the billing endpoints."
+- **With hints:** "Run the webapp-security-audit workflow; it's Django +
+  Postgres on one VPS behind nginx." Severity ratings depend on the
+  deployment.
+- **By name:** "/webapp-security-audit ./apps/web"
+- **Report:** "Write the audit's JSON up as a report in a gitignored file."
+
+Gotchas: blind spots and safe-run habits are in the playbook below, under
+[Where Claude is genuinely weak](#where-claude-is-genuinely-weak) and
+[Hygiene](#hygiene).
+
+The full script is [`webapp-security-audit.js`](webapp-security-audit.js).
 
 ## Versioning
 
-- The version is the `VERSION` constant in the `.js` file, and only there. Every result also returns it as `version`.
+- The version is the `VERSION` constant in the `.js` file, and only there.
+  Every result also returns it as `version`.
 - Bump rules:
-  - **Patch:** prompt wording or bug fixes, with the same inputs and output shape.
+  - **Patch:** prompt wording or bug fixes, with the same inputs and output
+    shape.
   - **Minor:** a new vulnerability class, optional arg or output field.
-  - **Major:** renamed or removed args, or a breaking change to the output schema.
-- Bump the version in the same commit as the change. For history, run `git log -- workflows/webapp-security-audit`.
+  - **Major:** renamed or removed args, or a breaking change to the output
+    schema.
+- Bump the version in the same commit as the change. For history, run
+  `git log -- workflows/webapp-security-audit`.
 
 ---
 
