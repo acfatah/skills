@@ -3,7 +3,7 @@ name: auto-commit
 description: "Opt-in Auto-commit mode: ask once, then commit each finished logical change with its suggested message and continue, stopping on gaps or failures. Load before approving or executing a plan, before a phased plan or roadmap phase, when the user asks for two or more distinct changes, or when the user says \"auto-commit\", \"unattended\", \"run it all\", \"commit as you go\", or \"don't stop between phases\"."
 ---
 
-# Auto-commit v1.0.0
+# Auto-commit v1.1.0
 
 By default Claude never commits unless asked: it finishes a logical change,
 suggests a commit message, and waits. That is **Pause** mode. **Auto-commit**
@@ -68,13 +68,22 @@ Push, amend, force, `--no-verify`, reset, rebase, branch deletion, or
 anything else outward-facing or hard to undo. Those still need an explicit
 request, as in Pause mode.
 
+## Starting a run
+
+- **Record the baseline.** Run `git status --short` and record its output,
+  together with the base SHA that the undo command uses.
+- **Report a dirty tree.** If the output is not empty, list the files and
+  ask once: commit them first, stash them, or continue.
+- **On continue, remember the dirty files.** Staging by path takes whole
+  files, so a task that edits one of them is a hard gap before its commit.
+
 ## Before each commit
 
 - **Run the repo's checks** (tests, lint, type check) when they exist.
   Failing checks are an unsafe gap.
-- **Compare `git status --short` with the baseline** recorded at the start
-  of the run. Changes outside the files this task touched are a hard gap:
-  they may be the user's own edits.
+- **Compare `git status --short` with the baseline** recorded when the run
+  started (see Starting a run). Changes outside the files this task
+  touched are a hard gap: they may be the user's own edits.
 
 ## Gaps
 

@@ -13,6 +13,8 @@ that removes those round trips.
   the same prompt, so they are answered before the run starts.
 - **Records the choice** as a `> Run mode:` line in the plan, so it survives
   a context clear. Without a plan, it lasts for the session only.
+- **Checks the tree when a run starts.** If you have uncommitted changes,
+  it lists them and asks: commit them first, stash them, or continue.
 - **In Auto-commit, commits** each finished change with its suggested
   message, staging only the files that change touched, on a topic branch.
 - **Never pushes,** amends, forces, rebases, or skips hooks.
@@ -37,8 +39,9 @@ that removes those round trips.
 - **You want to review each diff before it lands** → keep Pause, the
   default.
 - **The working tree has your own uncommitted edits** → commit or stash
-  them first. Commits stage whole files by path, so your edit in a file
-  the task also touches would land in its commit.
+  them first; that is still the simplest path. Otherwise Claude reports
+  them when the run starts and asks. Commits stage whole files by path, so
+  if you continue, a task that touches one of those files stops the run.
 - **The repo has no checks and the change is risky** → use Pause. Checks
   run only when they exist, so nothing catches a broken change before it
   is committed.
@@ -113,6 +116,9 @@ Gotchas:
 - **Nothing is pushed.** Review the branch, then push or open a PR yourself.
 - **Your own edits stop the run.** Changes in the working tree that Claude
   did not make are treated as a hard gap, so editing files mid-run halts it.
+- **A task that touches a file you had already edited stops the run.** If
+  you continue with a dirty tree, Claude cannot commit that file without
+  your edit, so it stops before that commit.
 - **The choice does not stick.** It is never saved to memory; every new
   plan or session starts in Pause.
 - **Roadmaps still stop per phase.** Auto-commit commits the phase and writes
