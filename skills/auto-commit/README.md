@@ -6,20 +6,46 @@ commit message, and waits. On multi-phase work that means one round trip per
 phase just to say "commit it". This skill adds an opt-in **Auto-commit** mode
 that removes those round trips.
 
-What it does:
+## What it is
 
-- Asks once, at plan approval or before a batch of changes: **Pause** (the
-  default) or **Auto-commit**. Open questions about the plan go into the same
-  prompt, so they are answered before the run starts.
-- Records the choice as a `> Run mode:` line in the plan, so it survives a
-  context clear. Without a plan, it lasts for the session only.
-- In Auto-commit, commits each finished change with its suggested message,
-  staging only the files that change touched, on a topic branch.
-- Never pushes, amends, forces, rebases, or skips hooks.
-- Sorts gaps into soft (default chosen and recorded), hard (task parked,
+- **Asks once,** at plan approval or before a batch of changes: **Pause**
+  (the default) or **Auto-commit**. Open questions about the plan go into
+  the same prompt, so they are answered before the run starts.
+- **Records the choice** as a `> Run mode:` line in the plan, so it survives
+  a context clear. Without a plan, it lasts for the session only.
+- **In Auto-commit, commits** each finished change with its suggested
+  message, staging only the files that change touched, on a topic branch.
+- **Never pushes,** amends, forces, rebases, or skips hooks.
+- **Sorts gaps** into soft (default chosen and recorded), hard (task parked,
   dependents blocked) and unsafe (stop).
-- Ends every run with a report: commits, the undo command, defaults chosen,
-  and any blocking question.
+- **Ends every run with a report:** commits, the undo command, defaults
+  chosen, and any blocking question.
+
+## What it is not
+
+- **Not a push or PR tool.** It never pushes, amends, forces, rebases,
+  resets, deletes branches, or skips hooks; you push and open the PR.
+- **Not a standing setting.** The choice is never saved to memory; it lasts
+  for one plan or one batch of changes, then Pause returns.
+- **Not a session runner.** In a roadmap it commits the phase, writes the
+  outcome, and stops; it never plans or starts the next phase.
+- **Not a guess.** "Proceed", "go ahead" and bypass-permissions mode never
+  turn it on; only your answer does.
+
+## When not to use
+
+- **You want to review each diff before it lands** → keep Pause, the
+  default.
+- **The working tree has your own uncommitted edits** → commit or stash
+  them first. Commits stage whole files by path, so your edit in a file
+  the task also touches would land in its commit.
+- **The repo has no checks and the change is risky** → use Pause. Checks
+  run only when they exist, so nothing catches a broken change before it
+  is committed.
+- **A single small task** → nothing to batch; Claude skips the question.
+
+**Negative example:** "Fix this typo" will not ask about Auto-commit; a
+single small task keeps the normal pause.
 
 ## Install
 
@@ -33,7 +59,46 @@ For local development, link the folder instead:
 ln -sfn "$PWD/skills/auto-commit" ~/.claude/skills/auto-commit
 ```
 
-## Example
+## Usage
+
+### How it loads
+
+- **As a side effect of planning or batching.** Claude loads it before
+  approving or executing a plan, before a phased plan or roadmap phase, or
+  when you ask for two or more distinct changes.
+- **By trigger phrase.** "auto-commit", "unattended", "run it all",
+  "commit as you go", "don't stop between phases".
+- **Reliably, with a `CLAUDE.md` pointer.** Its two rules hold even when
+  the skill does not load:
+
+  ```markdown
+  ## Auto-commit mode
+
+  Before approving or executing a plan, or when the user asks for several
+  distinct changes, load the `auto-commit` skill. Two rules hold even
+  without it: Pause is the default, and Auto-commit never pushes.
+  ```
+
+- **By name, always.** `/auto-commit …` or "use the auto-commit skill".
+- **What Claude asks back:** "Pause or Auto-commit?" once, with any open
+  questions about the plan in the same prompt; at a stop, the blocking
+  question with its options and a recommendation.
+
+### Example prompts
+
+- **Choose up front:** "Implement both phases, commit as you go." That is
+  the answer; Claude does not ask again.
+- **Batch:** "Rename the config key, update the docs, and bump the
+  version." Three distinct changes, so Claude asks "Pause or Auto-commit?"
+  first.
+- **Plan mode:** "Make this a two-phase plan." Claude asks "Pause or
+  Auto-commit?" before approval and writes the answer as a `> Run mode:`
+  line.
+- **Roadmap phase:** "/auto-commit implement phase 3 of
+  .claude/plans/<topic>/roadmap.md." It commits the phase, writes the
+  outcome, and stops.
+
+### Walkthrough
 
 1. **Plan the work.** In plan mode, ask for a two-phase change.
 2. **Choose the mode.** Before approval, Claude asks "Pause or Auto-commit?"
