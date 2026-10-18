@@ -93,6 +93,7 @@ bunx skills update -g
 ## Layout
 
 ```
+CLAUDE.md            rules for Claude when working in this repo
 claude/
 └── CLAUDE.md        global Claude Code instructions (see below)
 workflows/
