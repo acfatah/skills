@@ -71,8 +71,11 @@ ln -sfn "$PWD/skills/auto-commit" ~/.claude/skills/auto-commit
 - **As a side effect of planning or batching.** Claude loads it before
   approving or executing a plan, before a phased plan or roadmap phase, or
   when you ask for two or more distinct changes.
-- **By trigger phrase.** "auto-commit", "unattended", "run it all",
-  "commit as you go", "don't stop between phases".
+- **By trigger phrase that answers.** "auto-commit", "commit as you go"
+  and "don't stop between phases" load it and choose Auto-commit; Claude
+  does not ask.
+- **By trigger phrase that only loads.** "unattended" and "run it all"
+  load it, but Claude still asks "Pause or Auto-commit?".
 - **Reliably, with a `CLAUDE.md` pointer.** Its two rules hold even when
   the skill does not load:
 
@@ -92,7 +95,8 @@ ln -sfn "$PWD/skills/auto-commit" ~/.claude/skills/auto-commit
 ### Example prompts
 
 - **Choose up front:** "Implement both phases, commit as you go." That is
-  the answer; Claude does not ask again.
+  the answer; Claude does not ask again. "Run it all" still gets the
+  question.
 - **Batch:** "Rename the config key, update the docs, and bump the
   version." Three distinct changes, so Claude asks "Pause or Auto-commit?"
   first.

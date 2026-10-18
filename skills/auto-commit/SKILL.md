@@ -3,7 +3,7 @@ name: auto-commit
 description: "Opt-in Auto-commit mode: ask once, then commit each finished logical change with its suggested message and continue, stopping on gaps or failures. Load before approving or executing a plan, before a phased plan or roadmap phase, when the user asks for two or more distinct changes, or when the user says \"auto-commit\", \"unattended\", \"run it all\", \"commit as you go\", or \"don't stop between phases\"."
 ---
 
-# Auto-commit v1.2.0
+# Auto-commit v1.2.1
 
 By default Claude never commits unless asked: it finishes a logical change,
 suggests a commit message, and waits. That is **Pause** mode. **Auto-commit**
@@ -20,9 +20,12 @@ Ask once, at a natural decision point:
 - **Before executing a phased plan** that does not record a run mode yet.
 - **When the user asks for two or more distinct changes** in one request.
 
-A single small task skips the question and keeps the normal pause. If the
-user already said "auto-commit", "commit as you go" or similar, that is the
-answer; do not ask again.
+A single small task skips the question and keeps the normal pause. Some
+trigger phrases answer the question, and some only load this skill:
+
+- **Answers:** "auto-commit", "commit as you go", "don't stop between
+  phases". Do not ask again.
+- **Load only:** "unattended", "run it all". Still ask.
 
 ## The question
 
