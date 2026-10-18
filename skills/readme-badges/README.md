@@ -3,20 +3,44 @@
 An [agent skill](https://skills.sh) that adds a badge block to a README, or
 audits and repairs an existing one, in one consistent HTML format.
 
-What it does:
+## What it is
 
-- Asks which badges you want every time, with the ones it detected in the
-  repo pre-marked.
-- Works in three modes: **add** a new block, **add + repair** an existing
-  one, or **audit** it and report without writing.
-- Offers a catalog of runtime and tooling, repo meta, package registry, and
-  quality/CI badges.
-- Normalizes every badge to `flat-square`, `alt` before `src`, and `></a>`
-  closings, so badges sit side by side without gaps.
-- Verifies the image, the backing service, and the link of every badge, and
-  lets you keep, drop, or fix one that fails.
-- Previews the rendered block, plus a diff for an existing README, before
-  writing anything.
+- **Asks which badges** you want every time, with the ones it detected in
+  the repo pre-marked.
+- Works in **three modes**: **add** a new block, **add + repair** an
+  existing one, or **audit** it and report without writing.
+- **Offers a catalog** of runtime and tooling, repo meta, package registry,
+  and quality/CI badges.
+- **Normalizes** every badge to `flat-square`, `alt` before `src`, and
+  `></a>` closings, so badges sit side by side without gaps.
+- **Verifies** the image, the backing service, and the link of every badge,
+  and lets you keep, drop, or fix one that fails.
+- **Previews** the rendered block, plus a diff for an existing README,
+  before writing anything.
+
+## What it is not
+
+- **Not a CI or service setup tool.** It badges what already exists: a
+  workflow file, a published package, a qlty project. A missing service
+  fails the check, and you decide keep, drop, or fix.
+- **Not a badge designer.** New badges are filled from the catalog's
+  templates, in `flat-square`. A custom badge it finds is verified and
+  kept, its URL left alone.
+- **Not a silent editor.** It writes only after you approve the preview;
+  audit writes nothing, and removing a badge always needs your yes.
+
+## When not to use
+
+- **A private repo, for GitHub badges** → they render `repo not found`
+  until the repo is public; Claude warns you before you pick them.
+- **A repo not hosted on GitHub** → Claude asks for owner/repo and offers
+  only static and local-link badges.
+- **Badges outside a README,** such as a docs site or package page → out
+  of scope; the skill edits the badge block between a README's H1 and its
+  first H2.
+
+**Negative example:** "Set up a GitHub Actions test workflow" will not load
+it; it badges workflows that exist, it does not write them.
 
 ## Install
 
@@ -32,11 +56,39 @@ ln -sfn "$PWD/skills/readme-badges" ~/.claude/skills/readme-badges
 
 ## Usage
 
-Just talk to Claude:
+### How it loads
 
-- "Add badges to the README."
-- "Audit my badges."
-- "The npm badge is broken."
+- **By description match.** Ask to add badges or shields, to check, fix,
+  or tidy existing badges, or report a broken one.
+- **By name, always.** `/readme-badges …` or "use the readme-badges
+  skill".
+- **What Claude asks back:** add + repair or audit, when a block exists
+  and you did not say; which badges, every time, from the catalog with
+  `[present]` and `[detected]` marks; where a new block goes; keep, drop,
+  or fix for each failing badge; and approval of the preview before
+  writing. It also asks for the README path or owner/repo when it cannot
+  find them.
+
+### Example prompts
+
+- **Add:** "Add badges to the README." With no block yet, Claude shows the
+  badge picker first, then asks where the block goes.
+- **Add + repair:** "Add an npm badge and tidy the rest." / "Convert my
+  Markdown badges to HTML." It converts Markdown badges only on your yes.
+- **Audit:** "Audit my badges." Claude replies with one table and writes
+  nothing.
+- **Broken badge:** "The npm badge is broken."
+- **By name:** "/readme-badges add a CI badge for the test workflow."
+
+### Walkthrough
+
+1. **Ask.** "Add badges to the README."
+2. **Pick.** Claude shows the catalog with `[detected]` marks; name the
+   badges, then where the block goes.
+3. **Verify.** It checks each badge's image, service, and link; for a
+   failure, choose keep, drop, or fix.
+4. **Approve.** It shows the rendered block and, for an existing README, a
+   diff. It writes only after your yes, then confirms `git diff` matches.
 
 A block it writes looks like this:
 
