@@ -26,7 +26,9 @@ that removes those round trips.
 ## What it is not
 
 - **Not a push or PR tool.** It never pushes, amends, forces, rebases,
-  resets, deletes branches, or skips hooks; you push and open the PR.
+  deletes branches, or skips hooks; you push and open the PR. The only
+  reset it runs is the soft undo of the run, on your request and after you
+  confirm.
 - **Not a standing setting.** The choice is never saved to memory; it lasts
   for one plan or one batch of changes, then Pause returns.
 - **Not a session runner.** In a roadmap it commits the phase, writes the
@@ -100,6 +102,8 @@ ln -sfn "$PWD/skills/auto-commit" ~/.claude/skills/auto-commit
 - **Roadmap phase:** "/auto-commit implement phase 3 of
   .claude/plans/<topic>/roadmap.md." It commits the phase, writes the
   outcome, and stops.
+- **Undo:** "Undo the run." Claude shows `git reset --soft <base>` and the
+  commits it drops, and runs it after you confirm; the changes stay staged.
 
 ### Walkthrough
 

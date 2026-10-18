@@ -3,7 +3,7 @@ name: auto-commit
 description: "Opt-in Auto-commit mode: ask once, then commit each finished logical change with its suggested message and continue, stopping on gaps or failures. Load before approving or executing a plan, before a phased plan or roadmap phase, when the user asks for two or more distinct changes, or when the user says \"auto-commit\", \"unattended\", \"run it all\", \"commit as you go\", or \"don't stop between phases\"."
 ---
 
-# Auto-commit v1.1.0
+# Auto-commit v1.2.0
 
 By default Claude never commits unless asked: it finishes a logical change,
 suggests a commit message, and waits. That is **Pause** mode. **Auto-commit**
@@ -64,9 +64,9 @@ halting it later.
 
 ## What it never authorizes
 
-Push, amend, force, `--no-verify`, reset, rebase, branch deletion, or
-anything else outward-facing or hard to undo. Those still need an explicit
-request, as in Pause mode.
+Push, amend, force, `--no-verify`, reset (except the undo below), rebase,
+branch deletion, or anything else outward-facing or hard to undo. Those
+still need an explicit request, as in Pause mode.
 
 ## Starting a run
 
@@ -110,6 +110,17 @@ Whenever the run stops or ends, report:
   from. It drops the run's commits and keeps their changes staged.
 - **Defaults chosen** for soft gaps.
 - **Blocking question,** if any, with its options and a recommendation.
+
+## Undoing the run
+
+- **"Undo the run"** (or similar) is the explicit request for the soft
+  reset.
+- **Show, then confirm.** Show `git reset --soft <base>` with the real SHA
+  and the commits it drops. Run it only after the user confirms.
+- **Never `--hard`.** The changes stay staged. Throwing them away needs its
+  own explicit request.
+- **Only from the run's last commit.** If anything moved the branch since
+  the run (new commits, a push), stop and ask.
 
 ## Scope
 
