@@ -157,6 +157,22 @@ PR at the end, see [`auto-pr`](skills/auto-pr). For logging and triaging
 issues as local files, see the [`issue-tracker`](skills/issue-tracker)
 skill.
 
+## Recommended settings
+
+Apply these by hand in `~/.claude/settings.json`. Add each key inside the
+existing top-level object; do not paste a second `{}` block.
+
+```json
+{
+  "showClearContextOnPlanAccept": true
+}
+```
+
+- **`showClearContextOnPlanAccept`:** shows the option to clear the
+  context when you accept a plan, so work starts fresh from the plan file
+  alone. The `plans-and-roadmaps` and `auto-commit` skills write their
+  stop and run-mode lines into the plan so they survive that clear.
+
 ## License
 
 [MIT](LICENSE)
