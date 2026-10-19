@@ -21,6 +21,10 @@ split into phased plans and multi-session roadmaps.
   [`auto-commit`](../auto-commit)) by committing each phase instead of
   waiting. This needs the `auto-commit` skill installed; without it, the
   plan runs in Pause and Claude says why.
+- **Honours the Auto-PR run mode** too (see [`auto-pr`](../auto-pr)):
+  Auto-commit, then push and open or update a draft PR at a clean
+  finish. Without `auto-pr`, the line runs as Auto-commit, or as Pause
+  when `auto-commit` is missing too.
 - **Writes a short stop instruction** into every phased plan and roadmap,
   so the rules hold even if approval clears the context.
 - **Carries context between sessions** through a roadmap file.

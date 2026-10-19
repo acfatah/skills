@@ -9,15 +9,18 @@ that removes those round trips.
 ## What it is
 
 - **Asks once,** at plan approval or before a batch of changes: **Pause**
-  (the default) or **Auto-commit**. Open questions about the plan go into
-  the same prompt, so they are answered before the run starts.
+  (the default) or **Auto-commit**, plus **Auto-PR** when the
+  [`auto-pr`](../auto-pr) skill is installed and its preconditions pass.
+  Open questions about the plan go into the same prompt, so they are
+  answered before the run starts.
 - **Records the choice** as a `> Run mode:` line in the plan, so it survives
   a context clear. Without a plan, it lasts for the session only.
 - **Checks the tree when a run starts.** If you have uncommitted changes,
   it lists them and asks: commit them first, stash them, or continue.
 - **In Auto-commit, commits** each finished change with its suggested
   message, staging only the files that change touched, on a topic branch.
-- **Never pushes,** amends, forces, rebases, or skips hooks.
+- **Never pushes by itself,** amends, forces, rebases, or skips hooks.
+  Pushing and draft PRs come only with Auto-PR, via `auto-pr`.
 - **Sorts gaps** into soft (default chosen and recorded), hard (task parked,
   dependents blocked) and unsafe (stop).
 - **Ends every run with a report:** commits, the undo command, defaults
@@ -25,10 +28,11 @@ that removes those round trips.
 
 ## What it is not
 
-- **Not a push or PR tool.** It never pushes, amends, forces, rebases,
-  deletes branches, or skips hooks; you push and open the PR. The only
-  reset it runs is the soft undo of the run, on your request and after you
-  confirm.
+- **Not a push or PR tool by itself.** It never pushes, opens PRs,
+  amends, forces, rebases, deletes branches, or skips hooks; you push and
+  open the PR, or choose Auto-PR and let [`auto-pr`](../auto-pr) do it.
+  The only reset it runs is the soft undo of the run, on your request and
+  after you confirm.
 - **Not a standing setting.** The choice is never saved to memory; it lasts
   for one plan or one batch of changes, then Pause returns.
 - **Not a session runner.** In a roadmap it commits the phase, writes the
@@ -84,7 +88,8 @@ ln -sfn "$PWD/skills/auto-commit" ~/.claude/skills/auto-commit
 
   Before approving or executing a plan, or when the user asks for several
   distinct changes, load the `auto-commit` skill. Two rules hold even
-  without it: Pause is the default, and Auto-commit never pushes.
+  without it: Pause is the default, and only Auto-PR pushes, and only to
+  the branch's upstream; see the `auto-pr` skill.
   ```
 
 - **By name, always.** `/auto-commit …` or "use the auto-commit skill".
@@ -121,7 +126,10 @@ ln -sfn "$PWD/skills/auto-commit" ~/.claude/skills/auto-commit
 
 Gotchas:
 
-- **Nothing is pushed.** Review the branch, then push or open a PR yourself.
+- **Nothing is pushed unless you choose Auto-PR.** Otherwise review the
+  branch, then push or open a PR yourself.
+- **Undo stops at the remote.** `git reset --soft` cannot undo commits
+  that Auto-PR already pushed.
 - **Your own edits stop the run.** Changes in the working tree that Claude
   did not make are treated as a hard gap, so editing files mid-run halts it.
 - **A task that touches a file you had already edited stops the run.** If
