@@ -3,7 +3,7 @@ name: auto-commit
 description: "Opt-in Auto-commit mode: ask once, then commit each finished logical change with its suggested message and continue, stopping on gaps or failures. Load before approving or executing a plan, before a phased plan or roadmap phase, when the user asks for two or more distinct changes, or when the user says \"auto-commit\", \"unattended\", \"run it all\", \"commit as you go\", or \"don't stop between phases\"."
 ---
 
-# Auto-commit v1.2.1
+# Auto-commit v1.3.0
 
 By default Claude never commits unless asked: it finishes a logical change,
 suggests a commit message, and waits. That is **Pause** mode. **Auto-commit**
@@ -29,12 +29,19 @@ trigger phrases answer the question, and some only load this skill:
 
 ## The question
 
-Offer exactly two options, Pause first:
+Offer the options in this order, Pause first:
 
 - **Pause** (default): stop after each logical change or phase, show the
   commit message, and wait.
 - **Auto-commit**: commit each change with its message and continue; stop on
   any gap.
+- **Auto-PR**: Auto-commit, then push the branch and open or update a draft
+  PR after a clean finish. Offer it only when the `auto-pr` skill is
+  installed and its preconditions pass. Otherwise offer the first two and
+  say in one line why Auto-PR is hidden.
+
+**Hand-off.** When the user picks Auto-PR, or a plan's run-mode line says
+Auto-PR, load the `auto-pr` skill. Its rules add to this one.
 
 **Pre-flight.** Put every open question about the plan in the same
 AskUserQuestion call, so gaps are answered before the run starts instead of
@@ -67,9 +74,10 @@ halting it later.
 
 ## What it never authorizes
 
-Push, amend, force, `--no-verify`, reset (except the undo below), rebase,
-branch deletion, or anything else outward-facing or hard to undo. Those
-still need an explicit request, as in Pause mode.
+Push, opening or updating a PR, amend, force, `--no-verify`, reset (except
+the undo below), rebase, branch deletion, or anything else outward-facing or
+hard to undo. Those still need an explicit request, as in Pause mode. The
+exception is push and draft PRs under Auto-PR; see the `auto-pr` skill.
 
 ## Starting a run
 
@@ -110,7 +118,8 @@ Whenever the run stops or ends, report:
 
 - **Commits:** short SHA and subject of each.
 - **Undo:** `git reset --soft <base>`, with the real SHA the run started
-  from. It drops the run's commits and keeps their changes staged.
+  from. It drops the run's commits and keeps their changes staged. After
+  an Auto-PR push, it no longer reaches them; see the `auto-pr` skill.
 - **Defaults chosen** for soft gaps.
 - **Blocking question,** if any, with its options and a recommendation.
 
@@ -124,6 +133,9 @@ Whenever the run stops or ends, report:
   own explicit request.
 - **Only from the run's last commit.** If anything moved the branch since
   the run (new commits, a push), stop and ask.
+- **Pushed commits are out of reach.** `git reset --soft` cannot undo
+  commits that Auto-PR already pushed. Stop and ask, as for any moved
+  branch.
 
 ## Scope
 

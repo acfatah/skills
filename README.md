@@ -26,7 +26,7 @@ problem‑solving.
 
 | Skill | Description |
 |---|---|
-| [auto-commit](skills/auto-commit) | Opt-in Auto-commit mode: commit each finished change or phase with its message and continue, stopping on gaps. Never pushes. |
+| [auto-commit](skills/auto-commit) | Opt-in Auto-commit mode: commit each finished change or phase with its message and continue, stopping on gaps. Pushes only in Auto-PR mode, via auto-pr. |
 | [auto-pr](skills/auto-pr) | Opt-in Auto-PR mode on top of auto-commit: after a clean finish, push the branch to its upstream and open or update a draft PR. |
 | [issue-tracker](skills/issue-tracker) | Track issues as local files in `.claude/issues/`, with triage, milestones, sub-issues, and promotion to GitHub Issues and Projects. |
 | [plans-and-roadmaps](skills/plans-and-roadmaps) | Rules for plan documents: file location, progress stamps, state directories, phased plans, and multi-session roadmaps. |
@@ -138,8 +138,9 @@ the `VERSION` constant in its `.js` file, the one file users install.
 
 [`claude/CLAUDE.md`](claude/CLAUDE.md) holds my global instructions for
 Claude Code: response style, line width, PR and commit conventions, and
-pointers to the `plans-and-roadmaps`, `auto-commit` and `issue-tracker`
-skills. Claude Code loads it from `~/.claude/CLAUDE.md`, so link it there:
+pointers to the `plans-and-roadmaps`, `auto-commit`, `auto-pr` and
+`issue-tracker` skills. Claude Code loads it from `~/.claude/CLAUDE.md`,
+so link it there:
 
 ```bash
 ln -sfn "$PWD/claude/CLAUDE.md" ~/.claude/CLAUDE.md
@@ -150,7 +151,8 @@ This replaces any existing `~/.claude/CLAUDE.md`, so back that up first.
 For plan documents, phased plans and the roadmap workflow, see the
 [`plans-and-roadmaps`](skills/plans-and-roadmaps) skill. To let Claude
 commit each finished change or phase instead of waiting, see the
-[`auto-commit`](skills/auto-commit) skill. For logging and triaging
+[`auto-commit`](skills/auto-commit) skill; to also push and open a draft
+PR at the end, see [`auto-pr`](skills/auto-pr). For logging and triaging
 issues as local files, see the [`issue-tracker`](skills/issue-tracker)
 skill.
 
