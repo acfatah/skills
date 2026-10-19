@@ -25,6 +25,11 @@ split into phased plans and multi-session roadmaps.
   Auto-commit, then push and open or update a draft PR at a clean
   finish. Without `auto-pr`, the line runs as Auto-commit, or as Pause
   when `auto-commit` is missing too.
+- **Offers a worktree at plan approval,** in the same prompt as the
+  run-mode question. No worktree is the default. A worktree branches from
+  the current HEAD as `<type>/<topic>` under `.claude/worktrees/`, and can
+  carry uncommitted changes over by copy or move. The choice is written
+  into the plan, so it survives a context clear.
 - **Writes a short stop instruction** into every phased plan and roadmap,
   so the rules hold even if approval clears the context.
 - **Carries context between sessions** through a roadmap file.
@@ -85,13 +90,24 @@ ln -sfn "$PWD/skills/plans-and-roadmaps" ~/.claude/skills/plans-and-roadmaps
   `plans-and-roadmaps` skill. Two rules hold even without it: keep the
   plan-mode file in `~/.claude/plans/`, and commit plans only when
   asked.
+
+  ## Worktrees
+
+  Before a plan is approved or executed, the `plans-and-roadmaps` skill
+  asks whether to run it in a worktree. Without a plan, when the user asks
+  for two or more distinct changes in a git repo, load that skill and ask
+  the same question, in the same prompt as the auto-commit run-mode
+  question. Two rules hold even without it: No worktree is the default,
+  and never exit or remove a worktree unless asked.
   ```
 
 - **By name, always.** `/plans-and-roadmaps …` or "use the
   plans-and-roadmaps skill".
 - **The plan carries its own stop line,** so approval that clears the
   context still stops at each phase.
-- **What Claude asks back:** when a link name or `roadmap.md` is taken;
+- **What Claude asks back:** at plan approval, whether to run the plan in
+  a worktree, and, with a dirty tree, whether to leave, copy or move the
+  uncommitted changes; when a link name or `roadmap.md` is taken;
   before moving a tracked plan; when an earlier phase was left
   uncommitted (commit it, or combine the phases); before migrating legacy
   `PLAN_IN_PROGRESS-*` names.
@@ -103,6 +119,8 @@ ln -sfn "$PWD/skills/plans-and-roadmaps" ~/.claude/skills/plans-and-roadmaps
 - **Roadmap:** "Make a roadmap for moving to Postgres." / "Plan phase 2
   of .claude/plans/postgres/roadmap.md."
 - **Run:** "Implement the plan." Claude stamps each step as it finishes.
+- **Worktree:** pick "Worktree from HEAD" at approval. Claude creates
+  `feat/<topic>` under `.claude/worktrees/` and works there.
 - **Shelve:** "Pause this plan: waiting on the API key." / "Drop the
   cache plan, it's obsolete." It moves to `paused/` or `archived/` only
   when you ask; a linked plan becomes a real copy.
@@ -154,5 +172,16 @@ Gotchas:
   the docs don't say whether an edit resets the clock. Shelving a plan?
   Say "pause it" so it is copied into `paused/`, or raise
   `cleanupPeriodDays`.
+
+- **A worktree starts from local HEAD,** not `origin/main`, and ignores
+  `worktree.baseRef`.
+- **Plan files stay in the main checkout,** under `.claude/plans/` there,
+  so removing the worktree cannot delete them. Writing them from inside
+  the worktree may ask for permission.
+- **Auto-PR is hidden on a new worktree branch:** it has no upstream yet.
+  Run `git push -u origin <branch>` first.
+- **Leaving and removing the worktree is yours.** Claude stays in it and
+  never removes it unless asked; after the merge, use
+  [`post-merge-cleanup`](../post-merge-cleanup).
 
 The full rules are in [`SKILL.md`](SKILL.md).

@@ -29,7 +29,7 @@ problem‑solving.
 | [auto-commit](skills/auto-commit) | Opt-in Auto-commit mode: commit each finished change or phase with its message and continue, stopping on gaps. Pushes only in Auto-PR mode, via auto-pr. |
 | [auto-pr](skills/auto-pr) | Opt-in Auto-PR mode on top of auto-commit: after a clean finish, push the branch to its upstream and open or update a draft PR. |
 | [issue-tracker](skills/issue-tracker) | Track issues as local files in `.claude/issues/`, with triage, milestones, sub-issues, and promotion to GitHub Issues and Projects. |
-| [plans-and-roadmaps](skills/plans-and-roadmaps) | Rules for plan documents: file location, progress stamps, state directories, phased plans, and multi-session roadmaps. |
+| [plans-and-roadmaps](skills/plans-and-roadmaps) | Rules for plan documents: file location, whether a plan runs in a worktree, progress stamps, state directories, phased plans, and multi-session roadmaps. |
 | [post-merge-cleanup](skills/post-merge-cleanup) | After a PR merges, remove its worktree, local branch and remote branch, after safety checks and one confirmation. |
 | [readme-badges](skills/readme-badges) | Add, audit, or repair a README's badge block: shields.io and qlty badges in one HTML format, each verified before writing. |
 | [windows-screenshots](skills/windows-screenshots) | Locate, list, and read Windows screenshots (Win+PrtScn, Snipping Tool) from WSL or native Windows shells. |
@@ -138,10 +138,10 @@ the `VERSION` constant in its `.js` file, the one file users install.
 ## Claude Code instructions
 
 [`claude/CLAUDE.md`](claude/CLAUDE.md) holds my global instructions for
-Claude Code: response style, line width, PR and commit conventions, and
-pointers to the `plans-and-roadmaps`, `auto-commit`, `auto-pr` and
-`issue-tracker` skills. Claude Code loads it from `~/.claude/CLAUDE.md`,
-so link it there:
+Claude Code: response style, line width, PR and commit conventions, a
+worktree prompt, and pointers to the `plans-and-roadmaps`, `auto-commit`,
+`auto-pr` and `issue-tracker` skills. Claude Code loads it from
+`~/.claude/CLAUDE.md`, so link it there:
 
 ```bash
 ln -sfn "$PWD/claude/CLAUDE.md" ~/.claude/CLAUDE.md
