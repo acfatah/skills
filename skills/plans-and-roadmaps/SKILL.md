@@ -3,7 +3,7 @@ name: plans-and-roadmaps
 description: "Rules for plan documents and roadmaps: where plan files live, progress stamps, state directories, phased plans, multi-session roadmaps. Load before writing, executing, stamping, or moving a plan: the plan-mode file, any .md under .claude/plans/, or a PLAN*.md / TODO.md being executed."
 ---
 
-# Plans and Roadmaps v1.4.0
+# Plans and Roadmaps v1.5.0
 
 These rules apply to the plan-mode plan file, any `.md` under a
 `.claude/plans/` directory, and any `PLAN*.md` or `TODO.md` you are executing
@@ -219,8 +219,9 @@ can be copied verbatim.
   `git diff --stat`); a plan-time draft often drifts from the real diff.
 - The message is a suggestion, not an instruction to commit. Never run
   `git commit` unless the user explicitly asks, or the plan's run-mode line
-  says Auto-commit (see the `auto-commit` skill); plan approval, "proceed"
-  and "go ahead" are not requests to commit.
+  says Auto-commit or Auto-PR (see the `auto-commit` and `auto-pr`
+  skills); plan approval, "proceed" and "go ahead" are not requests to
+  commit.
 - Skip the commit message when the plan's changes land outside any git
   repo.
 
@@ -246,6 +247,12 @@ A plan with phases gets one commit per phase:
   under it and overrides only the waiting. If the `auto-commit` skill is
   not installed, treat the line as Pause: stop and wait as usual, and tell
   the user once why. Its safeguards live only in that skill.
+- **Auto-PR run mode.** The line
+  `> Run mode: Auto-PR (upstream: …)` runs as Auto-commit, then follows
+  the `auto-pr` skill at a clean finish: push the branch and open or
+  update a draft PR. If `auto-pr` is not installed, treat the line as
+  Auto-commit when `auto-commit` is installed, else as Pause, and tell the
+  user once why.
 - **Write the stop rule into the plan.** Approval can clear the context and
   start work from the plan alone, without this skill. So every phased plan
   carries this line under its title, with the real plan-mode path (a
@@ -266,8 +273,8 @@ Handle these cases:
   messages into the later phase's section, with a body that lists both
   phases, and mark the earlier section `(merged into Phase N)`. The extra
   changes may instead be the user's unrelated edits, so ask; never assume
-  which it is. In Auto-commit run mode, such changes are a hard gap: stop
-  and ask the same way, and never commit them.
+  which it is. In Auto-commit or Auto-PR run mode, such changes are a hard
+  gap: stop and ask the same way, and never commit them.
 - **Phase too small for its own commit.** Mark the heading
   `(no separate commit)` when writing the plan, and omit its message
   section. The next phase's message covers both, and its body names each
@@ -315,6 +322,9 @@ so the roadmap must hold:
 - `## Goal` and `## Decisions`: each choice, its reason, and the options
   rejected. Write these while planning the roadmap, not afterwards.
 - The `git status --short` baseline from Phased plans.
+- **One topic branch** for all phases, recorded under `## Decisions`,
+  unless the roadmap says its phases merge on their own. Under Auto-PR the
+  phases then share one draft PR.
 - One `## Phase N. <title>` per phase, one commit each, with scope and
   done-criteria. No `Step N.M` items yet; the phase plan writes those.
 - Under each finished phase, `### Phase N outcome`: what actually changed
@@ -391,7 +401,9 @@ into `<topic>/roadmap.md`, never over an existing file or link:
    Later edits, such as a revised commit message, go to the copy.
 4. Stop, show the phase's commit message, and wait, per Phased plans. In
    Auto-commit run mode, commit the phase with its message first, then
-   stop. Never plan or start the next phase.
+   stop. In Auto-PR run mode, commit, write the outcome, push and open or
+   update the PR (see the `auto-pr` skill), then stop. Never plan or start
+   the next phase.
 
 Phase plans stay in `<topic>/`, as real files, until the whole roadmap is
 complete.
