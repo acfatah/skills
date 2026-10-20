@@ -1,0 +1,15 @@
+{
+  "name": "issue-tracker-cli",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "build": "bun build src/cli.ts --target=bun --outfile scripts/issues.js",
+    "test": "bun test",
+    "typecheck": "tsc --noEmit"
+  },
+  "devDependencies": {
+    "@tursodatabase/serverless": "1.4.1",
+    "@types/bun": "1.4.3",
+    "typescript": "7.0.2"
+  }
+}
