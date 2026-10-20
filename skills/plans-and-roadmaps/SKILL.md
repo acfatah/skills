@@ -1,9 +1,9 @@
 ---
 name: plans-and-roadmaps
-description: "Rules for plan documents and roadmaps: where plan files live, whether a plan runs in a worktree, progress stamps, state directories, phased plans, multi-session roadmaps. Load before writing, executing, stamping, or moving a plan: the plan-mode file, any .md under .claude/plans/, or a PLAN*.md / TODO.md being executed."
+description: "Rules for plan documents and roadmaps: where plan files live, whether a plan runs in a worktree, which session a plan is written in, progress stamps, state directories, phased plans, multi-session roadmaps. Load before writing, executing, stamping, or moving a plan: the plan-mode file, any .md under .claude/plans/, or a PLAN*.md / TODO.md being executed."
 ---
 
-# Plans and Roadmaps v1.6.0
+# Plans and Roadmaps v1.7.0
 
 These rules apply to the plan-mode plan file, any `.md` under a
 `.claude/plans/` directory, and any `PLAN*.md` or `TODO.md` you are executing
@@ -183,6 +183,55 @@ Never call `ExitWorktree` or remove the worktree unless asked.
 - **Auto-PR:** a new worktree branch has no upstream, so `auto-pr` stays
   hidden with its usual line saying to run `git push -u origin <branch>`
   first.
+
+## Plan where the tools load
+
+Some tools load only in a session started in a given directory, and only
+at startup. For example, a project `.mcp.json` loads only from the launch
+directory. Nothing loads them mid-session, so a plan written elsewhere is
+drafted without them, and its approval prompt appears in a session that
+must not run it.
+
+**When:** before entering plan mode, or as soon as it shows up. The
+trigger is work that needs such a tool while this session does not have
+it: it is missing from `/mcp`, or its `.mcp.json` sits in another
+directory.
+
+**Skip** when the work does not need the tool, or the current session
+already has it.
+
+**Hand off instead of planning:**
+
+1. **Setup only.** Do only what the new session needs to start. If the
+   directory does not exist yet, for example a new worktree, ask the
+   worktree question now and create it as Worktrees describes. Nothing
+   else.
+2. **Write a brief** to `<main>/.claude/handoffs/<topic>.md`. It holds
+   the goal, the decisions so far with their reasons, findings with
+   paths, open questions, and what the new session must check with the
+   tool. Git-ignore `.claude/handoffs/` via `info/exclude`, as for
+   `.claude/plans/`.
+3. **End the turn** with the launch command and the first prompt. The
+   command is one line, with absolute paths and `--add-dir` for every
+   other directory the work edits. The prompt is: "Enter plan mode and
+   plan from `<brief path>`."
+
+- **Not a plan.** Never put the brief under `.claude/plans/`, or write it
+  as an approvable plan. A fresh session could otherwise treat it as
+  approved and start executing.
+- **Already in plan mode** when this shows up: plan mode can only write
+  the plan file, so write the brief there, under this stop line:
+
+      > Handoff brief: do not execute here. After approval, copy it to <brief path> and give the launch command.
+
+  Then call ExitPlanMode, and after approval do only that.
+- **In the new session:** read the brief and confirm the tool is loaded.
+  Then plan as usual, which asks the worktree and run-mode questions.
+  Quote the brief in the plan's `## Context`. Once the plan is approved,
+  delete the brief; the plan now holds its content.
+- **Roadmaps:** record the launch directory under `## Decisions`, so
+  every phase session starts there.
+- **Do not claim** the tool is loaded in the current session.
 
 ## Progress marking
 

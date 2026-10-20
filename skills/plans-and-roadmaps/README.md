@@ -30,6 +30,9 @@ split into phased plans and multi-session roadmaps.
   the current HEAD as `<type>/<topic>` under `.claude/worktrees/`, and can
   carry uncommitted changes over by copy or move. The choice is written
   into the plan, so it survives a context clear.
+- **Plans in the session that has the tools.** When a tool, such as an
+  MCP server, loads only in a session started from another directory,
+  it hands off a brief and a launch command instead of planning here.
 - **Writes a short stop instruction** into every phased plan and roadmap,
   so the rules hold even if approval clears the context.
 - **Carries context between sessions** through a roadmap file.
@@ -89,7 +92,9 @@ ln -sfn "$PWD/skills/plans-and-roadmaps" ~/.claude/skills/plans-and-roadmaps
   file, `.claude/plans/*.md`, `PLAN*.md`, `TODO.md`), load the
   `plans-and-roadmaps` skill. Two rules hold even without it: keep the
   plan-mode file in `~/.claude/plans/`, and commit plans only when
-  asked.
+  asked. If the work needs a tool this session can't load, such as an
+  MCP server from another directory's `.mcp.json`, hand off before
+  planning (see the skill).
 
   ## Worktrees
 
@@ -105,11 +110,12 @@ ln -sfn "$PWD/skills/plans-and-roadmaps" ~/.claude/skills/plans-and-roadmaps
   plans-and-roadmaps skill".
 - **The plan carries its own stop line,** so approval that clears the
   context still stops at each phase.
-- **What Claude asks back:** at plan approval, whether to run the plan in
-  a worktree, and, with a dirty tree, whether to leave, copy or move the
-  uncommitted changes; when a link name or `roadmap.md` is taken;
-  before moving a tracked plan; when an earlier phase was left
-  uncommitted (commit it, or combine the phases); before migrating legacy
+- **What Claude asks back:** at plan approval, whether to run the plan in a
+  worktree, and, with a dirty tree, whether to leave, copy or move the
+  uncommitted changes; at a handoff, the worktree question early, when the new
+  session needs a worktree that does not exist yet; when a link name or
+  `roadmap.md` is taken; before moving a tracked plan; when an earlier phase was
+  left uncommitted (commit it, or combine the phases); before migrating legacy
   `PLAN_IN_PROGRESS-*` names.
 
 ### Example prompts
@@ -121,6 +127,8 @@ ln -sfn "$PWD/skills/plans-and-roadmaps" ~/.claude/skills/plans-and-roadmaps
 - **Run:** "Implement the plan." Claude stamps each step as it finishes.
 - **Worktree:** pick "Worktree from HEAD" at approval. Claude creates
   `feat/<topic>` under `.claude/worktrees/` and works there.
+- **Handoff:** "Plan the Boost-side fix" while Boost isn't loaded. Claude
+  writes a brief and ends with a launch command; the new session plans.
 - **Shelve:** "Pause this plan: waiting on the API key." / "Drop the
   cache plan, it's obsolete." It moves to `paused/` or `archived/` only
   when you ask; a linked plan becomes a real copy.
@@ -172,6 +180,12 @@ Gotchas:
   the docs don't say whether an edit resets the clock. Shelving a plan?
   Say "pause it" so it is copied into `paused/`, or raise
   `cleanupPeriodDays`.
+
+- **A handoff brief lives in `.claude/handoffs/`,** not `.claude/plans/`,
+  so a fresh session never mistakes it for an approved plan.
+- **Approving a handoff brief in plan mode only copies it** to
+  `.claude/handoffs/` and gives the launch command. Planning happens in
+  the new session.
 
 - **A worktree starts from local HEAD,** not `origin/main`, and ignores
   `worktree.baseRef`.
