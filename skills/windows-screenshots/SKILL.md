@@ -3,7 +3,7 @@ name: windows-screenshots
 description: Locate, list, and read the user's Windows screenshots (Win+PrtScn, Snipping Tool) from WSL or native Windows shells; the folder location comes from the SCREENSHOTS environment variable. Use whenever the user mentions a screenshot they took or wants one found, viewed, compared, or attached - "look at my screenshot", "check the latest screenshot", "list today's screenshots", "the screenshot I just took", "find that capture from yesterday" - even if they say "screen capture", "snip", or "the image I just captured" instead of "screenshot".
 ---
 
-# Windows Screenshots v1.0.1
+# Windows Screenshots v1.0.2
 
 Windows screenshots (Win+PrtScn, Snipping Tool) save to the user's Screenshots folder, usually OneDrive-managed. This skill locates and reads them from WSL or native Windows.
 
@@ -56,7 +56,7 @@ The folder holds years of captures. When the user asks about "my screenshot" the
 Files are named `Screenshot YYYY-MM-DD HHMMSS.png`, so filtering by filename is reliable even when OneDrive sync perturbs modification times:
 
 ```bash
-ls -t "$SHOTS"/"Screenshot $(date +%Y-%m-%d)"*.png 2>/dev/null
+ls "$SHOTS"/"Screenshot $(date +%Y-%m-%d)"*.png 2>/dev/null | sort -r
 ```
 
 ```powershell
@@ -68,11 +68,11 @@ From cmd, delegate to PowerShell (`powershell -NoProfile -Command "..."`) - cmd 
 If nothing matches today, do not stop there: say no screenshots were taken today, show the 5 newest overall, and ask which one they meant.
 
 ```bash
-ls -t "$SHOTS"/*.png | head -5
+ls "$SHOTS"/"Screenshot "2*.png | sort -r | head -5
 ```
 
 ```powershell
-Get-ChildItem "$env:SCREENSHOTS" -Filter *.png | Sort-Object LastWriteTime -Descending | Select-Object -First 5
+Get-ChildItem "$env:SCREENSHOTS" -Filter "Screenshot 2*.png" | Sort-Object Name -Descending | Select-Object -First 5
 ```
 
 ## Picking the "latest" screenshot
