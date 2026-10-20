@@ -3,7 +3,7 @@
 GitHub detail for the [`issue-tracker`](../SKILL.md) skill. Every write here
 needs the user's agreement first.
 
-A `CLAUDE.md` that declares the issues folder may also name the target
+A `CLAUDE.md` that declares the issues directory may also name the target
 repository for each issue; follow it.
 
 ## Requirements
@@ -17,12 +17,16 @@ repository for each issue; follow it.
 
 Only when the user asks:
 
-1. **Labels:** create any that are missing; see [Labels](#labels).
-2. **Body:** write the issue body to a temp file **without its
-   `## Sub-issues` section**. Local ids like `0008` mean nothing on GitHub;
-   step 5 adds the real links. If an older body is hard-wrapped, join each
+1. **Build it:** `promote <id> --dry-run` prints the title, labels,
+   milestone, Project Status, labels that may need creating, the parent's
+   and children's GitHub links, and the body (with notes). Add `--json` for
+   fields. The CLI never runs `gh`.
+2. **Show it and ask.** Every write below needs the user's agreement.
+3. **Labels:** create any that are missing; see [Labels](#labels).
+4. **Issue:** write the printed body to a temp file. If it is
+   hard-wrapped, as bodies imported from v1 often are, join each
    paragraph's lines first; leave lists, code blocks and tables alone.
-3. **Issue:**
+   Then:
 
    ```bash
    gh issue create --title "<title>" --body-file <body.md> \
@@ -31,17 +35,16 @@ Only when the user asks:
 
    Pass `--milestone` only when the repo milestone exists; see
    [Milestones](#milestones).
-4. **Project:** add it to the `Issues` Project and set its Status; see
+5. **Project:** add it to the `Issues` Project and set its Status; see
    [Projects](#projects).
-5. **Sub-issues:** see [Sub-issues](#sub-issues).
-   - If its `parent` is already on GitHub, link it under that parent.
+6. **Sub-issues:** see [Sub-issues](#sub-issues).
+   - If its parent is already on GitHub, link it under that parent.
    - Link each child already on GitHub under it. Children still local get
      linked when they are promoted.
-6. **Local file:** set `github: <issue-url>`, `resolution: moved`, `closed`,
-   and `updated`, then move it to `closed/`.
+7. **Record it:** `close <id> --resolution moved --github <issue-url>`.
 
 From then on, **GitHub is the source of truth** for that issue. The local
-file keeps the history and the link.
+record keeps the history and the link.
 
 ## Milestones
 
@@ -54,7 +57,8 @@ gh api repos/{owner}/{repo}/milestones -f title="v1.0" \
   -f description="First public release" -f due_on="2026-12-01T00:00:00Z"
 ```
 
-Record the milestone URL in `MILESTONES.md`.
+Record the milestone URL locally:
+`milestone edit <name> --github <milestone-url>`.
 
 ## Sub-issues
 
@@ -168,7 +172,7 @@ gh project item-edit --id <item-id> --project-id <project-id> \
 ### One-way sync
 
 Sync goes **local → GitHub only**. Once promoted, GitHub owns the issue and
-the local file is a closed record with the link. Issues created directly on
+the local record is closed with the link. Issues created directly on
 GitHub stay there.
 
 ## Local to GitHub mapping
@@ -176,18 +180,17 @@ GitHub stay there.
 | Local                             | GitHub                                         |
 |-----------------------------------|------------------------------------------------|
 | `title`                           | Issue title                                    |
-| Body                              | Issue body (`--body-file`)                     |
-| Body `## Sub-issues` mirror       | Dropped; replaced by sub-issue links           |
+| Body and notes                    | Issue body (`--body-file`), notes as `## Notes` |
 | Body `## Steps` checklist         | Copied as a plain checklist                    |
 | `type`                            | Label, see [Labels](#labels)                   |
 | `priority: high`                  | Label `priority:high`                          |
 | `labels`                          | Labels with the same names                     |
 | `milestone`                       | Repo milestone with the same title             |
 | `parent`                          | Sub-issue link to the parent                   |
-| Folder `triage/`                  | Project Status `Triage`                        |
-| Folder `open/`                    | Project Status `Open`                          |
-| Folder `in-progress/`             | Project Status `In progress`                   |
-| Folder `blocked/`                 | Project Status `Blocked`                       |
+| Status `triage`                   | Project Status `Triage`                        |
+| Status `open`                     | Project Status `Open`                          |
+| Status `in-progress`              | Project Status `In progress`                   |
+| Status `blocked`                  | Project Status `Blocked`                       |
 | `resolution: done`                | Closed as `completed`, Status `Done`           |
 | `resolution: wont-fix`            | Closed as `not planned` + label `wontfix`      |
 | `resolution: invalid`             | Closed as `not planned` + label `invalid`      |
