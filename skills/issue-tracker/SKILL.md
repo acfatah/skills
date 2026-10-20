@@ -226,9 +226,10 @@ These need the user's explicit agreement every time:
 ## Turso sync
 
 Optional, per project, for the user's own machines only. The user sets up
-the databases and tokens; see the README. Then `remote enable` copies the
-local rows up (or pulls them on a second machine), and every command works
-against Turso with the local file as a mirror.
+the databases and tokens; see [`references/setup.md`](references/setup.md).
+Then `remote enable` copies the local rows up (or pulls them on a second
+machine), and every command works against Turso with the local file as a
+mirror.
 
 - **`remote status`** shows the backend, the project key, when the mirror
   was last synced, and queued entries.
