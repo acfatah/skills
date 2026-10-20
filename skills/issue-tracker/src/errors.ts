@@ -1,6 +1,12 @@
 // Every error the CLI reports on purpose. The exit code tells Claude what
 // to do next: 1 fix the command, 2 wait until online, 3 ask the user where.
 
+// Ends a message with a period unless it already ends a sentence, so
+// messages can be joined without "?." or "..".
+export function sentence(message: string): string {
+  return /[.?!]$/.test(message.trim()) ? message.trim() : `${message.trim()}.`;
+}
+
 export class CliError extends Error {
   constructor(
     message: string,

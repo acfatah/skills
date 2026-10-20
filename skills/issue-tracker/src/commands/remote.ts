@@ -1,6 +1,6 @@
 import { type Backend, openLocal } from "../backend.ts";
 import { type Config, type RemoteDb, configPath, writeConfig } from "../config.ts";
-import { Offline, UsageError, ValidationError } from "../errors.ts";
+import { Offline, UsageError, ValidationError, sentence } from "../errors.ts";
 import type { DbName } from "../ids.ts";
 import { getSync, refreshMirror } from "../mirror.ts";
 import { replay } from "../outbox.ts";
@@ -59,7 +59,7 @@ export async function remoteEnable(b: Backend, o: EnableOptions): Promise<string
           `Both the local and the Turso ${t.db} database have rows. Run export --out <file> first, then empty one side.`,
         );
       }
-      plans.push({ ...t, local, ld, copy: isEmpty(rd) && !isEmpty(ld) });
+      plans.push({ ...t, local, ld, copy: isEmpty(rd) && !isEmpty(ld), empty: isEmpty(rd) && isEmpty(ld) });
     }
     for (const p of plans) {
       if (p.copy) {
@@ -70,6 +70,8 @@ export async function remoteEnable(b: Backend, o: EnableOptions): Promise<string
           // Without the counter, a deleted top id may be reused; rare and harmless.
         }
         lines.push(`${p.db}: copied ${p.ld.issues.length} issues and ${p.ld.milestones.length} milestones to Turso.`);
+      } else if (p.empty) {
+        lines.push(`${p.db}: both sides are empty; nothing to copy.`);
       } else {
         lines.push(`${p.db}: pulled from Turso.`);
       }
@@ -110,7 +112,7 @@ export async function remoteDisable(b: Backend): Promise<string[]> {
       lines.push(`${db}: pulled a final copy from Turso.`);
     } catch (err) {
       if (err instanceof Offline) {
-        throw new Offline(`${err.message}. remote disable needs Turso to send ${outbox.read().length} queued entries and pull a final copy.`);
+        throw new Offline(`${sentence(err.message)} remote disable needs Turso to send ${outbox.read().length} queued entries and pull a final copy.`);
       }
       throw err;
     } finally {

@@ -1,6 +1,6 @@
 import { join } from "node:path";
 import { type Config, type ProjectConfig, type RemoteDb, readConfig, resolveToken } from "./config.ts";
-import { CliError, Offline } from "./errors.ts";
+import { CliError, Offline, sentence } from "./errors.ts";
 import type { DbName } from "./ids.ts";
 import { FILES, type Location, prepareFile } from "./location.ts";
 import { getSync, refreshMirror, resolvePid, setSync } from "./mirror.ts";
@@ -124,7 +124,7 @@ export class Backend {
       if (opts.queue) return await opts.queue(q);
       if (opts.write) {
         throw new Offline(
-          `${err.message}. Only new issues and notes queue offline; retry this when Turso is reachable.`,
+          `${sentence(err.message)} Only new issues and notes queue offline; retry this when Turso is reachable.`,
         );
       }
       this.offline.set(db, (await getSync(mirror, "synced_at")) ?? "never");

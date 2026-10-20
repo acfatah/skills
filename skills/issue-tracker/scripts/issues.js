@@ -13,6 +13,10 @@ import { homedir } from "os";
 import { dirname, join } from "path";
 
 // src/errors.ts
+function sentence(message) {
+  return /[.?!]$/.test(message.trim()) ? message.trim() : `${message.trim()}.`;
+}
+
 class CliError extends Error {
   exitCode;
   constructor(message, exitCode = 1) {
@@ -2338,7 +2342,7 @@ class Backend {
       if (opts.queue)
         return await opts.queue(q);
       if (opts.write) {
-        throw new Offline(`${err.message}. Only new issues and notes queue offline; retry this when Turso is reachable.`);
+        throw new Offline(`${sentence(err.message)} Only new issues and notes queue offline; retry this when Turso is reachable.`);
       }
       this.offline.set(db, await getSync(mirror, "synced_at") ?? "never");
       if (opts.offlineRead)
@@ -2603,7 +2607,7 @@ async function remoteEnable(b, o) {
       if (!isEmpty(rd) && !isEmpty(ld)) {
         throw new ValidationError(`Both the local and the Turso ${t.db} database have rows. Run export --out <file> first, then empty one side.`);
       }
-      plans.push({ ...t, local, ld, copy: isEmpty(rd) && !isEmpty(ld) });
+      plans.push({ ...t, local, ld, copy: isEmpty(rd) && !isEmpty(ld), empty: isEmpty(rd) && isEmpty(ld) });
     }
     for (const p of plans) {
       if (p.copy) {
@@ -2612,6 +2616,8 @@ async function remoteEnable(b, o) {
           await p.remote.batch(seqStmts(p.ld));
         } catch {}
         lines.push(`${p.db}: copied ${p.ld.issues.length} issues and ${p.ld.milestones.length} milestones to Turso.`);
+      } else if (p.empty) {
+        lines.push(`${p.db}: both sides are empty; nothing to copy.`);
       } else {
         lines.push(`${p.db}: pulled from Turso.`);
       }
@@ -2656,7 +2662,7 @@ async function remoteDisable(b) {
       lines.push(`${db}: pulled a final copy from Turso.`);
     } catch (err) {
       if (err instanceof Offline) {
-        throw new Offline(`${err.message}. remote disable needs Turso to send ${outbox.read().length} queued entries and pull a final copy.`);
+        throw new Offline(`${sentence(err.message)} remote disable needs Turso to send ${outbox.read().length} queued entries and pull a final copy.`);
       }
       throw err;
     } finally {

@@ -187,7 +187,7 @@ describe("Turso projects through the bundle", () => {
 
   test("offline: new and note queue with P ids, other writes exit 2, reads say how stale", async () => {
     const p = project();
-    await ok(p.enable());
+    expect((await ok(p.enable())).stdout).toContain("issues: both sides are empty; nothing to copy.");
     await ok(p.$("new", "--title", "Online", "--type", "bug"));
     p.issues.stop();
     const queued = await ok(p.$("new", "--title", "Offline one", "--type", "bug", "--label", "x"));
@@ -197,6 +197,7 @@ describe("Turso projects through the bundle", () => {
     const move = await p.$("move", "1", "open");
     expect(move.code).toBe(2);
     expect(move.stderr).toContain("Only new issues and notes queue offline");
+    expect(move.stderr).not.toMatch(/[.?!]\./);
     expect((await p.$("new", "--title", "child", "--parent", "P1")).code).toBe(1);
     const list = await ok(p.$("list"));
     expect(list.stdout).toContain("0001");
