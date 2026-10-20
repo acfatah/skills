@@ -67,3 +67,25 @@ export function run(args: string[], cwd: string, opts: { stdin?: string; env?: R
     stderr: proc.stderr.toString(),
   };
 }
+
+// Like run, but leaves the event loop free, so an in-process fake server
+// can answer the CLI.
+export async function runAsync(
+  args: string[],
+  cwd: string,
+  opts: { stdin?: string; env?: Record<string, string> } = {},
+): Promise<RunResult> {
+  const proc = Bun.spawn(["bun", BUNDLE, ...args], {
+    cwd,
+    env: { ...process.env, ...GIT_ENV, ...opts.env },
+    stdin: opts.stdin === undefined ? "ignore" : new TextEncoder().encode(opts.stdin),
+    stdout: "pipe",
+    stderr: "pipe",
+  });
+  const [stdout, stderr, code] = await Promise.all([
+    new Response(proc.stdout).text(),
+    new Response(proc.stderr).text(),
+    proc.exited,
+  ]);
+  return { code, stdout, stderr };
+}

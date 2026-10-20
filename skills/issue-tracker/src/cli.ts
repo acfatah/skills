@@ -14,9 +14,11 @@ import {
   showIssue,
 } from "./commands/issues.ts";
 import { addMilestone, closeMilestone, editMilestone, listMilestones } from "./commands/milestones.ts";
-import { CliError, UsageError } from "./errors.ts";
+import { matches, queueNew, queueNote, queuedIssues, queuedNotesOn } from "./commands/offline.ts";
+import { remoteDisable, remoteEnable, remoteStatus } from "./commands/remote.ts";
+import { CliError, Offline, UsageError } from "./errors.ts";
 import { detailText, issueJson, issueLine, milestoneLine } from "./format.ts";
-import { type DbName, formatId, parseRealId } from "./ids.ts";
+import { type DbName, formatId, parseId, parseRealId } from "./ids.ts";
 import { resolveLocation } from "./location.ts";
 import { OPEN_STATUSES, type Status, checkStatus, splitList, today } from "./model.ts";
 import { STATUSES } from "./schema.ts";
@@ -96,11 +98,20 @@ export const VERBS: Record<string, Verb> = {
         milestone: str(v, "milestone"),
         body: await readBody(v),
       };
-      const made = await ctx.backend().run(db, (s) =>
-        createIssue(s, db, input, { clientId: crypto.randomUUID(), date: today() }),
+      const opts = { clientId: crypto.randomUUID(), date: today() };
+      const made = await ctx.backend().run(
+        db,
+        async (s) => {
+          const r = await createIssue(s, db, input, opts);
+          return { id: formatId(db, r.id), status: r.status as string };
+        },
+        { write: true, queue: (q) => queueNew(q, db, input, opts) },
       );
-      const id = formatId(db, made.id);
-      print(ctx, v, { id, status: made.status }, () => `Created ${id} (${made.status}): ${title.trim()}`);
+      print(ctx, v, made, () =>
+        made.status === "queued"
+          ? `Queued ${made.id} (offline): ${title.trim()}. It gets a real id once Turso is reachable.`
+          : `Created ${made.id} (${made.status}): ${title.trim()}`,
+      );
     },
   },
 
@@ -125,20 +136,25 @@ export const VERBS: Record<string, Verb> = {
       const statusText = str(v, "status");
       const statuses: Status[] =
         statusText === "all" ? [...STATUSES] : statusText ? splitList(statusText).map(checkStatus) : OPEN_STATUSES;
-      const issues = await ctx.backend().run(db, (s) =>
-        listIssues(s, {
-          statuses,
-          type: str(v, "type"),
-          milestone: str(v, "milestone"),
-          label: str(v, "label"),
-          parent: parentText ? parseLocalRef(db, parentText) : undefined,
-        }),
-      );
+      const filters = {
+        statuses,
+        type: str(v, "type"),
+        milestone: str(v, "milestone"),
+        label: str(v, "label"),
+        parent: parentText ? parseLocalRef(db, parentText) : undefined,
+      };
+      const b = ctx.backend();
+      const issues = await b.run(db, (s) => listIssues(s, filters));
+      const queued = b.offline.has(db) ? queuedIssues(db, b.outboxFor(db)).filter((q) => matches(q.issue, filters)) : [];
+      const lines = [
+        ...issues.map((i) => issueLine(db, i)),
+        ...queued.map((q) => issueLine(db, q.issue, q.shownId)),
+      ];
       print(
         ctx,
         v,
-        issues.map((i) => issueJson(db, i)),
-        () => (issues.length ? issues.map((i) => issueLine(db, i)).join("\n") : "No matching issues."),
+        [...issues.map((i) => issueJson(db, i)), ...queued.map((q) => issueJson(db, q.issue, q.shownId))],
+        () => (lines.length ? lines.join("\n") : "No matching issues."),
       );
     },
   },
@@ -147,17 +163,36 @@ export const VERBS: Record<string, Verb> = {
     usage: ["show <id> [--json]"],
     options: { ...json },
     async run(ctx, v, pos) {
-      const { db, id } = parseRealId(onePos(pos, "id"));
-      const d = await ctx.backend().run(db, (s) => showIssue(s, db, id));
+      const ref = parseId(onePos(pos, "id"));
+      const db = ref.db;
+      const b = ctx.backend();
+      const d = await b.run(
+        db,
+        async (s, rt) => {
+          const detail = await showIssue(s, db, ref.id ?? (await rt.pid(ref.pid!)));
+          return { ...detail, shownId: undefined as string | undefined };
+        },
+        {
+          offlineRead: async (q) => {
+            if (ref.id !== undefined) {
+              const detail = await showIssue(q.mirror, db, ref.id);
+              return { ...detail, notes: [...detail.notes, ...queuedNotesOn(q.outbox, ref.id)] as typeof detail.notes, shownId: undefined };
+            }
+            const hit = queuedIssues(db, q.outbox).find((x) => x.shownId === `${db === "security" ? "S" : ""}P${ref.pid}`);
+            if (!hit) throw new UsageError(`No queued issue ${onePos(pos, "id")}.`);
+            return { issue: hit.issue, notes: hit.notes as never, children: [], shownId: hit.shownId };
+          },
+        },
+      );
       print(
         ctx,
         v,
         {
-          ...issueJson(db, d.issue),
+          ...issueJson(db, d.issue, d.shownId),
           notes: d.notes.map(({ date, text }) => ({ date, text })),
           children: d.children.map((c) => ({ ...c, id: formatId(db, c.id) })),
         },
-        () => detailText(db, d),
+        () => detailText(db, d, d.shownId),
       );
     },
   },
@@ -174,7 +209,7 @@ export const VERBS: Record<string, Verb> = {
         set[pair.slice(0, eq).trim()] = pair.slice(eq + 1);
       }
       const changes = { title: str(v, "title"), body: await readBody(v), set };
-      await ctx.backend().run(db, (s) => editIssue(s, db, id, changes, today()));
+      await ctx.backend().run(db, (s) => editIssue(s, db, id, changes, today()), { write: true });
       ctx.out(`Updated ${formatId(db, id)}.`);
     },
   },
@@ -186,7 +221,7 @@ export const VERBS: Record<string, Verb> = {
       if (pos.length !== 2) throw new UsageError("move needs <id> and a status.");
       const { db, id } = parseRealId(pos[0]!);
       const to = checkStatus(pos[1]!);
-      const from = await ctx.backend().run(db, (s) => moveIssue(s, db, id, to, str(v, "note"), today()));
+      const from = await ctx.backend().run(db, (s) => moveIssue(s, db, id, to, str(v, "note"), today()), { write: true });
       ctx.out(`Moved ${formatId(db, id)}: ${from} → ${to}.`);
     },
   },
@@ -215,7 +250,7 @@ export const VERBS: Record<string, Verb> = {
         note: str(v, "note"),
         keepChildren: Boolean(v["keep-children"]),
       };
-      await ctx.backend().run(db, (s) => closeIssue(s, db, id, opts, today()));
+      await ctx.backend().run(db, (s) => closeIssue(s, db, id, opts, today()), { write: true });
       ctx.out(`Closed ${formatId(db, id)} (${resolution}).`);
     },
   },
@@ -225,7 +260,7 @@ export const VERBS: Record<string, Verb> = {
     options: { note: { type: "string" } },
     async run(ctx, v, pos) {
       const { db, id } = parseRealId(onePos(pos, "id"));
-      const status = await ctx.backend().run(db, (s) => reopenIssue(s, db, id, str(v, "note"), today()));
+      const status = await ctx.backend().run(db, (s) => reopenIssue(s, db, id, str(v, "note"), today()), { write: true });
       ctx.out(`Reopened ${formatId(db, id)} (${status}).`);
     },
   },
@@ -235,10 +270,20 @@ export const VERBS: Record<string, Verb> = {
     options: {},
     async run(ctx, _v, pos) {
       if (pos.length < 2) throw new UsageError('note needs <id> and "text".');
-      const { db, id } = parseRealId(pos[0]!);
+      const ref = parseId(pos[0]!);
+      const db = ref.db;
       const text = pos.slice(1).join(" ");
-      await ctx.backend().run(db, (s) => addNote(s, db, id, text, { clientId: crypto.randomUUID(), date: today() }));
-      ctx.out(`Noted on ${formatId(db, id)}.`);
+      const opts = { clientId: crypto.randomUUID(), date: today() };
+      const shown = await ctx.backend().run(
+        db,
+        async (s, rt) => {
+          const id = ref.id ?? (await rt.pid(ref.pid!));
+          await addNote(s, db, id, text, opts);
+          return formatId(db, id);
+        },
+        { write: true, queue: async (q) => `${await queueNote(q, db, ref, text, opts)} (queued offline)` },
+      );
+      ctx.out(`Noted on ${shown}.`);
     },
   },
 
@@ -247,7 +292,7 @@ export const VERBS: Record<string, Verb> = {
     options: {},
     async run(ctx, _v, pos) {
       const { db, id } = parseRealId(onePos(pos, "id"));
-      await ctx.backend().run(db, (s) => deleteIssue(s, db, id));
+      await ctx.backend().run(db, (s) => deleteIssue(s, db, id), { write: true });
       ctx.out(`Deleted ${formatId(db, id)}.`);
     },
   },
@@ -270,11 +315,76 @@ export const VERBS: Record<string, Verb> = {
         return;
       }
       const name = onePos(rest, "milestone name");
-      if (action === "add") await b.run("issues", (s) => addMilestone(s, name, fields));
-      else if (action === "edit") await b.run("issues", (s) => editMilestone(s, name, fields));
-      else if (action === "close") await b.run("issues", (s) => closeMilestone(s, name));
+      if (action === "add") await b.run("issues", (s) => addMilestone(s, name, fields), { write: true });
+      else if (action === "edit") await b.run("issues", (s) => editMilestone(s, name, fields), { write: true });
+      else if (action === "close") await b.run("issues", (s) => closeMilestone(s, name), { write: true });
       else throw new UsageError("milestone needs add, list, edit, or close.");
       ctx.out(`Milestone ${name}: ${action === "add" ? "added" : action === "edit" ? "updated" : "closed"}.`);
+    },
+  },
+
+  flush: {
+    usage: ["flush"],
+    options: {},
+    async run(ctx) {
+      const b = ctx.backend();
+      const dbs = (["issues", "security"] as DbName[]).filter((db) => b.remoteFor(db));
+      if (dbs.length === 0) {
+        ctx.out("Nothing to flush: this project is local.");
+        return;
+      }
+      for (const db of dbs) {
+        try {
+          await b.run(db, async () => {}, { write: true });
+        } catch (err) {
+          if (!(err instanceof Offline)) throw err;
+          const n = b.outboxFor(db).read().length;
+          throw new Offline(`Turso is unreachable; ${n} ${db} entries stay queued in ${b.outboxFor(db).path}.`);
+        }
+      }
+      ctx.out("Outbox empty; mirror refreshed.");
+    },
+  },
+
+  remote: {
+    usage: [
+      "remote enable --issues-url <libsql://…> --token-env <VAR>",
+      "    [--security-url <libsql://…> --security-token-env <VAR>] [--slug <name>]",
+      "remote disable",
+      "remote status [--json]",
+    ],
+    options: {
+      "issues-url": { type: "string" },
+      "token-env": { type: "string" },
+      "security-url": { type: "string" },
+      "security-token-env": { type: "string" },
+      slug: { type: "string" },
+      ...json,
+    },
+    async run(ctx, v, pos) {
+      const b = ctx.backend();
+      const [action] = pos;
+      if (action === "enable") {
+        const lines = await remoteEnable(b, {
+          issuesUrl: str(v, "issues-url"),
+          tokenEnv: str(v, "token-env"),
+          securityUrl: str(v, "security-url"),
+          securityTokenEnv: str(v, "security-token-env"),
+          slug: str(v, "slug"),
+        });
+        ctx.out(lines.join("\n"));
+      } else if (action === "disable") {
+        ctx.out((await remoteDisable(b)).join("\n"));
+      } else if (action === "status") {
+        const st = await remoteStatus(b);
+        print(ctx, v, st, () =>
+          Object.entries(st)
+            .map(([k, val]) => `${k}: ${typeof val === "object" && val ? Object.entries(val).map(([a, x]) => `${a} ${x ?? "never"}`).join(", ") : (val ?? "none")}`)
+            .join("\n"),
+        );
+      } else {
+        throw new UsageError("remote needs enable, disable, or status.");
+      }
     },
   },
 
@@ -372,9 +482,13 @@ export async function main(argv: string[], io: Partial<Ctx> = {}): Promise<numbe
     dir,
     out,
     err: io.err ?? ((t: string) => process.stderr.write(t.endsWith("\n") ? t : `${t}\n`)),
-    backend: () => (backend ??= new Backend(resolveLocation({ cwd, dir }))),
+    backend: () => (backend ??= new Backend(resolveLocation({ cwd, dir }), (m) => ctx.err(m))),
   };
-  return (await verb.run(ctx, parsed.values as Values, parsed.positionals)) ?? 0;
+  const code = (await verb.run(ctx, parsed.values as Values, parsed.positionals)) ?? 0;
+  for (const [db, since] of backend?.offline ?? []) {
+    ctx.err(`offline; ${db} as of ${since}`);
+  }
+  return code;
 }
 
 if (import.meta.main) {

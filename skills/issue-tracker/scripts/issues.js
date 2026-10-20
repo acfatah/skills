@@ -2,9 +2,13 @@
 // src/cli.ts
 import { parseArgs } from "util";
 
-// src/location.ts
-import { appendFileSync, existsSync, mkdirSync, readFileSync } from "fs";
-import { dirname, isAbsolute, join, relative, resolve, sep } from "path";
+// src/backend.ts
+import { join as join3 } from "path";
+
+// src/config.ts
+import { chmodSync, existsSync, mkdirSync, readFileSync, renameSync, statSync, writeFileSync } from "fs";
+import { homedir } from "os";
+import { dirname, join } from "path";
 
 // src/errors.ts
 class CliError extends Error {
@@ -21,13 +25,73 @@ class UsageError extends CliError {
 
 class ValidationError extends CliError {
 }
+
+class Offline extends CliError {
+  constructor(message = "Turso is unreachable") {
+    super(message, 2);
+  }
+}
+
+class AuthError extends CliError {
+  constructor(message) {
+    super(`${message}. Check the token; if it leaked, revoke it with ` + "`turso db tokens invalidate <db>` and issue a new one.");
+  }
+}
+
 class LocationError extends CliError {
   constructor(message) {
     super(message, 3);
   }
 }
 
+// src/config.ts
+function configPath() {
+  if (process.env.XDG_CONFIG_HOME) {
+    return join(process.env.XDG_CONFIG_HOME, "issue-tracker", "config.json");
+  }
+  if (process.platform === "win32" && process.env.APPDATA) {
+    return join(process.env.APPDATA, "issue-tracker", "config.json");
+  }
+  return join(homedir(), ".config", "issue-tracker", "config.json");
+}
+function readConfig(warn = () => {}) {
+  const path = configPath();
+  if (!existsSync(path))
+    return {};
+  if (process.platform !== "win32" && (statSync(path).mode & 63) !== 0) {
+    warn(`warning: ${path} is readable by other users and may hold tokens. Run: chmod 600 ${path}`);
+  }
+  try {
+    return JSON.parse(readFileSync(path, "utf8"));
+  } catch (err) {
+    throw new CliError(`Cannot read ${path}: ${err.message}`);
+  }
+}
+function writeConfig(config) {
+  const path = configPath();
+  mkdirSync(dirname(path), { recursive: true, mode: 448 });
+  const tmp = `${path}.tmp-${process.pid}`;
+  writeFileSync(tmp, `${JSON.stringify(config, null, 2)}
+`, { mode: 384 });
+  chmodSync(tmp, 384);
+  renameSync(tmp, path);
+}
+function resolveToken(db, which) {
+  if (db.token)
+    return db.token;
+  if (db.tokenEnv) {
+    const token = process.env[db.tokenEnv];
+    if (!token) {
+      throw new CliError(`The ${which} token is read from $${db.tokenEnv}, which is not set.`);
+    }
+    return token;
+  }
+  throw new CliError(`No token configured for the ${which} database. Set token or tokenEnv in ${configPath()}.`);
+}
+
 // src/location.ts
+import { appendFileSync, existsSync as existsSync2, mkdirSync as mkdirSync2, readFileSync as readFileSync2 } from "fs";
+import { dirname as dirname2, isAbsolute, join as join2, relative, resolve, sep } from "path";
 var FILES = {
   issues: "issues.sqlite3",
   security: "issues-security.sqlite3",
@@ -40,8 +104,8 @@ function git(args, cwd) {
 }
 function nearestExisting(path) {
   let p = path;
-  while (!existsSync(p) && dirname(p) !== p)
-    p = dirname(p);
+  while (!existsSync2(p) && dirname2(p) !== p)
+    p = dirname2(p);
   return p;
 }
 function resolveLocation(opts) {
@@ -69,7 +133,7 @@ function resolveLocation(opts) {
   } else {
     root = git(["rev-parse", "--show-toplevel"], opts.cwd).out;
   }
-  return { dir: join(root, ".claude"), repoRoot: root };
+  return { dir: join2(root, ".claude"), repoRoot: root };
 }
 function ensureIgnored(loc) {
   if (!loc.repoRoot)
@@ -81,8 +145,8 @@ function ensureIgnored(loc) {
   if (git(["check-ignore", "-q", `${prefix}${FILES.issues}`], loc.repoRoot).ok)
     return;
   const exclude = resolve(loc.repoRoot, git(["rev-parse", "--path-format=absolute", "--git-path", "info/exclude"], loc.repoRoot).out);
-  mkdirSync(dirname(exclude), { recursive: true });
-  const current = existsSync(exclude) ? readFileSync(exclude, "utf8") : "";
+  mkdirSync2(dirname2(exclude), { recursive: true });
+  const current = existsSync2(exclude) ? readFileSync2(exclude, "utf8") : "";
   const lead = current && !current.endsWith(`
 `) ? `
 ` : "";
@@ -90,12 +154,159 @@ function ensureIgnored(loc) {
 `);
 }
 function prepareFile(loc, name) {
-  const path = join(loc.dir, name);
-  if (!existsSync(path)) {
-    mkdirSync(loc.dir, { recursive: true });
+  const path = join2(loc.dir, name);
+  if (!existsSync2(path)) {
+    mkdirSync2(loc.dir, { recursive: true });
     ensureIgnored(loc);
   }
   return path;
+}
+
+// src/rows.ts
+var ISSUE_COLS = [
+  "id",
+  "client_id",
+  "title",
+  "type",
+  "status",
+  "priority",
+  "milestone",
+  "parent",
+  "github",
+  "resolution",
+  "created",
+  "updated",
+  "closed",
+  "body"
+];
+var MILESTONE_COLS = ["name", "goal", "due", "state", "github"];
+var NOTE_COLS = ["id", "client_id", "issue_id", "date", "text"];
+async function dump(store) {
+  const [milestones, issues, labels, notes, seq] = await store.batch([
+    { sql: `SELECT ${MILESTONE_COLS.join(", ")} FROM milestones ORDER BY name` },
+    { sql: `SELECT ${ISSUE_COLS.join(", ")} FROM issues ORDER BY id` },
+    { sql: "SELECT issue_id, label FROM labels ORDER BY issue_id, label" },
+    { sql: `SELECT ${NOTE_COLS.join(", ")} FROM notes ORDER BY id` },
+    { sql: "SELECT name, seq FROM sqlite_sequence WHERE name IN ('issues', 'notes')" }
+  ]);
+  return {
+    milestones,
+    issues,
+    labels,
+    notes,
+    seq
+  };
+}
+function isEmpty(d) {
+  return d.milestones.length + d.issues.length === 0;
+}
+function insert(table, cols, row) {
+  return {
+    sql: `INSERT INTO ${table} (${cols.join(", ")}) VALUES (${cols.map(() => "?").join(", ")})`,
+    args: cols.map((c) => row[c] ?? null)
+  };
+}
+function parentsFirst(issues) {
+  const byId = new Map(issues.map((i) => [i.id, i]));
+  const done = new Set;
+  const out = [];
+  const visit = (i, depth) => {
+    if (done.has(i.id) || depth > issues.length)
+      return;
+    const parent = i.parent === null ? undefined : byId.get(i.parent);
+    if (parent)
+      visit(parent, depth + 1);
+    if (!done.has(i.id)) {
+      done.add(i.id);
+      out.push(i);
+    }
+  };
+  for (const i of issues)
+    visit(i, 0);
+  return out;
+}
+function clearStmts() {
+  return ["labels", "notes", "issues", "milestones"].map((t) => ({ sql: `DELETE FROM ${t}` }));
+}
+function loadStmts(d) {
+  return [
+    ...d.milestones.map((m) => insert("milestones", MILESTONE_COLS, m)),
+    ...parentsFirst(d.issues).map((i) => insert("issues", ISSUE_COLS, i)),
+    ...d.labels.map((l) => insert("labels", ["issue_id", "label"], l)),
+    ...d.notes.map((n) => insert("notes", NOTE_COLS, n))
+  ];
+}
+function seqStmts(d) {
+  return d.seq.flatMap((s) => [
+    { sql: "DELETE FROM sqlite_sequence WHERE name = ?", args: [s.name] },
+    { sql: "INSERT INTO sqlite_sequence (name, seq) VALUES (?, ?)", args: [s.name, s.seq] }
+  ]);
+}
+
+// src/mirror.ts
+async function ensureSync(mirror) {
+  await mirror.exec("CREATE TABLE IF NOT EXISTS sync (key TEXT PRIMARY KEY, value TEXT NOT NULL)");
+}
+async function getSync(mirror, key) {
+  await ensureSync(mirror);
+  const [row] = await mirror.query("SELECT value FROM sync WHERE key = ?", [key]);
+  return row?.value ?? null;
+}
+async function setSync(mirror, key, value) {
+  await ensureSync(mirror);
+  await mirror.exec("INSERT INTO sync (key, value) VALUES (?, ?) ON CONFLICT (key) DO UPDATE SET value = excluded.value", [key, value]);
+}
+function now() {
+  const d = new Date;
+  const pad = (n) => String(n).padStart(2, "0");
+  return `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())} ${pad(d.getHours())}:${pad(d.getMinutes())}`;
+}
+async function refreshMirror(remote, mirror) {
+  const d = await dump(remote);
+  await ensureSync(mirror);
+  await mirror.batch([
+    ...clearStmts(),
+    ...loadStmts(d),
+    ...seqStmts(d),
+    {
+      sql: "INSERT INTO sync (key, value) VALUES ('synced_at', ?) ON CONFLICT (key) DO UPDATE SET value = excluded.value",
+      args: [now()]
+    }
+  ]);
+}
+async function resolvePid(mirror, db, pid) {
+  const map = JSON.parse(await getSync(mirror, "pid_map") ?? "{}");
+  const id = map[String(pid)];
+  if (id === undefined) {
+    throw new CliError(`Provisional id ${db === "security" ? "S" : ""}P${pid} is unknown or not replayed yet.`);
+  }
+  return id;
+}
+
+// src/outbox.ts
+import { appendFileSync as appendFileSync2, existsSync as existsSync3, readFileSync as readFileSync3, renameSync as renameSync2, writeFileSync as writeFileSync2 } from "fs";
+
+// src/ids.ts
+function parseId(text) {
+  const m = /^(S)?(P)?0*(\d+)$/i.exec(text.trim());
+  if (!m || Number(m[3]) === 0) {
+    throw new UsageError(`Not an issue id: ${text}. Use 7, 0007, S0007, or P1.`);
+  }
+  const db = m[1] ? "security" : "issues";
+  return m[2] ? { db, pid: Number(m[3]) } : { db, id: Number(m[3]) };
+}
+function parseRealId(text) {
+  const ref = parseId(text);
+  if (ref.id === undefined) {
+    throw new UsageError(`${text} is a provisional id; it gets a real id once Turso is reachable. Run flush first.`);
+  }
+  return { db: ref.db, id: ref.id };
+}
+function formatId(db, id) {
+  return `${db === "security" ? "S" : ""}${String(id).padStart(4, "0")}`;
+}
+function formatPid(db, pid) {
+  return `${db === "security" ? "S" : ""}P${pid}`;
 }
 
 // src/schema.ts
@@ -204,80 +415,6 @@ async function migrate(store) {
   }
 }
 
-// src/store/local.ts
-import { Database } from "bun:sqlite";
-
-class LocalStore {
-  path;
-  kind = "local";
-  db;
-  constructor(path) {
-    this.path = path;
-    this.db = new Database(path, { create: true });
-    this.db.run("PRAGMA busy_timeout = 5000");
-    this.db.run("PRAGMA journal_mode = WAL");
-    this.db.run("PRAGMA foreign_keys = ON");
-  }
-  async query(sql, args = []) {
-    return this.db.prepare(sql).all(...args);
-  }
-  async exec(sql, args = []) {
-    this.db.prepare(sql).run(...args);
-  }
-  async batch(stmts) {
-    const run = this.db.transaction(() => stmts.map((s) => this.db.prepare(s.sql).all(...s.args ?? [])));
-    return run.immediate();
-  }
-  async close() {
-    this.db.close();
-  }
-}
-
-// src/backend.ts
-function dbFile(db) {
-  return db === "security" ? FILES.security : FILES.issues;
-}
-async function openLocal(loc, db) {
-  const store = new LocalStore(prepareFile(loc, dbFile(db)));
-  await migrate(store);
-  return store;
-}
-
-class Backend {
-  loc;
-  constructor(loc) {
-    this.loc = loc;
-  }
-  async run(db, fn) {
-    const store = await openLocal(this.loc, db);
-    try {
-      return await fn(store);
-    } finally {
-      await store.close();
-    }
-  }
-}
-
-// src/ids.ts
-function parseId(text) {
-  const m = /^(S)?(P)?0*(\d+)$/i.exec(text.trim());
-  if (!m || Number(m[3]) === 0) {
-    throw new UsageError(`Not an issue id: ${text}. Use 7, 0007, S0007, or P1.`);
-  }
-  const db = m[1] ? "security" : "issues";
-  return m[2] ? { db, pid: Number(m[3]) } : { db, id: Number(m[3]) };
-}
-function parseRealId(text) {
-  const ref = parseId(text);
-  if (ref.id === undefined) {
-    throw new UsageError(`${text} is a provisional id; it gets a real id once Turso is reachable. Run flush first.`);
-  }
-  return { db: ref.db, id: ref.id };
-}
-function formatId(db, id) {
-  return `${db === "security" ? "S" : ""}${String(id).padStart(4, "0")}`;
-}
-
 // src/model.ts
 var OPEN_STATUSES = ["triage", "open", "in-progress", "blocked"];
 var ACCEPTED_STATUSES = ["open", "in-progress", "blocked"];
@@ -320,70 +457,6 @@ function today() {
   const d = new Date;
   const pad = (n) => String(n).padStart(2, "0");
   return `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}`;
-}
-
-// src/commands/check.ts
-async function checkDb(store, db, milestones) {
-  const problems = [];
-  const [integrity] = await store.query("PRAGMA integrity_check");
-  if (integrity && integrity.integrity_check !== "ok") {
-    problems.push(`${db} database: integrity_check says ${integrity.integrity_check}`);
-  }
-  for (const fk of await store.query("PRAGMA foreign_key_check")) {
-    problems.push(`${db} database: foreign key broken in ${fk.table} row ${fk.rowid}`);
-  }
-  const rows = await store.query("SELECT id, title, type, status, priority, milestone, parent, resolution, created, updated, closed FROM issues ORDER BY id");
-  const byId = new Map(rows.map((r) => [r.id, r]));
-  const has = (values, v) => values.includes(v);
-  for (const r of rows) {
-    const id = formatId(db, r.id);
-    const bad = (msg) => problems.push(`${id}: ${msg}`);
-    if (!r.title || typeof r.title !== "string" || !r.title.trim())
-      bad("empty title");
-    if (!has(STATUSES, r.status))
-      bad(`unknown status "${r.status}"`);
-    if (r.type !== null && !has(TYPES, r.type))
-      bad(`unknown type "${r.type}"`);
-    if (r.type === null && r.status !== "triage")
-      bad(`no type while ${r.status}`);
-    if (db === "security" && r.type !== null && r.type !== "security")
-      bad(`type ${r.type} in the security database`);
-    if (db === "issues" && r.type === "security")
-      bad("type security outside the security database");
-    if (r.priority !== null && !has(PRIORITIES, r.priority))
-      bad(`unknown priority "${r.priority}"`);
-    if (r.resolution !== null && !has(RESOLUTIONS, r.resolution))
-      bad(`unknown resolution "${r.resolution}"`);
-    if (r.status === "closed" !== (r.resolution !== null))
-      bad("closed and resolution disagree");
-    if (r.status === "closed" !== (r.closed !== null))
-      bad("closed status and closed date disagree");
-    for (const field of ["created", "updated", "closed"]) {
-      if (r[field] !== null && !DATE_RE.test(String(r[field])))
-        bad(`${field} is not YYYY-MM-DD`);
-    }
-    if (r.milestone !== null) {
-      if (db === "security")
-        bad("security issues do not take a milestone");
-      else if (!milestones.has(r.milestone))
-        bad(`unknown milestone "${r.milestone}"`);
-    }
-    if (r.parent !== null) {
-      const seen = new Set([r.id]);
-      let p = byId.get(r.parent);
-      if (!p)
-        bad(`parent ${formatId(db, r.parent)} does not exist`);
-      while (p) {
-        if (seen.has(p.id)) {
-          bad("parent chain loops");
-          break;
-        }
-        seen.add(p.id);
-        p = p.parent === null ? undefined : byId.get(p.parent);
-      }
-    }
-  }
-  return problems;
 }
 
 // src/commands/issues.ts
@@ -711,6 +784,1646 @@ async function deleteIssue(store, db, id) {
   await store.exec("DELETE FROM issues WHERE id = ?", [id]);
 }
 
+// src/outbox.ts
+class Outbox {
+  path;
+  constructor(path) {
+    this.path = path;
+  }
+  read() {
+    if (!existsSync3(this.path))
+      return [];
+    return readFileSync3(this.path, "utf8").split(`
+`).filter((line) => line.trim()).map((line) => JSON.parse(line));
+  }
+  append(entry) {
+    appendFileSync2(this.path, `${JSON.stringify(entry)}
+`, { mode: 384 });
+  }
+  write(entries) {
+    const tmp = `${this.path}.tmp-${process.pid}`;
+    writeFileSync2(tmp, entries.map((e) => `${JSON.stringify(e)}
+`).join(""), { mode: 384 });
+    renameSync2(tmp, this.path);
+  }
+}
+async function replay(remote, db, outbox, mirror, hooks = {}) {
+  const lines = [];
+  let entries = outbox.read();
+  while (entries.length > 0) {
+    const entry = entries[0];
+    const map = JSON.parse(await getSync(mirror, "pid_map") ?? "{}");
+    try {
+      if (entry.kind === "new") {
+        const { id } = await createIssue(remote, db, entry.issue, { clientId: entry.client_id, date: entry.date });
+        hooks.afterCommit?.(entry);
+        map[String(entry.pid)] = id;
+        await setSync(mirror, "pid_map", JSON.stringify(map));
+        lines.push(`${formatPid(db, entry.pid)} \u2192 ${formatId(db, id)}`);
+      } else {
+        const id = "id" in entry.target ? entry.target.id : map[String(entry.target.pid)];
+        if (id === undefined) {
+          throw new CliError(`it names ${formatPid(db, entry.target.pid)}, which was never queued`);
+        }
+        await addNote(remote, db, id, entry.text, { clientId: entry.client_id, date: entry.date });
+        hooks.afterCommit?.(entry);
+        lines.push(`Sent a queued note on ${formatId(db, id)}.`);
+      }
+    } catch (err) {
+      if (err instanceof Offline)
+        throw err;
+      const what = entry.kind === "new" ? formatPid(db, entry.pid) : "a queued note";
+      throw new CliError(`Could not replay ${what} from ${outbox.path}: ${err.message}. It stays queued.`);
+    }
+    entries = entries.slice(1);
+    outbox.write(entries);
+  }
+  return lines;
+}
+
+// src/project.ts
+function normalizeRemote(url) {
+  let u = url.trim();
+  const scp = /^(?:[^@/]+@)?([^:/]+):(?!\/)(.+)$/.exec(u);
+  let host;
+  let path;
+  if (scp && !/^[a-z][a-z0-9+.-]*:\/\//i.test(u)) {
+    host = scp[1];
+    path = scp[2];
+  } else {
+    const m = /^[a-z][a-z0-9+.-]*:\/\/(?:[^@/]+@)?([^/:]*)(?::\d+)?(\/.*)?$/i.exec(u);
+    if (!m)
+      return u.replace(/\.git$/, "").replace(/\/+$/, "");
+    host = m[1];
+    path = m[2] ?? "";
+  }
+  path = path.replace(/^\/+/, "").replace(/\/+$/, "").replace(/\.git$/, "");
+  return host ? `${host.toLowerCase()}/${path}` : path;
+}
+function projectKey(repoRoot, dir, config) {
+  if (repoRoot) {
+    const origin = git(["remote", "get-url", "origin"], repoRoot);
+    if (origin.ok && origin.out)
+      return normalizeRemote(origin.out);
+  }
+  for (const path of [dir, repoRoot]) {
+    if (path && config.dirs?.[path])
+      return config.dirs[path];
+  }
+  return null;
+}
+
+// src/store/local.ts
+import { Database } from "bun:sqlite";
+
+class LocalStore {
+  path;
+  kind = "local";
+  db;
+  constructor(path) {
+    this.path = path;
+    this.db = new Database(path, { create: true });
+    this.db.run("PRAGMA busy_timeout = 5000");
+    this.db.run("PRAGMA journal_mode = WAL");
+    this.db.run("PRAGMA foreign_keys = ON");
+  }
+  async query(sql, args = []) {
+    return this.db.prepare(sql).all(...args);
+  }
+  async exec(sql, args = []) {
+    this.db.prepare(sql).run(...args);
+  }
+  async batch(stmts) {
+    const run = this.db.transaction(() => stmts.map((s) => this.db.prepare(s.sql).all(...s.args ?? [])));
+    return run.immediate();
+  }
+  async close() {
+    this.db.close();
+  }
+}
+
+// node_modules/@tursodatabase/serverless/dist/index.js
+var AsyncLock = class {
+  constructor() {
+    this.locked = false;
+    this.queue = [];
+  }
+  async acquire() {
+    if (!this.locked) {
+      this.locked = true;
+      return;
+    }
+    return new Promise((resolve) => {
+      this.queue.push(resolve);
+    });
+  }
+  release() {
+    const next = this.queue.shift();
+    if (next) {
+      next();
+    } else {
+      this.locked = false;
+    }
+  }
+};
+var DatabaseError = class _DatabaseError extends Error {
+  constructor(message, code, rawCode, cause) {
+    super(message);
+    this.name = "DatabaseError";
+    this.code = code;
+    this.rawCode = rawCode;
+    this.cause = cause;
+    Object.setPrototypeOf(this, _DatabaseError.prototype);
+  }
+};
+var TimeoutError = class _TimeoutError extends DatabaseError {
+  constructor(message = "Query timed out", cause) {
+    super(message, "TIMEOUT", undefined, cause);
+    this.name = "TimeoutError";
+    Object.setPrototypeOf(this, _TimeoutError.prototype);
+  }
+};
+function toBase64(uint8) {
+  return Buffer.from(uint8.buffer, uint8.byteOffset, uint8.byteLength).toString("base64");
+}
+function encodeValue(value) {
+  if (value === null || value === undefined) {
+    return { type: "null" };
+  }
+  if (typeof value === "number") {
+    if (!Number.isFinite(value)) {
+      throw new Error("Only finite numbers (not Infinity or NaN) can be passed as arguments");
+    }
+    if (Number.isSafeInteger(value)) {
+      return { type: "integer", value: value.toString() };
+    }
+    return { type: "float", value };
+  }
+  if (typeof value === "bigint") {
+    if (value < -(1n << 63n) || value > (1n << 63n) - 1n) {
+      throw new Error("BigInt value is outside SQLite's signed 64-bit integer range");
+    }
+    return { type: "integer", value: value.toString() };
+  }
+  if (typeof value === "boolean") {
+    return { type: "integer", value: value ? "1" : "0" };
+  }
+  if (typeof value === "string") {
+    return { type: "text", value };
+  }
+  if (value instanceof ArrayBuffer) {
+    return { type: "blob", base64: toBase64(new Uint8Array(value)) };
+  }
+  if (value instanceof Uint8Array) {
+    return { type: "blob", base64: toBase64(value) };
+  }
+  return { type: "text", value: String(value) };
+}
+function decodeValue(value, safeIntegers = false) {
+  switch (value.type) {
+    case "null":
+      return null;
+    case "integer":
+      if (safeIntegers) {
+        return BigInt(value.value);
+      }
+      return parseInt(value.value, 10);
+    case "float":
+      return value.value;
+    case "text":
+      return value.value;
+    case "blob":
+      if (value.base64 !== undefined && value.base64 !== null) {
+        let b64 = value.base64;
+        while (b64.length % 4 !== 0) {
+          b64 += "=";
+        }
+        const binaryString = atob(b64);
+        const bytes = new Uint8Array(binaryString.length);
+        for (let i = 0;i < binaryString.length; i++) {
+          bytes[i] = binaryString.charCodeAt(i);
+        }
+        return Buffer.from(bytes);
+      }
+      return Buffer.alloc(0);
+    default:
+      return null;
+  }
+}
+var ENCRYPTION_KEY_HEADER = "x-turso-encryption-key";
+function buildHeaders(ctx) {
+  const headers = {
+    "Content-Type": "application/json"
+  };
+  if (ctx.authToken) {
+    headers["Authorization"] = `Bearer ${ctx.authToken}`;
+  }
+  if (ctx.remoteEncryptionKey) {
+    headers[ENCRYPTION_KEY_HEADER] = ctx.remoteEncryptionKey;
+  }
+  for (const [name, value] of Object.entries(ctx.requestHeaders ?? {})) {
+    if (name.toLowerCase() === "host") {
+      throw new DatabaseError("overwriting the 'Host' header is not supported");
+    }
+    headers[name] = value;
+  }
+  return headers;
+}
+function buildFetchOptions(ctx, body, signal) {
+  return {
+    method: "POST",
+    headers: buildHeaders(ctx),
+    body,
+    signal
+  };
+}
+function wrapAbortError(error) {
+  if (error instanceof Error && (error.name === "AbortError" || error.name === "TimeoutError")) {
+    throw new TimeoutError("Query timed out");
+  }
+  throw error;
+}
+async function executeCursor(ctx, request, signal) {
+  let response;
+  try {
+    response = await fetch(`${ctx.url}/v3/cursor`, buildFetchOptions(ctx, JSON.stringify(request), signal));
+  } catch (error) {
+    wrapAbortError(error);
+  }
+  if (!response.ok) {
+    let errorMessage = `HTTP error! status: ${response.status}`;
+    try {
+      const errorBody = await response.text();
+      const errorData = JSON.parse(errorBody);
+      if (errorData.message) {
+        errorMessage = errorData.message;
+      }
+    } catch {}
+    throw new DatabaseError(errorMessage);
+  }
+  const reader = response.body?.getReader();
+  if (!reader) {
+    throw new DatabaseError("No response body");
+  }
+  const decoder = new TextDecoder;
+  let buffer = "";
+  let cursorResponse;
+  try {
+    while (!cursorResponse) {
+      const { done, value } = await reader.read();
+      if (done)
+        break;
+      buffer += decoder.decode(value, { stream: true });
+      const newlineIndex = buffer.indexOf(`
+`);
+      if (newlineIndex !== -1) {
+        const line = buffer.slice(0, newlineIndex).trim();
+        buffer = buffer.slice(newlineIndex + 1);
+        if (line) {
+          cursorResponse = JSON.parse(line);
+          break;
+        }
+      }
+    }
+  } catch (error) {
+    reader.releaseLock();
+    wrapAbortError(error);
+  }
+  if (!cursorResponse) {
+    reader.releaseLock();
+    throw new DatabaseError("No cursor response received");
+  }
+  async function* parseEntries() {
+    try {
+      let newlineIndex;
+      while ((newlineIndex = buffer.indexOf(`
+`)) !== -1) {
+        const line = buffer.slice(0, newlineIndex).trim();
+        buffer = buffer.slice(newlineIndex + 1);
+        if (line) {
+          yield JSON.parse(line);
+        }
+      }
+      while (true) {
+        let readResult;
+        try {
+          readResult = await reader.read();
+        } catch (error) {
+          wrapAbortError(error);
+        }
+        if (readResult.done)
+          break;
+        buffer += decoder.decode(readResult.value, { stream: true });
+        while ((newlineIndex = buffer.indexOf(`
+`)) !== -1) {
+          const line = buffer.slice(0, newlineIndex).trim();
+          buffer = buffer.slice(newlineIndex + 1);
+          if (line) {
+            yield JSON.parse(line);
+          }
+        }
+      }
+      if (buffer.trim()) {
+        yield JSON.parse(buffer.trim());
+      }
+    } finally {
+      reader.releaseLock();
+    }
+  }
+  return { response: cursorResponse, entries: parseEntries() };
+}
+async function executePipeline(ctx, request, signal) {
+  let response;
+  try {
+    response = await fetch(`${ctx.url}/v3/pipeline`, buildFetchOptions(ctx, JSON.stringify(request), signal));
+  } catch (error) {
+    wrapAbortError(error);
+  }
+  if (!response.ok) {
+    throw new DatabaseError(`HTTP error! status: ${response.status}`);
+  }
+  return response.json();
+}
+function normalizeArgs(args) {
+  if (args === undefined)
+    return [];
+  if (Array.isArray(args))
+    return args;
+  if (args !== null && typeof args === "object" && args.constructor === Object) {
+    return args;
+  }
+  return [args];
+}
+function isQueryOptions(value) {
+  return value != null && typeof value === "object" && !Array.isArray(value) && (Object.prototype.hasOwnProperty.call(value, "queryTimeout") || Object.prototype.hasOwnProperty.call(value, "requestHeaders"));
+}
+function splitBindParameters(bindParameters) {
+  if (bindParameters.length === 0) {
+    return { params: undefined, queryOptions: undefined };
+  }
+  if (isQueryOptions(bindParameters[bindParameters.length - 1])) {
+    if (bindParameters.length === 1) {
+      return { params: undefined, queryOptions: bindParameters[0] };
+    }
+    return {
+      params: bindParameters.length === 2 ? bindParameters[0] : bindParameters.slice(0, -1),
+      queryOptions: bindParameters[bindParameters.length - 1]
+    };
+  }
+  return {
+    params: bindParameters.length === 1 ? bindParameters[0] : bindParameters,
+    queryOptions: undefined
+  };
+}
+function encodeSqlArgs(args = []) {
+  let positionalArgs = [];
+  let namedArgs = [];
+  if (Array.isArray(args)) {
+    positionalArgs = args.map(encodeValue);
+  } else {
+    const keys = Object.keys(args);
+    const isNumericKeys = keys.length > 0 && keys.every((key) => /^\d+$/.test(key));
+    if (isNumericKeys) {
+      const sortedKeys = keys.sort((a, b) => parseInt(a, 10) - parseInt(b, 10));
+      const maxIndex = parseInt(sortedKeys[sortedKeys.length - 1], 10);
+      positionalArgs = new Array(maxIndex);
+      for (const key of sortedKeys) {
+        const index = parseInt(key, 10) - 1;
+        positionalArgs[index] = encodeValue(args[key]);
+      }
+      for (let i = 0;i < positionalArgs.length; i++) {
+        if (positionalArgs[i] === undefined) {
+          positionalArgs[i] = { type: "null" };
+        }
+      }
+    } else {
+      namedArgs = Object.entries(args).map(([name, value]) => ({
+        name,
+        value: encodeValue(value)
+      }));
+    }
+  }
+  return { args: positionalArgs, namedArgs };
+}
+var TRANSACTION_CONTROL_KEYWORDS = /* @__PURE__ */ new Set([
+  "BEGIN",
+  "COMMIT",
+  "END",
+  "ROLLBACK",
+  "SAVEPOINT",
+  "RELEASE"
+]);
+function normalizeBatchMode(mode) {
+  switch (String(mode).toLowerCase()) {
+    case "write":
+      return "IMMEDIATE";
+    case "read":
+    case "deferred":
+      return "DEFERRED";
+    case "immediate":
+      return "IMMEDIATE";
+    case "exclusive":
+      return "EXCLUSIVE";
+    case "concurrent":
+      return "CONCURRENT";
+    default:
+      return String(mode).toUpperCase();
+  }
+}
+function firstSqlKeyword(sql) {
+  let offset = 0;
+  while (offset < sql.length) {
+    if (/\s/.test(sql[offset]) || sql[offset] === ";") {
+      offset++;
+      continue;
+    }
+    if (sql.startsWith("--", offset)) {
+      const newline = sql.indexOf(`
+`, offset + 2);
+      if (newline < 0)
+        return;
+      offset = newline + 1;
+      continue;
+    }
+    if (sql.startsWith("/*", offset)) {
+      const end = sql.indexOf("*/", offset + 2);
+      if (end < 0)
+        return;
+      offset = end + 2;
+      continue;
+    }
+    break;
+  }
+  return /^[A-Za-z]+/.exec(sql.slice(offset))?.[0].toUpperCase();
+}
+function batchInputError(index, message) {
+  const error = new DatabaseError(`batch statement ${index} failed: ${message}`);
+  error.batchIndex = index;
+  error.batchResults = [];
+  return error;
+}
+function normalizeUrl(url) {
+  return url.replace(/^(libsql|turso):\/\//, "https://").replace(/\/+$/, "");
+}
+function isValidIdentifier(str) {
+  return /^[a-zA-Z_$][a-zA-Z0-9_$]*$/.test(str);
+}
+var Session = class _Session {
+  constructor(config) {
+    this.baton = null;
+    this.autocommit = true;
+    for (const name of Object.keys(config.requestHeaders ?? {})) {
+      if (name.toLowerCase() === "host") {
+        throw new DatabaseError("overwriting the 'Host' header is not supported");
+      }
+    }
+    this.config = config;
+    this.baseUrl = normalizeUrl(config.url);
+  }
+  httpContext(queryOptions) {
+    let requestHeaders = this.config.requestHeaders;
+    if (queryOptions?.requestHeaders) {
+      requestHeaders = { ...requestHeaders, ...queryOptions.requestHeaders };
+    }
+    return {
+      url: this.baseUrl,
+      authToken: this.config.authToken,
+      remoteEncryptionKey: this.config.remoteEncryptionKey,
+      requestHeaders
+    };
+  }
+  get inTransaction() {
+    return !this.autocommit;
+  }
+  updateAutocommit(response) {
+    if (!response.results) {
+      return;
+    }
+    for (const result of response.results) {
+      if (result.type === "ok" && result.response?.type === "get_autocommit" && typeof result.response.is_autocommit === "boolean") {
+        this.autocommit = result.response.is_autocommit;
+        return;
+      }
+    }
+  }
+  createAbortSignal(queryOptions) {
+    const timeout = queryOptions?.queryTimeout ?? this.config.defaultQueryTimeout;
+    if (timeout != null && timeout > 0) {
+      return AbortSignal.timeout(timeout);
+    }
+    return;
+  }
+  async describe(sql, queryOptions) {
+    const request = {
+      baton: this.baton,
+      requests: [
+        { type: "describe", sql },
+        { type: "get_autocommit" }
+      ]
+    };
+    let response;
+    try {
+      response = await executePipeline(this.httpContext(queryOptions), request, this.createAbortSignal(queryOptions));
+    } catch (e) {
+      this.baton = null;
+      this.autocommit = true;
+      throw e;
+    }
+    this.baton = response.baton;
+    if (response.base_url) {
+      this.baseUrl = normalizeUrl(response.base_url);
+    }
+    this.updateAutocommit(response);
+    if (response.results && response.results[0]) {
+      const result = response.results[0];
+      if (result.type === "error") {
+        throw new DatabaseError(result.error?.message || "Describe execution failed", result.error?.code);
+      }
+      if (result.response?.type === "describe" && result.response.result) {
+        return result.response.result;
+      }
+    }
+    throw new DatabaseError("Unexpected describe response");
+  }
+  async execute(sql, args = [], safeIntegers = false, queryOptions) {
+    const { response, entries } = await this.executeRaw(sql, args, queryOptions);
+    const result = await this.processCursorEntries(entries, safeIntegers);
+    return result;
+  }
+  static autocommitProbeStep() {
+    return {
+      stmt: { sql: "SELECT 1", args: [], named_args: [], want_rows: false },
+      condition: { type: "is_autocommit" }
+    };
+  }
+  async* trackAutocommit(entries, probeIdx, queryOptions) {
+    let sawProbe = false;
+    let unreliable = false;
+    let completed = false;
+    try {
+      for await (const entry of entries) {
+        if (entry.type === "step_begin" && entry.step === probeIdx) {
+          sawProbe = true;
+          continue;
+        }
+        if (sawProbe && (entry.type === "row" || entry.type === "step_end")) {
+          continue;
+        }
+        if (entry.type === "error" || entry.type === "step_error" && entry.step === probeIdx) {
+          unreliable = true;
+          if (entry.type === "step_error") {
+            continue;
+          }
+        }
+        yield entry;
+      }
+      completed = true;
+    } finally {
+      if (completed && !unreliable) {
+        this.autocommit = sawProbe;
+      } else {
+        await this.refreshAutocommit(queryOptions);
+      }
+    }
+  }
+  async executeRaw(sql, args = [], queryOptions) {
+    const encodedArgs = encodeSqlArgs(args);
+    const request = {
+      baton: this.baton,
+      batch: {
+        steps: [{
+          stmt: {
+            sql,
+            args: encodedArgs.args,
+            named_args: encodedArgs.namedArgs,
+            want_rows: true
+          }
+        }, _Session.autocommitProbeStep()]
+      }
+    };
+    let result;
+    try {
+      result = await executeCursor(this.httpContext(queryOptions), request, this.createAbortSignal(queryOptions));
+    } catch (e) {
+      this.baton = null;
+      this.autocommit = true;
+      throw e;
+    }
+    const { response, entries } = result;
+    this.baton = response.baton;
+    if (response.base_url) {
+      this.baseUrl = normalizeUrl(response.base_url);
+    }
+    return { response, entries: this.trackAutocommit(entries, 1, queryOptions) };
+  }
+  async refreshAutocommit(queryOptions) {
+    const request = {
+      baton: this.baton,
+      requests: [{ type: "get_autocommit" }]
+    };
+    let response;
+    try {
+      response = await executePipeline(this.httpContext(), request, this.createAbortSignal(queryOptions));
+    } catch {
+      this.baton = null;
+      this.autocommit = true;
+      return;
+    }
+    this.baton = response.baton;
+    if (response.base_url) {
+      this.baseUrl = normalizeUrl(response.base_url);
+    }
+    this.updateAutocommit(response);
+  }
+  async processCursorEntries(entries, safeIntegers = false) {
+    let columns = [];
+    let columnTypes = [];
+    let rows = [];
+    let rowsAffected = 0;
+    let lastInsertRowid;
+    for await (const entry of entries) {
+      switch (entry.type) {
+        case "step_begin":
+          if (entry.cols) {
+            columns = entry.cols.map((col) => col.name);
+            columnTypes = entry.cols.map((col) => col.decltype || "");
+          }
+          break;
+        case "row":
+          if (entry.row) {
+            const decodedRow = entry.row.map((value) => decodeValue(value, safeIntegers));
+            const rowObject = this.createRowObject(decodedRow, columns);
+            rows.push(rowObject);
+          }
+          break;
+        case "step_end":
+          if (entry.affected_row_count !== undefined) {
+            rowsAffected = entry.affected_row_count;
+          }
+          if (entry.last_insert_rowid !== undefined && entry.last_insert_rowid !== null) {
+            lastInsertRowid = typeof entry.last_insert_rowid === "number" ? entry.last_insert_rowid : parseInt(entry.last_insert_rowid, 10);
+          }
+          break;
+        case "step_error":
+        case "error":
+          throw new DatabaseError(entry.error?.message || "SQL execution failed", entry.error?.code);
+      }
+    }
+    return {
+      columns,
+      columnTypes,
+      rows,
+      rowsAffected,
+      lastInsertRowid
+    };
+  }
+  createRowObject(values, columns) {
+    const row = [...values];
+    columns.forEach((column, index) => {
+      if (column && isValidIdentifier(column) && !Object.prototype.hasOwnProperty.call(row, column)) {
+        Object.defineProperty(row, column, {
+          value: values[index],
+          enumerable: false,
+          writable: false,
+          configurable: true
+        });
+      }
+    });
+    return row;
+  }
+  createObjectRow(values, columns) {
+    const row = {};
+    columns.forEach((column, index) => {
+      row[column] = values[index];
+    });
+    return row;
+  }
+  async batch(statements, mode, queryOptions, safeIntegers = false, raw = false) {
+    const userSteps = statements.map((statement, index) => {
+      if (typeof statement === "string") {
+        return {
+          stmt: { sql: statement, args: [], named_args: [], want_rows: true }
+        };
+      }
+      let encodedArgs;
+      try {
+        encodedArgs = encodeSqlArgs(statement.args ?? []);
+      } catch (e) {
+        throw batchInputError(index, e?.message ?? String(e));
+      }
+      return {
+        stmt: {
+          sql: statement.sql,
+          args: encodedArgs.args,
+          named_args: encodedArgs.namedArgs,
+          want_rows: true
+        }
+      };
+    });
+    if (mode !== undefined) {
+      for (let index = 0;index < statements.length; index++) {
+        const statement = statements[index];
+        const sql = typeof statement === "string" ? statement : statement.sql;
+        const keyword = firstSqlKeyword(sql);
+        if (keyword !== undefined && TRANSACTION_CONTROL_KEYWORDS.has(keyword)) {
+          throw batchInputError(index, `${keyword} is not allowed in an atomic batch`);
+        }
+      }
+    }
+    let steps;
+    let firstUserStepIdx = 0;
+    let beginIdx = -1;
+    let commitIdx = -1;
+    let rollbackIdx = -1;
+    if (mode === undefined) {
+      steps = userSteps.map((step, i) => i === 0 ? step : { ...step, condition: { type: "ok", step: i - 1 } });
+    } else {
+      beginIdx = 0;
+      firstUserStepIdx = 1;
+      const lastUserStepIdx = userSteps.length;
+      commitIdx = lastUserStepIdx + 1;
+      rollbackIdx = commitIdx + 1;
+      steps = [
+        { stmt: { sql: `BEGIN ${normalizeBatchMode(mode)}`, args: [], named_args: [], want_rows: false } },
+        ...userSteps.map((step, i) => ({
+          ...step,
+          condition: { type: "ok", step: i === 0 ? beginIdx : firstUserStepIdx + i - 1 }
+        })),
+        {
+          stmt: { sql: "COMMIT", args: [], named_args: [], want_rows: false },
+          condition: { type: "ok", step: lastUserStepIdx }
+        },
+        {
+          stmt: { sql: "ROLLBACK", args: [], named_args: [], want_rows: false },
+          condition: {
+            type: "and",
+            conds: [
+              { type: "ok", step: beginIdx },
+              { type: "not", cond: { type: "ok", step: commitIdx } }
+            ]
+          }
+        }
+      ];
+    }
+    const request = {
+      baton: this.baton,
+      requests: [
+        { type: "batch", batch: { steps } },
+        { type: "get_autocommit" }
+      ]
+    };
+    let response;
+    try {
+      response = await executePipeline(this.httpContext(queryOptions), request, this.createAbortSignal(queryOptions));
+    } catch (e) {
+      this.baton = null;
+      this.autocommit = true;
+      throw e;
+    }
+    this.baton = response.baton;
+    if (response.base_url) {
+      this.baseUrl = normalizeUrl(response.base_url);
+    }
+    this.updateAutocommit(response);
+    const first = response.results?.[0];
+    if (!first) {
+      throw new DatabaseError("missing batch result in pipeline response");
+    }
+    if (first.type === "error") {
+      throw new DatabaseError(first.error?.message || "Batch execution failed", first.error?.code);
+    }
+    if (first.response?.type !== "batch") {
+      throw new DatabaseError(`expected batch result in pipeline response, got ${first.response?.type}`);
+    }
+    const batchResult = first.response.result;
+    const stepResults = batchResult?.step_results;
+    const stepErrors = batchResult?.step_errors;
+    if (!Array.isArray(stepResults) || !Array.isArray(stepErrors) || stepResults.length !== steps.length || stepErrors.length !== steps.length) {
+      throw new DatabaseError("batch response does not have one result and one error per step");
+    }
+    const results = statements.map((_, i) => {
+      const stepResult = stepResults[firstUserStepIdx + i];
+      return stepResult ? this.decodeBatchStepResult(stepResult, safeIntegers, raw) : null;
+    });
+    const rollbackError = rollbackIdx >= 0 ? stepErrors[rollbackIdx] : null;
+    const throwStepError = (error, batchIndex) => {
+      const e = new DatabaseError(error?.message || "Batch execution failed", error?.code);
+      if (batchIndex !== undefined) {
+        e.batchIndex = batchIndex;
+      }
+      e.batchResults = results;
+      if (rollbackError) {
+        e.rollbackError = new DatabaseError(rollbackError.message || "Batch rollback failed", rollbackError.code);
+      }
+      throw e;
+    };
+    if (beginIdx >= 0 && stepErrors[beginIdx]) {
+      throwStepError(stepErrors[beginIdx]);
+    }
+    for (let i = 0;i < userSteps.length; i++) {
+      const stepError = stepErrors[firstUserStepIdx + i];
+      if (stepError) {
+        throwStepError(stepError, i);
+      }
+    }
+    if (commitIdx >= 0 && stepErrors[commitIdx]) {
+      throwStepError(stepErrors[commitIdx]);
+    }
+    if (rollbackError) {
+      const error = new DatabaseError(rollbackError.message || "Batch rollback failed", rollbackError.code);
+      error.batchResults = results;
+      throw error;
+    }
+    if (results.some((result) => result === null)) {
+      throw new DatabaseError("batch response is missing statement results");
+    }
+    return results;
+  }
+  decodeBatchStepResult(stepResult, safeIntegers, raw) {
+    const columns = (stepResult.cols ?? []).map((col) => col.name ?? "");
+    const columnTypes = (stepResult.cols ?? []).map((col) => col.decltype || "");
+    const rows = (stepResult.rows ?? []).map((row) => {
+      const decoded = row.map((value) => decodeValue(value, safeIntegers));
+      return raw ? decoded : this.createObjectRow(decoded, columns);
+    });
+    let lastInsertRowid;
+    if (stepResult.last_insert_rowid !== undefined && stepResult.last_insert_rowid !== null) {
+      lastInsertRowid = typeof stepResult.last_insert_rowid === "number" ? stepResult.last_insert_rowid : parseInt(stepResult.last_insert_rowid, 10);
+    }
+    const resultSet = {
+      columns,
+      columnTypes,
+      rows,
+      rowsAffected: columns.length > 0 ? 0 : stepResult.affected_row_count ?? 0,
+      rowsRead: stepResult.rows_read,
+      rowsWritten: stepResult.rows_written,
+      queryDurationMs: stepResult.query_duration_ms
+    };
+    if (lastInsertRowid !== undefined) {
+      resultSet.lastInsertRowid = lastInsertRowid;
+    }
+    return resultSet;
+  }
+  async sequence(sql, queryOptions) {
+    const request = {
+      baton: this.baton,
+      requests: [
+        { type: "sequence", sql },
+        { type: "get_autocommit" }
+      ]
+    };
+    let seqResponse;
+    try {
+      seqResponse = await executePipeline(this.httpContext(queryOptions), request, this.createAbortSignal(queryOptions));
+    } catch (e) {
+      this.baton = null;
+      this.autocommit = true;
+      throw e;
+    }
+    this.baton = seqResponse.baton;
+    if (seqResponse.base_url) {
+      this.baseUrl = normalizeUrl(seqResponse.base_url);
+    }
+    this.updateAutocommit(seqResponse);
+    if (seqResponse.results && seqResponse.results[0]) {
+      const result = seqResponse.results[0];
+      if (result.type === "error") {
+        throw new DatabaseError(result.error?.message || "Sequence execution failed", result.error?.code);
+      }
+    }
+  }
+  async close() {
+    if (this.baton) {
+      try {
+        const request = {
+          baton: this.baton,
+          requests: [{
+            type: "close"
+          }]
+        };
+        await executePipeline(this.httpContext(), request);
+      } catch {}
+    }
+    this.baton = null;
+    this.baseUrl = "";
+    this.autocommit = true;
+  }
+};
+function createExpandedRow(row, columns) {
+  const expanded = {};
+  columns.forEach((column, index) => {
+    expanded[column] = row[index];
+  });
+  return expanded;
+}
+var Statement = class _Statement {
+  constructor(sessionConfig, sql, columns) {
+    this.presentationMode = "expanded";
+    this.safeIntegerMode = false;
+    this.session = new Session(sessionConfig);
+    this.sql = sql;
+    this.columnMetadata = columns || [];
+  }
+  static fromSession(session, sql, columns, execLock) {
+    const stmt = Object.create(_Statement.prototype);
+    stmt.session = session;
+    stmt.sql = sql;
+    stmt.columnMetadata = columns || [];
+    stmt.presentationMode = "expanded";
+    stmt.safeIntegerMode = false;
+    stmt.execLock = execLock;
+    return stmt;
+  }
+  get reader() {
+    return this.columnMetadata.length > 0;
+  }
+  raw(raw) {
+    this.presentationMode = raw === false ? "expanded" : "raw";
+    return this;
+  }
+  pluck(pluck) {
+    this.presentationMode = pluck === false ? "expanded" : "pluck";
+    return this;
+  }
+  safeIntegers(toggle) {
+    this.safeIntegerMode = toggle === false ? false : true;
+    return this;
+  }
+  columns() {
+    return this.columnMetadata.map((col) => ({
+      name: col.name,
+      type: col.decltype
+    }));
+  }
+  async withLock(fn) {
+    if (!this.execLock) {
+      return await fn();
+    }
+    await this.execLock.acquire();
+    try {
+      return await fn();
+    } finally {
+      this.execLock.release();
+    }
+  }
+  async run(args, queryOptions) {
+    return await this.withLock(async () => {
+      const normalizedArgs = normalizeArgs(args);
+      const result = await this.session.execute(this.sql, normalizedArgs, this.safeIntegerMode, queryOptions);
+      return { changes: result.rowsAffected, lastInsertRowid: result.lastInsertRowid };
+    });
+  }
+  async get(args, queryOptions) {
+    return await this.withLock(async () => {
+      const normalizedArgs = normalizeArgs(args);
+      const result = await this.session.execute(this.sql, normalizedArgs, this.safeIntegerMode, queryOptions);
+      const row = result.rows[0];
+      if (!row) {
+        return;
+      }
+      if (this.presentationMode === "pluck") {
+        return row[0];
+      }
+      if (this.presentationMode === "raw") {
+        return [...row];
+      }
+      return createExpandedRow(row, result.columns);
+    });
+  }
+  async all(args, queryOptions) {
+    return await this.withLock(async () => {
+      const normalizedArgs = normalizeArgs(args);
+      const result = await this.session.execute(this.sql, normalizedArgs, this.safeIntegerMode, queryOptions);
+      if (this.presentationMode === "pluck") {
+        return result.rows.map((row) => row[0]);
+      }
+      if (this.presentationMode === "raw") {
+        return result.rows.map((row) => [...row]);
+      }
+      return result.rows.map((row) => createExpandedRow(row, result.columns));
+    });
+  }
+  async* iterate(args, queryOptions) {
+    if (this.execLock) {
+      const rows = await this.all(args, queryOptions);
+      for (const row of rows) {
+        yield row;
+      }
+      return;
+    }
+    const normalizedArgs = normalizeArgs(args);
+    const { entries } = await this.session.executeRaw(this.sql, normalizedArgs, queryOptions);
+    let columns = [];
+    for await (const entry of entries) {
+      switch (entry.type) {
+        case "step_begin":
+          if (entry.cols) {
+            columns = entry.cols.map((col) => col.name);
+          }
+          break;
+        case "row":
+          if (entry.row) {
+            const decodedRow = entry.row.map((value) => decodeValue(value, this.safeIntegerMode));
+            if (this.presentationMode === "pluck") {
+              yield decodedRow[0];
+            } else if (this.presentationMode === "raw") {
+              yield decodedRow;
+            } else {
+              yield createExpandedRow(decodedRow, columns);
+            }
+          }
+          break;
+        case "step_error":
+        case "error":
+          throw new DatabaseError(entry.error?.message || "SQL execution failed");
+      }
+    }
+  }
+};
+function normalizeBatchOptions(options) {
+  if (options != null && typeof options === "object") {
+    return {
+      mode: options.mode,
+      raw: options.raw === true
+    };
+  }
+  return {
+    mode: options,
+    raw: false
+  };
+}
+function toResultSet(result) {
+  const resultSet = {
+    columns: result.columns ?? [],
+    columnTypes: result.columnTypes ?? [],
+    rows: result.rows ?? [],
+    rowsAffected: result.rowsAffected ?? 0,
+    rowsRead: result.rowsRead,
+    rowsWritten: result.rowsWritten,
+    queryDurationMs: result.queryDurationMs
+  };
+  if (result.lastInsertRowid !== undefined) {
+    resultSet.lastInsertRowid = result.lastInsertRowid;
+  }
+  return resultSet;
+}
+function shapeBatchError(error) {
+  if (error instanceof DatabaseError && Array.isArray(error.batchResults)) {
+    error.batchResults = error.batchResults.map((result) => result === null ? null : toResultSet(result));
+  }
+  return error;
+}
+var Connection = class {
+  constructor(config) {
+    this.isOpen = true;
+    this.defaultSafeIntegerMode = false;
+    this.execLock = new AsyncLock;
+    if (!config.url) {
+      throw new Error("invalid config: url is required");
+    }
+    this.config = config;
+    this.session = new Session(config);
+    Object.defineProperty(this, "inTransaction", {
+      get: () => this.session.inTransaction,
+      enumerable: true
+    });
+  }
+  get inTransaction() {
+    return this.session.inTransaction;
+  }
+  async prepare(sql) {
+    if (!this.isOpen) {
+      throw new TypeError("The database connection is not open");
+    }
+    await this.execLock.acquire();
+    let description;
+    try {
+      description = await this.session.describe(sql);
+    } finally {
+      this.execLock.release();
+    }
+    const stmt = Statement.fromSession(this.session, sql, description.cols, this.execLock);
+    if (this.defaultSafeIntegerMode) {
+      stmt.safeIntegers(true);
+    }
+    return stmt;
+  }
+  async run(sql, ...bindParameters) {
+    if (!this.isOpen)
+      throw new TypeError("The database connection is not open");
+    const { params, queryOptions } = splitBindParameters(bindParameters);
+    await this.execLock.acquire();
+    try {
+      const result = await this.session.execute(sql, normalizeArgs(params), this.defaultSafeIntegerMode, queryOptions);
+      return { changes: result.rowsAffected, lastInsertRowid: result.lastInsertRowid };
+    } finally {
+      this.execLock.release();
+    }
+  }
+  async get(sql, ...bindParameters) {
+    if (!this.isOpen)
+      throw new TypeError("The database connection is not open");
+    const { params, queryOptions } = splitBindParameters(bindParameters);
+    await this.execLock.acquire();
+    try {
+      const result = await this.session.execute(sql, normalizeArgs(params), this.defaultSafeIntegerMode, queryOptions);
+      const row = result.rows[0];
+      if (!row)
+        return;
+      return createExpandedRow(row, result.columns);
+    } finally {
+      this.execLock.release();
+    }
+  }
+  async all(sql, ...bindParameters) {
+    if (!this.isOpen)
+      throw new TypeError("The database connection is not open");
+    const { params, queryOptions } = splitBindParameters(bindParameters);
+    await this.execLock.acquire();
+    try {
+      const result = await this.session.execute(sql, normalizeArgs(params), this.defaultSafeIntegerMode, queryOptions);
+      return result.rows.map((row) => createExpandedRow(row, result.columns));
+    } finally {
+      this.execLock.release();
+    }
+  }
+  async* iterate(sql, ...bindParameters) {
+    for (const row of await this.all(sql, ...bindParameters))
+      yield row;
+  }
+  async exec(sql, queryOptions) {
+    if (!this.isOpen) {
+      throw new TypeError("The database connection is not open");
+    }
+    await this.execLock.acquire();
+    try {
+      return await this.session.sequence(sql, queryOptions);
+    } finally {
+      this.execLock.release();
+    }
+  }
+  async batch(statements, options, queryOptions) {
+    if (!Array.isArray(statements)) {
+      throw new TypeError("Expected first argument to be an array of statements");
+    }
+    if (!this.isOpen) {
+      throw new TypeError("The database connection is not open");
+    }
+    await this.execLock.acquire();
+    try {
+      const { mode, raw } = normalizeBatchOptions(options);
+      const effectiveMode = this.session.inTransaction ? undefined : mode;
+      const results = await this.session.batch(statements, effectiveMode, queryOptions, this.defaultSafeIntegerMode, raw);
+      return results.map((result) => toResultSet(result));
+    } catch (error) {
+      throw shapeBatchError(error);
+    } finally {
+      this.execLock.release();
+    }
+  }
+  async pragma(pragma, queryOptions) {
+    if (!this.isOpen) {
+      throw new TypeError("The database connection is not open");
+    }
+    await this.execLock.acquire();
+    try {
+      const sql = `PRAGMA ${pragma}`;
+      return await this.session.execute(sql, [], false, queryOptions);
+    } finally {
+      this.execLock.release();
+    }
+  }
+  defaultSafeIntegers(toggle) {
+    this.defaultSafeIntegerMode = toggle === false ? false : true;
+  }
+  transaction(fn) {
+    if (typeof fn !== "function") {
+      throw new TypeError("Expected first argument to be a function");
+    }
+    const db = this;
+    const wrapTxn = (mode) => {
+      return async (...bindParameters) => {
+        await db.exec("BEGIN " + mode);
+        try {
+          const result = await fn(...bindParameters);
+          await db.exec("COMMIT");
+          return result;
+        } catch (err) {
+          await db.exec("ROLLBACK");
+          throw err;
+        }
+      };
+    };
+    const properties = {
+      default: { value: wrapTxn("") },
+      deferred: { value: wrapTxn("DEFERRED") },
+      concurrent: { value: wrapTxn("CONCURRENT") },
+      immediate: { value: wrapTxn("IMMEDIATE") },
+      exclusive: { value: wrapTxn("EXCLUSIVE") },
+      database: { value: this, enumerable: true }
+    };
+    Object.defineProperties(properties.default.value, properties);
+    Object.defineProperties(properties.deferred.value, properties);
+    Object.defineProperties(properties.concurrent.value, properties);
+    Object.defineProperties(properties.immediate.value, properties);
+    Object.defineProperties(properties.exclusive.value, properties);
+    return properties.default.value;
+  }
+  transactionAsync(fn) {
+    if (typeof fn !== "function") {
+      throw new TypeError("Expected first argument to be a function");
+    }
+    if (fn.length === 0) {
+      throw new TypeError("transactionAsync() callbacks receive a Transaction handle as their first argument and must declare it: db.transactionAsync(async (tx, ...args) => { await tx.run(...) }).");
+    }
+    const db = this;
+    const wrapTxn = (mode) => {
+      return async (...bindParameters) => {
+        if (!db.isOpen) {
+          throw new TypeError("The database connection is not open");
+        }
+        const session = new Session(db.config);
+        const txn = new Transaction(session, db.defaultSafeIntegerMode);
+        try {
+          await txn.exec("BEGIN " + mode);
+          try {
+            const result = await fn(txn, ...bindParameters);
+            await txn.exec("COMMIT");
+            return result;
+          } catch (err) {
+            try {
+              await txn.exec("ROLLBACK");
+            } catch {}
+            throw err;
+          }
+        } finally {
+          txn.finish();
+          await session.close();
+        }
+      };
+    };
+    const properties = {
+      default: { value: wrapTxn("") },
+      deferred: { value: wrapTxn("DEFERRED") },
+      concurrent: { value: wrapTxn("CONCURRENT") },
+      immediate: { value: wrapTxn("IMMEDIATE") },
+      exclusive: { value: wrapTxn("EXCLUSIVE") },
+      database: { value: this, enumerable: true }
+    };
+    Object.defineProperties(properties.default.value, properties);
+    Object.defineProperties(properties.deferred.value, properties);
+    Object.defineProperties(properties.concurrent.value, properties);
+    Object.defineProperties(properties.immediate.value, properties);
+    Object.defineProperties(properties.exclusive.value, properties);
+    return properties.default.value;
+  }
+  async close() {
+    this.isOpen = false;
+    await this.session.close();
+  }
+  async reconnect() {
+    try {
+      if (this.isOpen) {
+        await this.close();
+      }
+    } finally {
+      this.session = new Session(this.config);
+      this.isOpen = true;
+    }
+  }
+};
+var Transaction = class {
+  constructor(session, defaultSafeIntegerMode) {
+    this.active = true;
+    this.session = session;
+    this.defaultSafeIntegerMode = defaultSafeIntegerMode;
+    const lock = new AsyncLock;
+    this.gate = {
+      acquire: async () => {
+        this.assertActive();
+        await lock.acquire();
+      },
+      release: () => {
+        lock.release();
+      }
+    };
+  }
+  async withGate(fn) {
+    await this.gate.acquire();
+    try {
+      return await fn();
+    } finally {
+      this.gate.release();
+    }
+  }
+  get open() {
+    return this.active;
+  }
+  assertActive() {
+    if (!this.active) {
+      throw new TypeError("The transaction has already completed");
+    }
+  }
+  finish() {
+    this.active = false;
+  }
+  async prepare(sql) {
+    const description = await this.withGate(() => this.session.describe(sql));
+    const stmt = Statement.fromSession(this.session, sql, description.cols, this.gate);
+    if (this.defaultSafeIntegerMode) {
+      stmt.safeIntegers(true);
+    }
+    return stmt;
+  }
+  async run(sql, ...bindParameters) {
+    const { params, queryOptions } = splitBindParameters(bindParameters);
+    return await this.withGate(async () => {
+      const result = await this.session.execute(sql, normalizeArgs(params), this.defaultSafeIntegerMode, queryOptions);
+      return { changes: result.rowsAffected, lastInsertRowid: result.lastInsertRowid };
+    });
+  }
+  async get(sql, ...bindParameters) {
+    const { params, queryOptions } = splitBindParameters(bindParameters);
+    return await this.withGate(async () => {
+      const result = await this.session.execute(sql, normalizeArgs(params), this.defaultSafeIntegerMode, queryOptions);
+      const row = result.rows[0];
+      if (!row)
+        return;
+      return createExpandedRow(row, result.columns);
+    });
+  }
+  async all(sql, ...bindParameters) {
+    const { params, queryOptions } = splitBindParameters(bindParameters);
+    return await this.withGate(async () => {
+      const result = await this.session.execute(sql, normalizeArgs(params), this.defaultSafeIntegerMode, queryOptions);
+      return result.rows.map((row) => createExpandedRow(row, result.columns));
+    });
+  }
+  async* iterate(sql, ...bindParameters) {
+    for (const row of await this.all(sql, ...bindParameters))
+      yield row;
+  }
+  async execute(sql, args, queryOptions) {
+    return await this.withGate(() => this.session.execute(sql, args || [], this.defaultSafeIntegerMode, queryOptions));
+  }
+  async exec(sql, queryOptions) {
+    return await this.withGate(() => this.session.sequence(sql, queryOptions));
+  }
+  async batch(statements, options, queryOptions) {
+    if (!Array.isArray(statements)) {
+      throw new TypeError("Expected first argument to be an array of statements");
+    }
+    const { raw } = normalizeBatchOptions(options);
+    return await this.withGate(async () => {
+      try {
+        const results = await this.session.batch(statements, undefined, queryOptions, this.defaultSafeIntegerMode, raw);
+        return results.map((result) => toResultSet(result));
+      } catch (error) {
+        throw shapeBatchError(error);
+      }
+    });
+  }
+};
+function connect(config) {
+  return new Connection(config);
+}
+
+// src/store/turso.ts
+function toNumber(v) {
+  if (typeof v === "bigint" && v <= BigInt(Number.MAX_SAFE_INTEGER) && v >= BigInt(Number.MIN_SAFE_INTEGER)) {
+    return Number(v);
+  }
+  return v;
+}
+function toRows(r) {
+  return r.rows.map((values) => Object.fromEntries(r.columns.map((c, i) => [c, toNumber(values[i])])));
+}
+function classify(err, url) {
+  if (err instanceof TimeoutError)
+    return new Offline(`Turso did not answer in time (${url})`);
+  if (err instanceof DatabaseError) {
+    const status = /HTTP error! status: (\d+)/.exec(err.message);
+    if (status) {
+      const code = Number(status[1]);
+      if (code === 401 || code === 403)
+        return new AuthError(`Turso refused the token for ${url} (HTTP ${code})`);
+      if (code === 429 || code >= 500)
+        return new Offline(`Turso is unavailable (HTTP ${code}, ${url})`);
+      return new CliError(`Turso request failed (HTTP ${code}, ${url})`);
+    }
+    return new CliError(err.message);
+  }
+  return new Offline(`Turso is unreachable (${url}): ${err?.message ?? err}`);
+}
+
+class TursoStore {
+  url;
+  kind = "turso";
+  conn;
+  constructor(url, authToken, timeoutMs = 5000) {
+    this.url = url;
+    this.conn = connect({ url, authToken, defaultQueryTimeout: timeoutMs });
+  }
+  async send(stmts, atomic) {
+    const batch = stmts.map((s) => ({ sql: s.sql, args: s.args ?? [] }));
+    try {
+      const results = await this.conn.batch(batch, { mode: atomic ? "write" : undefined, raw: true });
+      return results.map(toRows);
+    } catch (err) {
+      throw classify(err, this.url);
+    }
+  }
+  async query(sql, args = []) {
+    const [rows] = await this.send([{ sql, args }], false);
+    return rows ?? [];
+  }
+  async exec(sql, args = []) {
+    await this.send([{ sql, args }], false);
+  }
+  async batch(stmts) {
+    return this.send(stmts, true);
+  }
+  async close() {
+    try {
+      await this.conn.close();
+    } catch {}
+  }
+}
+
+// src/backend.ts
+function dbFile(db) {
+  return db === "security" ? FILES.security : FILES.issues;
+}
+async function openLocal(loc, db) {
+  const store = new LocalStore(prepareFile(loc, dbFile(db)));
+  await migrate(store);
+  return store;
+}
+
+class Backend {
+  loc;
+  log;
+  config;
+  key;
+  offline = new Map;
+  constructor(loc, log = () => {}, config) {
+    this.loc = loc;
+    this.log = log;
+    this.config = config ?? readConfig(log);
+    this.key = projectKey(loc.repoRoot, loc.dir, this.config);
+  }
+  project() {
+    return this.key ? this.config.projects?.[this.key] : undefined;
+  }
+  remoteFor(db) {
+    const p = this.project();
+    return p?.backend === "turso" ? p[db] ?? null : null;
+  }
+  outboxFor(db) {
+    return new Outbox(join3(this.loc.dir, db === "security" ? FILES.securityOutbox : FILES.issuesOutbox));
+  }
+  openRemote(db, remote) {
+    const timeout = Number(process.env.ISSUE_TRACKER_TIMEOUT_MS) || 5000;
+    return new TursoStore(remote.url, resolveToken(remote, db), timeout);
+  }
+  queueCtx(mirror, outbox) {
+    return {
+      mirror,
+      outbox,
+      nextPid: async () => {
+        const next = Number(await getSync(mirror, "next_pid") ?? "1");
+        await setSync(mirror, "next_pid", String(next + 1));
+        return next;
+      }
+    };
+  }
+  async run(db, fn, opts = {}) {
+    const remoteCfg = this.remoteFor(db);
+    if (!remoteCfg) {
+      const store = await openLocal(this.loc, db);
+      const rt = {
+        pid: async () => {
+          throw new CliError("Provisional ids exist only on Turso projects.");
+        }
+      };
+      try {
+        return await fn(store, rt);
+      } finally {
+        await store.close();
+      }
+    }
+    const mirror = await openLocal(this.loc, db);
+    const outbox = this.outboxFor(db);
+    const remote = this.openRemote(db, remoteCfg);
+    const rt = { pid: (pid) => resolvePid(mirror, db, pid) };
+    let done = false;
+    let result;
+    try {
+      await migrate(remote);
+      await this.flushWith(db, remote, mirror, outbox);
+      result = await fn(remote, rt);
+      done = true;
+      await refreshMirror(remote, mirror);
+      return result;
+    } catch (err) {
+      if (!(err instanceof Offline))
+        throw err;
+      if (done) {
+        this.log(`warning: the change reached Turso, but the local mirror was not refreshed (${err.message}).`);
+        return result;
+      }
+      const q = this.queueCtx(mirror, outbox);
+      if (opts.queue)
+        return await opts.queue(q);
+      if (opts.write) {
+        throw new Offline(`${err.message}. Only new issues and notes queue offline; retry this when Turso is reachable.`);
+      }
+      this.offline.set(db, await getSync(mirror, "synced_at") ?? "never");
+      if (opts.offlineRead)
+        return await opts.offlineRead(q);
+      return await fn(mirror, rt);
+    } finally {
+      await remote.close();
+      await mirror.close();
+    }
+  }
+  async flushWith(db, remote, mirror, outbox) {
+    if (outbox.read().length === 0)
+      return;
+    for (const line of await replay(remote, db, outbox, mirror))
+      this.log(line);
+  }
+}
+
+// src/commands/check.ts
+async function checkDb(store, db, milestones) {
+  const problems = [];
+  try {
+    const [integrity] = await store.query("PRAGMA integrity_check");
+    if (integrity && integrity.integrity_check !== "ok") {
+      problems.push(`${db} database: integrity_check says ${integrity.integrity_check}`);
+    }
+    for (const fk of await store.query("PRAGMA foreign_key_check")) {
+      problems.push(`${db} database: foreign key broken in ${fk.table} row ${fk.rowid}`);
+    }
+  } catch (err) {
+    if (store.kind === "local" || err instanceof Offline)
+      throw err;
+  }
+  const rows = await store.query("SELECT id, title, type, status, priority, milestone, parent, resolution, created, updated, closed FROM issues ORDER BY id");
+  const byId = new Map(rows.map((r) => [r.id, r]));
+  const has = (values, v) => values.includes(v);
+  for (const r of rows) {
+    const id = formatId(db, r.id);
+    const bad = (msg) => problems.push(`${id}: ${msg}`);
+    if (!r.title || typeof r.title !== "string" || !r.title.trim())
+      bad("empty title");
+    if (!has(STATUSES, r.status))
+      bad(`unknown status "${r.status}"`);
+    if (r.type !== null && !has(TYPES, r.type))
+      bad(`unknown type "${r.type}"`);
+    if (r.type === null && r.status !== "triage")
+      bad(`no type while ${r.status}`);
+    if (db === "security" && r.type !== null && r.type !== "security")
+      bad(`type ${r.type} in the security database`);
+    if (db === "issues" && r.type === "security")
+      bad("type security outside the security database");
+    if (r.priority !== null && !has(PRIORITIES, r.priority))
+      bad(`unknown priority "${r.priority}"`);
+    if (r.resolution !== null && !has(RESOLUTIONS, r.resolution))
+      bad(`unknown resolution "${r.resolution}"`);
+    if (r.status === "closed" !== (r.resolution !== null))
+      bad("closed and resolution disagree");
+    if (r.status === "closed" !== (r.closed !== null))
+      bad("closed status and closed date disagree");
+    for (const field of ["created", "updated", "closed"]) {
+      if (r[field] !== null && !DATE_RE.test(String(r[field])))
+        bad(`${field} is not YYYY-MM-DD`);
+    }
+    if (r.milestone !== null) {
+      if (db === "security")
+        bad("security issues do not take a milestone");
+      else if (!milestones.has(r.milestone))
+        bad(`unknown milestone "${r.milestone}"`);
+    }
+    if (r.parent !== null) {
+      const seen = new Set([r.id]);
+      let p = byId.get(r.parent);
+      if (!p)
+        bad(`parent ${formatId(db, r.parent)} does not exist`);
+      while (p) {
+        if (seen.has(p.id)) {
+          bad("parent chain loops");
+          break;
+        }
+        seen.add(p.id);
+        p = p.parent === null ? undefined : byId.get(p.parent);
+      }
+    }
+  }
+  return problems;
+}
+
 // src/commands/milestones.ts
 async function load(store, name) {
   const [row] = await store.query("SELECT name, goal, due, state, github FROM milestones WHERE name = ?", [name]);
@@ -771,6 +2484,207 @@ async function listMilestones(store) {
     ...m,
     counts: Object.fromEntries(counts.filter((c) => c.milestone === m.name).map((c) => [c.status, c.n]))
   }));
+}
+
+// src/commands/offline.ts
+async function queueNew(q, db, input, opts) {
+  if (!input.title.trim())
+    throw new ValidationError("A title is required.");
+  if (input.type)
+    checkType(input.type);
+  if (input.priority)
+    checkPriority(input.priority);
+  if (input.parent && !await findIssue(q.mirror, input.parent)) {
+    throw new ValidationError(`No issue ${formatId(db, input.parent)} in the local mirror.`);
+  }
+  if (input.milestone) {
+    const rows = await q.mirror.query("SELECT name FROM milestones WHERE name = ?", [input.milestone]);
+    if (db === "security" || rows.length === 0)
+      throw new ValidationError(`No milestone "${input.milestone}".`);
+  }
+  const pid = await q.nextPid();
+  q.outbox.append({ kind: "new", client_id: opts.clientId, pid, date: opts.date, issue: input });
+  return { id: formatPid(db, pid), status: "queued" };
+}
+async function queueNote(q, db, ref, text, opts) {
+  if (!text.trim())
+    throw new ValidationError("The note is empty.");
+  let target;
+  if (ref.pid !== undefined) {
+    const map = JSON.parse(await getSync(q.mirror, "pid_map") ?? "{}");
+    const mapped = map[String(ref.pid)];
+    const queued = q.outbox.read().some((e) => e.kind === "new" && e.pid === ref.pid);
+    if (mapped !== undefined)
+      target = { id: mapped };
+    else if (queued)
+      target = { pid: ref.pid };
+    else
+      throw new ValidationError(`No queued issue ${formatPid(db, ref.pid)}.`);
+  } else {
+    if (!await findIssue(q.mirror, ref.id)) {
+      throw new ValidationError(`No issue ${formatId(db, ref.id)} in the local mirror.`);
+    }
+    target = { id: ref.id };
+  }
+  q.outbox.append({ kind: "note", client_id: opts.clientId, date: opts.date, target, text: text.trim() });
+  return "id" in target ? formatId(db, target.id) : formatPid(db, target.pid);
+}
+function queuedIssues(db, outbox) {
+  const entries = outbox.read();
+  const notesFor = (pid) => entries.filter((e) => e.kind === "note" && ("pid" in e.target) && e.target.pid === pid).map((e) => ({ date: e.date, text: e.text }));
+  return entries.filter((e) => e.kind === "new").map((e) => ({
+    shownId: formatPid(db, e.pid),
+    notes: notesFor(e.pid),
+    issue: {
+      id: 0,
+      client_id: e.client_id,
+      title: e.issue.title.trim(),
+      type: e.issue.type || (db === "security" ? "security" : null),
+      status: "queued",
+      priority: e.issue.priority || null,
+      milestone: e.issue.milestone || null,
+      parent: e.issue.parent ?? null,
+      github: null,
+      resolution: null,
+      created: e.date,
+      updated: e.date,
+      closed: null,
+      body: e.issue.body ?? "",
+      labels: e.issue.labels ?? []
+    }
+  }));
+}
+function matches(i, f) {
+  return (!f.type || i.type === f.type) && (!f.milestone || i.milestone === f.milestone) && (!f.label || i.labels.includes(f.label)) && (f.parent === undefined || i.parent === f.parent);
+}
+function queuedNotesOn(outbox, id) {
+  return outbox.read().filter((e) => e.kind === "note" && ("id" in e.target) && e.target.id === id).map((e) => ({ date: e.date, text: e.text }));
+}
+
+// src/commands/remote.ts
+var DBS = ["issues", "security"];
+async function remoteEnable(b, o) {
+  if (!o.issuesUrl || !o.tokenEnv) {
+    throw new UsageError("remote enable needs --issues-url and --token-env.");
+  }
+  if (o.securityUrl && !o.securityTokenEnv) {
+    throw new UsageError("--security-url needs its own --security-token-env.");
+  }
+  if (o.securityUrl && o.securityTokenEnv === o.tokenEnv) {
+    throw new ValidationError("The security database needs its own token, in a different env var (D5).");
+  }
+  const config = structuredClone(b.config);
+  let key = b.key;
+  if (!key) {
+    if (!o.slug)
+      throw new ValidationError("This project has no origin remote. Pass --slug <name> to name it.");
+    key = o.slug;
+    config.dirs = { ...config.dirs, [b.loc.repoRoot ?? b.loc.dir]: o.slug };
+  }
+  if (config.projects?.[key]?.backend === "turso") {
+    throw new ValidationError(`${key} already syncs to Turso. See remote status.`);
+  }
+  const targets = [["issues", { url: o.issuesUrl, tokenEnv: o.tokenEnv }]];
+  if (o.securityUrl)
+    targets.push(["security", { url: o.securityUrl, tokenEnv: o.securityTokenEnv }]);
+  const lines = [];
+  const opened = targets.map(([db, cfg]) => ({ db, cfg, remote: b.openRemote(db, cfg) }));
+  const locals = [];
+  try {
+    const plans = [];
+    for (const t of opened) {
+      await t.remote.query("SELECT 1");
+      await migrate(t.remote);
+      const local = await openLocal(b.loc, t.db);
+      locals.push(local);
+      const [rd, ld] = [await dump(t.remote), await dump(local)];
+      if (!isEmpty(rd) && !isEmpty(ld)) {
+        throw new ValidationError(`Both the local and the Turso ${t.db} database have rows. Run export --out <file> first, then empty one side.`);
+      }
+      plans.push({ ...t, local, ld, copy: isEmpty(rd) && !isEmpty(ld) });
+    }
+    for (const p of plans) {
+      if (p.copy) {
+        await p.remote.batch(loadStmts(p.ld));
+        try {
+          await p.remote.batch(seqStmts(p.ld));
+        } catch {}
+        lines.push(`${p.db}: copied ${p.ld.issues.length} issues and ${p.ld.milestones.length} milestones to Turso.`);
+      } else {
+        lines.push(`${p.db}: pulled from Turso.`);
+      }
+      await refreshMirror(p.remote, p.local);
+    }
+  } finally {
+    for (const t of opened)
+      await t.remote.close();
+    for (const l of locals)
+      await l.close();
+  }
+  config.projects = {
+    ...config.projects,
+    [key]: {
+      backend: "turso",
+      issues: targets[0][1],
+      ...targets[1] ? { security: targets[1][1] } : {}
+    }
+  };
+  writeConfig(config);
+  if (!o.securityUrl)
+    lines.push("security: stays local.");
+  lines.push(`${key} now syncs to Turso. Config: ${configPath()}`);
+  return lines;
+}
+async function remoteDisable(b) {
+  const project = b.project();
+  if (!b.key || project?.backend !== "turso")
+    throw new ValidationError("This project is already local.");
+  const lines = [];
+  for (const db of DBS) {
+    const cfg = b.remoteFor(db);
+    if (!cfg)
+      continue;
+    const remote = b.openRemote(db, cfg);
+    const mirror = await openLocal(b.loc, db);
+    const outbox = b.outboxFor(db);
+    try {
+      await migrate(remote);
+      lines.push(...await replay(remote, db, outbox, mirror));
+      await refreshMirror(remote, mirror);
+      lines.push(`${db}: pulled a final copy from Turso.`);
+    } catch (err) {
+      if (err instanceof Offline) {
+        throw new Offline(`${err.message}. remote disable needs Turso to send ${outbox.read().length} queued entries and pull a final copy.`);
+      }
+      throw err;
+    } finally {
+      await remote.close();
+      await mirror.close();
+    }
+  }
+  const config = structuredClone(b.config);
+  config.projects[b.key].backend = "local";
+  writeConfig(config);
+  lines.push(`${b.key} is local now. The Turso databases are untouched; delete them with the turso CLI if no longer needed.`);
+  return lines;
+}
+async function remoteStatus(b) {
+  const project = b.project();
+  const out = {
+    project: b.key,
+    backend: project?.backend ?? "local",
+    dir: b.loc.dir
+  };
+  for (const db of DBS) {
+    const cfg = b.remoteFor(db);
+    const store = await openLocal(b.loc, db);
+    try {
+      out[db] = cfg ? { url: cfg.url, synced_at: await getSync(store, "synced_at"), queued: b.outboxFor(db).read().length } : { backend: "local" };
+    } finally {
+      await store.close();
+    }
+  }
+  return out;
 }
 
 // src/format.ts
@@ -901,9 +2815,12 @@ var VERBS = {
         milestone: str(v, "milestone"),
         body: await readBody(v)
       };
-      const made = await ctx.backend().run(db, (s) => createIssue(s, db, input, { clientId: crypto.randomUUID(), date: today() }));
-      const id = formatId(db, made.id);
-      print(ctx, v, { id, status: made.status }, () => `Created ${id} (${made.status}): ${title.trim()}`);
+      const opts = { clientId: crypto.randomUUID(), date: today() };
+      const made = await ctx.backend().run(db, async (s) => {
+        const r = await createIssue(s, db, input, opts);
+        return { id: formatId(db, r.id), status: r.status };
+      }, { write: true, queue: (q) => queueNew(q, db, input, opts) });
+      print(ctx, v, made, () => made.status === "queued" ? `Queued ${made.id} (offline): ${title.trim()}. It gets a real id once Turso is reachable.` : `Created ${made.id} (${made.status}): ${title.trim()}`);
     }
   },
   list: {
@@ -925,14 +2842,21 @@ var VERBS = {
       const db = v.security || str(v, "type") === "security" || /^S/i.test(parentText ?? "") ? "security" : "issues";
       const statusText = str(v, "status");
       const statuses = statusText === "all" ? [...STATUSES] : statusText ? splitList(statusText).map(checkStatus) : OPEN_STATUSES;
-      const issues = await ctx.backend().run(db, (s) => listIssues(s, {
+      const filters = {
         statuses,
         type: str(v, "type"),
         milestone: str(v, "milestone"),
         label: str(v, "label"),
         parent: parentText ? parseLocalRef(db, parentText) : undefined
-      }));
-      print(ctx, v, issues.map((i) => issueJson(db, i)), () => issues.length ? issues.map((i) => issueLine(db, i)).join(`
+      };
+      const b = ctx.backend();
+      const issues = await b.run(db, (s) => listIssues(s, filters));
+      const queued = b.offline.has(db) ? queuedIssues(db, b.outboxFor(db)).filter((q) => matches(q.issue, filters)) : [];
+      const lines = [
+        ...issues.map((i) => issueLine(db, i)),
+        ...queued.map((q) => issueLine(db, q.issue, q.shownId))
+      ];
+      print(ctx, v, [...issues.map((i) => issueJson(db, i)), ...queued.map((q) => issueJson(db, q.issue, q.shownId))], () => lines.length ? lines.join(`
 `) : "No matching issues.");
     }
   },
@@ -940,13 +2864,29 @@ var VERBS = {
     usage: ["show <id> [--json]"],
     options: { ...json },
     async run(ctx, v, pos) {
-      const { db, id } = parseRealId(onePos(pos, "id"));
-      const d = await ctx.backend().run(db, (s) => showIssue(s, db, id));
+      const ref = parseId(onePos(pos, "id"));
+      const db = ref.db;
+      const b = ctx.backend();
+      const d = await b.run(db, async (s, rt) => {
+        const detail = await showIssue(s, db, ref.id ?? await rt.pid(ref.pid));
+        return { ...detail, shownId: undefined };
+      }, {
+        offlineRead: async (q) => {
+          if (ref.id !== undefined) {
+            const detail = await showIssue(q.mirror, db, ref.id);
+            return { ...detail, notes: [...detail.notes, ...queuedNotesOn(q.outbox, ref.id)], shownId: undefined };
+          }
+          const hit = queuedIssues(db, q.outbox).find((x) => x.shownId === `${db === "security" ? "S" : ""}P${ref.pid}`);
+          if (!hit)
+            throw new UsageError(`No queued issue ${onePos(pos, "id")}.`);
+          return { issue: hit.issue, notes: hit.notes, children: [], shownId: hit.shownId };
+        }
+      });
       print(ctx, v, {
-        ...issueJson(db, d.issue),
+        ...issueJson(db, d.issue, d.shownId),
         notes: d.notes.map(({ date, text }) => ({ date, text })),
         children: d.children.map((c) => ({ ...c, id: formatId(db, c.id) }))
-      }, () => detailText(db, d));
+      }, () => detailText(db, d, d.shownId));
     }
   },
   edit: {
@@ -962,7 +2902,7 @@ var VERBS = {
         set[pair.slice(0, eq).trim()] = pair.slice(eq + 1);
       }
       const changes = { title: str(v, "title"), body: await readBody(v), set };
-      await ctx.backend().run(db, (s) => editIssue(s, db, id, changes, today()));
+      await ctx.backend().run(db, (s) => editIssue(s, db, id, changes, today()), { write: true });
       ctx.out(`Updated ${formatId(db, id)}.`);
     }
   },
@@ -974,7 +2914,7 @@ var VERBS = {
         throw new UsageError("move needs <id> and a status.");
       const { db, id } = parseRealId(pos[0]);
       const to = checkStatus(pos[1]);
-      const from = await ctx.backend().run(db, (s) => moveIssue(s, db, id, to, str(v, "note"), today()));
+      const from = await ctx.backend().run(db, (s) => moveIssue(s, db, id, to, str(v, "note"), today()), { write: true });
       ctx.out(`Moved ${formatId(db, id)}: ${from} \u2192 ${to}.`);
     }
   },
@@ -1003,7 +2943,7 @@ var VERBS = {
         note: str(v, "note"),
         keepChildren: Boolean(v["keep-children"])
       };
-      await ctx.backend().run(db, (s) => closeIssue(s, db, id, opts, today()));
+      await ctx.backend().run(db, (s) => closeIssue(s, db, id, opts, today()), { write: true });
       ctx.out(`Closed ${formatId(db, id)} (${resolution}).`);
     }
   },
@@ -1012,7 +2952,7 @@ var VERBS = {
     options: { note: { type: "string" } },
     async run(ctx, v, pos) {
       const { db, id } = parseRealId(onePos(pos, "id"));
-      const status = await ctx.backend().run(db, (s) => reopenIssue(s, db, id, str(v, "note"), today()));
+      const status = await ctx.backend().run(db, (s) => reopenIssue(s, db, id, str(v, "note"), today()), { write: true });
       ctx.out(`Reopened ${formatId(db, id)} (${status}).`);
     }
   },
@@ -1022,10 +2962,16 @@ var VERBS = {
     async run(ctx, _v, pos) {
       if (pos.length < 2)
         throw new UsageError('note needs <id> and "text".');
-      const { db, id } = parseRealId(pos[0]);
+      const ref = parseId(pos[0]);
+      const db = ref.db;
       const text = pos.slice(1).join(" ");
-      await ctx.backend().run(db, (s) => addNote(s, db, id, text, { clientId: crypto.randomUUID(), date: today() }));
-      ctx.out(`Noted on ${formatId(db, id)}.`);
+      const opts = { clientId: crypto.randomUUID(), date: today() };
+      const shown = await ctx.backend().run(db, async (s, rt) => {
+        const id = ref.id ?? await rt.pid(ref.pid);
+        await addNote(s, db, id, text, opts);
+        return formatId(db, id);
+      }, { write: true, queue: async (q) => `${await queueNote(q, db, ref, text, opts)} (queued offline)` });
+      ctx.out(`Noted on ${shown}.`);
     }
   },
   delete: {
@@ -1033,7 +2979,7 @@ var VERBS = {
     options: {},
     async run(ctx, _v, pos) {
       const { db, id } = parseRealId(onePos(pos, "id"));
-      await ctx.backend().run(db, (s) => deleteIssue(s, db, id));
+      await ctx.backend().run(db, (s) => deleteIssue(s, db, id), { write: true });
       ctx.out(`Deleted ${formatId(db, id)}.`);
     }
   },
@@ -1057,14 +3003,77 @@ var VERBS = {
       }
       const name = onePos(rest, "milestone name");
       if (action === "add")
-        await b.run("issues", (s) => addMilestone(s, name, fields));
+        await b.run("issues", (s) => addMilestone(s, name, fields), { write: true });
       else if (action === "edit")
-        await b.run("issues", (s) => editMilestone(s, name, fields));
+        await b.run("issues", (s) => editMilestone(s, name, fields), { write: true });
       else if (action === "close")
-        await b.run("issues", (s) => closeMilestone(s, name));
+        await b.run("issues", (s) => closeMilestone(s, name), { write: true });
       else
         throw new UsageError("milestone needs add, list, edit, or close.");
       ctx.out(`Milestone ${name}: ${action === "add" ? "added" : action === "edit" ? "updated" : "closed"}.`);
+    }
+  },
+  flush: {
+    usage: ["flush"],
+    options: {},
+    async run(ctx) {
+      const b = ctx.backend();
+      const dbs = ["issues", "security"].filter((db) => b.remoteFor(db));
+      if (dbs.length === 0) {
+        ctx.out("Nothing to flush: this project is local.");
+        return;
+      }
+      for (const db of dbs) {
+        try {
+          await b.run(db, async () => {}, { write: true });
+        } catch (err) {
+          if (!(err instanceof Offline))
+            throw err;
+          const n = b.outboxFor(db).read().length;
+          throw new Offline(`Turso is unreachable; ${n} ${db} entries stay queued in ${b.outboxFor(db).path}.`);
+        }
+      }
+      ctx.out("Outbox empty; mirror refreshed.");
+    }
+  },
+  remote: {
+    usage: [
+      "remote enable --issues-url <libsql://\u2026> --token-env <VAR>",
+      "    [--security-url <libsql://\u2026> --security-token-env <VAR>] [--slug <name>]",
+      "remote disable",
+      "remote status [--json]"
+    ],
+    options: {
+      "issues-url": { type: "string" },
+      "token-env": { type: "string" },
+      "security-url": { type: "string" },
+      "security-token-env": { type: "string" },
+      slug: { type: "string" },
+      ...json
+    },
+    async run(ctx, v, pos) {
+      const b = ctx.backend();
+      const [action] = pos;
+      if (action === "enable") {
+        const lines = await remoteEnable(b, {
+          issuesUrl: str(v, "issues-url"),
+          tokenEnv: str(v, "token-env"),
+          securityUrl: str(v, "security-url"),
+          securityTokenEnv: str(v, "security-token-env"),
+          slug: str(v, "slug")
+        });
+        ctx.out(lines.join(`
+`));
+      } else if (action === "disable") {
+        ctx.out((await remoteDisable(b)).join(`
+`));
+      } else if (action === "status") {
+        const st = await remoteStatus(b);
+        print(ctx, v, st, () => Object.entries(st).map(([k, val]) => `${k}: ${typeof val === "object" && val ? Object.entries(val).map(([a, x]) => `${a} ${x ?? "never"}`).join(", ") : val ?? "none"}`).join(`
+`));
+      } else {
+        throw new UsageError("remote needs enable, disable, or status.");
+      }
     }
   },
   check: {
@@ -1165,9 +3174,13 @@ Usage: ${verb.usage.join(`
     err: io.err ?? ((t) => process.stderr.write(t.endsWith(`
 `) ? t : `${t}
 `)),
-    backend: () => backend ??= new Backend(resolveLocation({ cwd, dir }))
+    backend: () => backend ??= new Backend(resolveLocation({ cwd, dir }), (m) => ctx.err(m))
   };
-  return await verb.run(ctx, parsed.values, parsed.positionals) ?? 0;
+  const code = await verb.run(ctx, parsed.values, parsed.positionals) ?? 0;
+  for (const [db, since] of backend?.offline ?? []) {
+    ctx.err(`offline; ${db} as of ${since}`);
+  }
+  return code;
 }
 if (import.meta.main) {
   main(process.argv.slice(2)).then((code) => process.exit(code), (err) => {

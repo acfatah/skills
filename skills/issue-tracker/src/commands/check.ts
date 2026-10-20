@@ -1,3 +1,4 @@
+import { Offline } from "../errors.ts";
 import { type DbName, formatId } from "../ids.ts";
 import { DATE_RE } from "../model.ts";
 import { PRIORITIES, RESOLUTIONS, STATUSES, TYPES } from "../schema.ts";
@@ -7,12 +8,17 @@ import type { Row, Store } from "../store/types.ts";
 // constraints switched off, is still caught.
 export async function checkDb(store: Store, db: DbName, milestones: Set<string>): Promise<string[]> {
   const problems: string[] = [];
-  const [integrity] = await store.query<{ integrity_check: string }>("PRAGMA integrity_check");
-  if (integrity && integrity.integrity_check !== "ok") {
-    problems.push(`${db} database: integrity_check says ${integrity.integrity_check}`);
-  }
-  for (const fk of await store.query<Row>("PRAGMA foreign_key_check")) {
-    problems.push(`${db} database: foreign key broken in ${fk.table} row ${fk.rowid}`);
+  // Turso may not run these PRAGMAs; the row checks below still apply.
+  try {
+    const [integrity] = await store.query<{ integrity_check: string }>("PRAGMA integrity_check");
+    if (integrity && integrity.integrity_check !== "ok") {
+      problems.push(`${db} database: integrity_check says ${integrity.integrity_check}`);
+    }
+    for (const fk of await store.query<Row>("PRAGMA foreign_key_check")) {
+      problems.push(`${db} database: foreign key broken in ${fk.table} row ${fk.rowid}`);
+    }
+  } catch (err) {
+    if (store.kind === "local" || err instanceof Offline) throw err;
   }
   const rows = await store.query<Row>(
     "SELECT id, title, type, status, priority, milestone, parent, resolution, created, updated, closed FROM issues ORDER BY id",

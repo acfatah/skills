@@ -138,7 +138,8 @@ describe("issue verbs through the bundle", () => {
     expect($(["show", "1"]).code).toBe(1);
     expect($(["frobnicate"]).code).toBe(1);
     expect($(["new"]).code).toBe(1);
-    expect($(["show", "P1"]).stderr).toContain("provisional");
+    expect($(["show", "P1"]).stderr).toContain("Provisional ids exist only on Turso projects");
+    expect($(["move", "P1", "open"]).stderr).toContain("provisional id");
     expect(run(["list"], tempDir(), { env }).code).toBe(3);
     const dir = tempDir();
     expect(run(["--dir", dir, "list"], tempDir(), { env }).code).toBe(0);
