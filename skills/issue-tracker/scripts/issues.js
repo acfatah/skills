@@ -3104,6 +3104,106 @@ ${tree.problems.map((p) => `  ${p}`).join(`
   }
 }
 
+// src/promote.ts
+var LABELS = [
+  { label: "bug", for: "type bug", color: null },
+  { label: "enhancement", for: "type feature", color: null },
+  { label: "documentation", for: "type docs", color: null },
+  { label: "question", for: "type question", color: null },
+  { label: "idea", for: "type idea", color: "C5DEF5" },
+  { label: "feedback", for: "type feedback", color: "BFDADC" },
+  { label: "task", for: "type task", color: "1D76DB" },
+  { label: "chore", for: "type chore", color: "EDEDED" },
+  { label: "refactor", for: "type refactor", color: "5319E7" },
+  { label: "priority:high", for: "priority high", color: "B60205" },
+  { label: "priority:medium", for: "priority medium", color: "D93F0B" },
+  { label: "priority:low", for: "priority low", color: "FBCA04" },
+  { label: "duplicate", for: "resolution duplicate", color: null },
+  { label: "wontfix", for: "resolution wont-fix", color: null },
+  { label: "invalid", for: "resolution invalid", color: null }
+];
+var PROJECT_STATUS = {
+  triage: "Triage",
+  open: "Open",
+  "in-progress": "In progress",
+  blocked: "Blocked",
+  closed: "Done"
+};
+var labelFor = (what) => LABELS.find((l) => l.for === what);
+var ADVISORY = "Security issues never become GitHub issues. Use a private security advisory: " + "repo Security tab \u2192 Advisories \u2192 New draft security advisory.";
+async function promote(store, id) {
+  const issue = await loadIssue(store, "issues", id);
+  const shown = formatId("issues", id);
+  if (issue.status === "closed") {
+    throw new ValidationError(`${shown} is closed (${issue.resolution}${issue.github ? `, ${issue.github}` : ""}); there is nothing to promote.`);
+  }
+  const notes = await store.query("SELECT date, text FROM notes WHERE issue_id = ? ORDER BY id", [id]);
+  let body = issue.body.trimEnd();
+  if (notes.length) {
+    const lines = notes.map((n) => `- ${n.date}: ${n.text.replace(/\n/g, `
+  `)}`);
+    body = `${body ? `${body}
+
+` : ""}## Notes
+${lines.join(`
+`)}`;
+  }
+  const specs = [
+    issue.type ? labelFor(`type ${issue.type}`) : undefined,
+    issue.priority ? labelFor(`priority ${issue.priority}`) : undefined
+  ].filter((s) => Boolean(s));
+  const labels = [...new Set([...specs.map((s) => s.label), ...issue.labels])];
+  const create = [
+    ...specs.filter((s) => s.color).map((s) => ({ name: s.label, color: s.color })),
+    ...issue.labels.filter((l) => !LABELS.some((s) => s.label === l)).map((name) => ({ name, color: null }))
+  ];
+  let milestoneGithub = null;
+  if (issue.milestone) {
+    const [m] = await store.query("SELECT github FROM milestones WHERE name = ?", [
+      issue.milestone
+    ]);
+    milestoneGithub = m?.github ?? null;
+  }
+  const parent = issue.parent === null ? null : await findIssue(store, issue.parent);
+  const children = await store.query("SELECT github FROM issues WHERE parent = ? AND github IS NOT NULL ORDER BY id", [id]);
+  return {
+    id: shown,
+    title: issue.title,
+    body: body ? `${body}
+` : "",
+    labels,
+    milestone: issue.milestone,
+    milestone_github: milestoneGithub,
+    project_status: PROJECT_STATUS[issue.status],
+    create_labels: create,
+    parent_github: parent?.github ?? null,
+    children_github: children.map((c) => c.github),
+    then: `close ${shown} --resolution moved --github <issue-url>`
+  };
+}
+function promotionText(p) {
+  const out = [
+    `Promote ${p.id} to GitHub (dry run; nothing was created).`,
+    `Title: ${p.title}`,
+    `Labels: ${p.labels.join(", ") || "none"}`,
+    `Milestone: ${p.milestone ? `${p.milestone} (${p.milestone_github ?? "not on GitHub yet; create it first"})` : "none"}`,
+    `Project Status: ${p.project_status}`
+  ];
+  if (p.create_labels.length) {
+    out.push("Labels that may need creating:");
+    for (const l of p.create_labels) {
+      out.push(`  gh label create ${l.name}${l.color ? ` --color ${l.color}` : ""} --force`);
+    }
+  }
+  if (p.parent_github)
+    out.push(`Parent on GitHub: ${p.parent_github}`);
+  if (p.children_github.length)
+    out.push(`Children on GitHub: ${p.children_github.join(", ")}`);
+  out.push("Body:", "-----", p.body.trimEnd(), "-----", `Then record the link: ${p.then}`);
+  return out.join(`
+`);
+}
+
 // src/cli.ts
 var VERSION = "2.0.0";
 var str2 = (v, k) => v[k];
@@ -3356,6 +3456,20 @@ var VERBS = {
       else
         throw new UsageError("milestone needs add, list, edit, or close.");
       ctx.out(`Milestone ${name}: ${action === "add" ? "added" : action === "edit" ? "updated" : "closed"}.`);
+    }
+  },
+  promote: {
+    usage: ["promote <id> --dry-run [--json]"],
+    options: { "dry-run": { type: "boolean" }, ...json },
+    async run(ctx, v, pos) {
+      const { db, id } = parseRealId(onePos(pos, "id"));
+      if (db === "security")
+        throw new ValidationError(ADVISORY);
+      if (!v["dry-run"]) {
+        throw new UsageError("The CLI never runs gh. Pass --dry-run, show the result, ask, then run gh yourself.");
+      }
+      const p = await ctx.backend().run(db, (s) => promote(s, id));
+      print(ctx, v, p, () => promotionText(p));
     }
   },
   flush: {

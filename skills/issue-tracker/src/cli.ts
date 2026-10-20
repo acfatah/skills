@@ -24,6 +24,7 @@ import { detailText, issueJson, issueLine, milestoneLine } from "./format.ts";
 import { type DbName, formatId, parseId, parseRealId } from "./ids.ts";
 import { assertClean, countRows, deleteV1, readV1, toDumps, writeDumps } from "./importer.ts";
 import { resolveLocation } from "./location.ts";
+import { ADVISORY, promote, promotionText } from "./promote.ts";
 import { OPEN_STATUSES, type Status, checkStatus, splitList, today } from "./model.ts";
 import { STATUSES } from "./schema.ts";
 
@@ -324,6 +325,20 @@ export const VERBS: Record<string, Verb> = {
       else if (action === "close") await b.run("issues", (s) => closeMilestone(s, name), { write: true });
       else throw new UsageError("milestone needs add, list, edit, or close.");
       ctx.out(`Milestone ${name}: ${action === "add" ? "added" : action === "edit" ? "updated" : "closed"}.`);
+    },
+  },
+
+  promote: {
+    usage: ["promote <id> --dry-run [--json]"],
+    options: { "dry-run": { type: "boolean" }, ...json },
+    async run(ctx, v, pos) {
+      const { db, id } = parseRealId(onePos(pos, "id"));
+      if (db === "security") throw new ValidationError(ADVISORY);
+      if (!v["dry-run"]) {
+        throw new UsageError("The CLI never runs gh. Pass --dry-run, show the result, ask, then run gh yourself.");
+      }
+      const p = await ctx.backend().run(db, (s) => promote(s, id));
+      print(ctx, v, p, () => promotionText(p));
     },
   },
 
