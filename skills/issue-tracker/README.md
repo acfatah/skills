@@ -124,6 +124,8 @@ Gotchas:
 - **Claude asks before anything leaves your machine.** Creating GitHub
   issues, labels, milestones, or Project items, and closing or deleting
   issues, always need your agreement.
+- **Issue bodies are not hard-wrapped.** GitHub shows single newlines as
+  line breaks, so Claude writes each paragraph of an issue on one line.
 - **Sync is one-way.** Once promoted, an issue lives on GitHub; the local
   file is a closed record with the link.
 - **Worktrees share one issue list.** Inside a git worktree, Claude logs

@@ -20,7 +20,8 @@ Only when the user asks:
 1. **Labels:** create any that are missing; see [Labels](#labels).
 2. **Body:** write the issue body to a temp file **without its
    `## Sub-issues` section**. Local ids like `0008` mean nothing on GitHub;
-   step 5 adds the real links.
+   step 5 adds the real links. If an older body is hard-wrapped, join each
+   paragraph's lines first; leave lists, code blocks and tables alone.
 3. **Issue:**
 
    ```bash
