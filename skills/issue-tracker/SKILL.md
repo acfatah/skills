@@ -3,7 +3,7 @@ name: issue-tracker
 description: Issue tracking in local .claude/issues/ files, with GitHub as a second step. Load when logging or capturing an issue (bug, idea, feedback, task), triaging issues, starting, blocking, closing, or reopening one, managing sub-issues or milestones, recording a security finding, or promoting an issue to GitHub Issues or a GitHub Project.
 ---
 
-# Issue Tracker v1.2.0
+# Issue Tracker v1.3.0
 
 Track issues while you work: every issue starts as a local file, and moves
 to GitHub only when it must be shared. Capture fast, triage later, and keep
@@ -159,7 +159,8 @@ one shape. Get dates from `date +%F`.
 ### Body
 
 Use the sections that apply and drop the rest. Bugs usually need the first
-five.
+five. Write each paragraph on one line; do not hard-wrap. Promotion sends
+the body to GitHub as-is, and GitHub shows single newlines as line breaks.
 
 ```markdown
 ## Summary
