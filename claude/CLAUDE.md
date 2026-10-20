@@ -55,6 +55,12 @@ When you notice an issue unrelated to the current task, mention it in
 one line and offer to log it. To log, triage, or promote issues, load
 the `issue-tracker` skill.
 
+## Web pages
+
+To read a page, use WebFetch. Use a browser tool only to interact with
+a page (log in, click, fill forms, screenshots) or when WebFetch cannot
+get its content.
+
 ## Line width
 
 Hard-wrap new markdown documents at 80 columns. In an existing file, follow
