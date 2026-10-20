@@ -1,9 +1,9 @@
 ---
 name: plans-and-roadmaps
-description: "Rules for plan documents and roadmaps: where plan files live, progress stamps, state directories, phased plans, multi-session roadmaps. Load before writing, executing, stamping, or moving a plan: the plan-mode file, any .md under .claude/plans/, or a PLAN*.md / TODO.md being executed."
+description: "Rules for plan documents and roadmaps: where plan files live, whether a plan runs in a worktree, progress stamps, state directories, phased plans, multi-session roadmaps. Load before writing, executing, stamping, or moving a plan: the plan-mode file, any .md under .claude/plans/, or a PLAN*.md / TODO.md being executed."
 ---
 
-# Plans and Roadmaps v1.5.0
+# Plans and Roadmaps v1.6.0
 
 These rules apply to the plan-mode plan file, any `.md` under a
 `.claude/plans/` directory, and any `PLAN*.md` or `TODO.md` you are executing
@@ -30,6 +30,9 @@ copied instead; see Roadmap plans). Never overwrite what is already there:
 - Choose the target by which files the plan edits. A plan spanning several
   repos, or touching only workspace-level tooling, belongs at the workspace
   root instead.
+- **Worktree plans live in the main checkout.** When the plan runs in a
+  linked worktree, `<target>` is the main checkout, not the worktree. See
+  Worktrees.
 - **Link wherever the plan-mode file lives.** A `plansDirectory` setting
   can put it inside the repo; link it the same way, with its absolute path.
   Never move or rename it while active.
@@ -75,6 +78,111 @@ copied instead; see Roadmap plans). Never overwrite what is already there:
   (see Check the link first).
 - A project `CLAUDE.md` may pin the exact destination directory. Where one
   does, it wins over this section.
+
+## Worktrees
+
+Claude uses `EnterWorktree` on its own only when asked, so it never offers
+isolation. Ask instead, so the user decides whether a plan runs in a linked
+worktree or in the current checkout.
+
+**When to ask:**
+
+- **At plan approval,** before calling ExitPlanMode, so the answer goes
+  into the plan.
+- **Before executing a plan** that has no `> Worktree:` line yet.
+- **While planning a roadmap.** Ask once; every phase uses the answer (see
+  Roadmap plans).
+
+**Skip the question,** and write no line, when:
+
+- **Already in a linked worktree:** `git rev-parse --absolute-git-dir`
+  differs from `git rev-parse --path-format=absolute --git-common-dir`.
+- **Not in a git repo.**
+- **Nothing tracked changes:** the plan edits only ignored files or files
+  outside the repo. A plan that adds new tracked files still asks.
+- **One file:** the plan edits exactly one file.
+
+**The question.** Ask in the same AskUserQuestion call as the `auto-commit`
+run-mode question, never as a second prompt. Offer, in this order:
+
+- **No worktree** (default): run in the current checkout.
+- **Worktree from HEAD:** a new branch `<type>/<topic>` (e.g.
+  `feat/<topic>`) at `.claude/worktrees/<topic>`. Show the real branch name
+  and path in the option.
+
+The base is always the current local HEAD, not `origin/main`, and
+`worktree.baseRef` is ignored.
+
+**Dirty tree.** Only when `git status --short` is not empty and the user
+may pick a worktree, add a question to the same call: what happens to the
+uncommitted changes. Untracked files count; ignored files do not.
+
+- **Leave behind** (default): the worktree starts clean.
+- **Copy:** the changes stay in the main checkout and also appear in the
+  worktree:
+
+      git stash push -u
+      git -C <wt> stash apply
+      git stash pop
+
+  Stashes are shared between worktrees, so the last `pop` restores the
+  main checkout.
+- **Move:** the changes leave the main checkout:
+
+      git stash push -u
+      git -C <wt> stash pop
+
+- **Carried edits are the user's.** In the worktree, `auto-commit`'s
+  dirty-tree check reports them like any other uncommitted change.
+
+**Recording.** Write the answer as a line under the title, below the stop
+line and the run-mode line. Write `none` too, so execution does not ask
+again:
+
+    > Worktree: feat/<topic> from <sha> at <main>/.claude/worktrees/<topic>; carry: copy. Create it if missing, then EnterWorktree with path. See the plans-and-roadmaps skill.
+    > Worktree: none.
+
+`<sha>` is the HEAD at approval, `<main>` the absolute main-checkout path,
+and `carry` is `leave`, `copy` or `move`.
+
+**Creating and entering.** After approval, before the first edit:
+
+1. Git-ignore `.claude/worktrees/`: unless `git check-ignore -q
+   .claude/worktrees/` succeeds, append it to
+   `git rev-parse --git-path info/exclude`, as for `.claude/plans/`.
+2. Create the worktree. Plain `EnterWorktree name=` cannot take a base, so
+   create it with git:
+
+       git worktree add -b <type>/<topic> <main>/.claude/worktrees/<topic> <sha>
+
+3. Carry the changes as recorded, then call `EnterWorktree` with
+   `path=<main>/.claude/worktrees/<topic>`.
+
+A fresh session, such as after a context clear, follows the line: if the
+path exists, enter it; if not, create it first. Carry changes only when
+creating it.
+
+**Plan files stay in the main checkout.** The link, `completed/` copies and
+roadmap directories go to `<main>/.claude/plans/`, so removing the worktree
+cannot delete them. Find `<main>` from inside the worktree with:
+
+```bash
+if [ "$(git rev-parse --absolute-git-dir)" != "$(git rev-parse --path-format=absolute --git-common-dir)" ]; then
+  git worktree list --porcelain | sed -n '1s/^worktree //p'
+else
+  git rev-parse --show-toplevel
+fi
+```
+
+Writes outside the worktree may ask for permission; that is expected.
+
+**Finishing.** Stay in the worktree. The final report names its path and
+branch, and points to the `post-merge-cleanup` skill for after the merge.
+Never call `ExitWorktree` or remove the worktree unless asked.
+
+- **Auto-PR:** a new worktree branch has no upstream, so `auto-pr` stays
+  hidden with its usual line saying to run `git push -u origin <branch>`
+  first.
 
 ## Progress marking
 
@@ -260,7 +368,9 @@ A plan with phases gets one commit per phase:
 
       > Phased plan: stop after each phase, show its commit message, and wait. Plan file: ~/.claude/plans/<slug>.md
 
-  The line stays true for the plan's whole life; never remove it.
+  The line stays true for the plan's whole life; never remove it. The
+  run-mode line and the `> Worktree:` line (see Worktrees) follow it, in
+  that order.
 - Move the plan to `completed/` only when every phase is stamped.
 
 Handle these cases:
@@ -325,6 +435,9 @@ so the roadmap must hold:
 - **One topic branch** for all phases, recorded under `## Decisions`,
   unless the roadmap says its phases merge on their own. Under Auto-PR the
   phases then share one draft PR.
+- **The worktree answer,** recorded under `## Decisions` next to the topic
+  branch: its branch and path, or none (see Worktrees). Phase 1 creates
+  it; later phases enter it.
 - One `## Phase N. <title>` per phase, one commit each, with scope and
   done-criteria. No `Step N.M` items yet; the phase plan writes those.
 - Under each finished phase, `### Phase N outcome`: what actually changed
@@ -377,6 +490,10 @@ into `<topic>/roadmap.md`, never over an existing file or link:
    on, then `### Step N.M` items, then `### Phase N commit message`.
 
        > Roadmap phase N of <target>/.claude/plans/<topic>/roadmap.md: after approval, link this plan as phase_N_<subject>.md, implement, write the Phase N outcome there, and stop. Plan file: ~/.claude/plans/<slug>.md
+
+   Below it, copy the run-mode line and a `> Worktree:` line built from the
+   roadmap's Decisions, so a fresh session re-enters the same worktree. Do
+   not ask the worktree question again.
 
 4. If the phase is too big for one commit, propose splitting it into
    `Phase 2a` and `Phase 2b` and plan only the first.
