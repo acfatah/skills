@@ -47,7 +47,9 @@ Before writing, executing, stamping, or moving any plan (plan-mode
 file, `.claude/plans/*.md`, `PLAN*.md`, `TODO.md`), load the
 `plans-and-roadmaps` skill. Two rules hold even without it: keep the
 plan-mode file in `~/.claude/plans/`, and commit plans only when
-asked.
+asked. If the work needs a tool this session can't load, such as an
+MCP server from another directory's `.mcp.json`, hand off before
+planning (see the skill).
 
 ## Issues
 
