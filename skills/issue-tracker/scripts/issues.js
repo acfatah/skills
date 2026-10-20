@@ -1,5 +1,7 @@
 // @bun
 // src/cli.ts
+import { readFileSync as readFileSync5 } from "fs";
+import { join as join5 } from "path";
 import { parseArgs } from "util";
 
 // src/backend.ts
@@ -2687,6 +2689,88 @@ async function remoteStatus(b) {
   return out;
 }
 
+// src/exporter.ts
+import { chmodSync as chmodSync2, writeFileSync as writeFileSync3 } from "fs";
+import { dirname as dirname3, resolve as resolve2 } from "path";
+var DBS2 = ["issues", "security"];
+async function exportAll(b, out, warn) {
+  const lines = [
+    { record: "meta", schema: LATEST_VERSION, project: b.key, exported_at: new Date().toISOString() }
+  ];
+  const counts = {};
+  for (const db of DBS2) {
+    const d = await b.run(db, dump);
+    const labels = new Map;
+    for (const l of d.labels)
+      labels.set(l.issue_id, [...labels.get(l.issue_id) ?? [], l.label]);
+    for (const m of d.milestones)
+      lines.push({ record: "milestone", db, ...m });
+    for (const i of d.issues)
+      lines.push({ record: "issue", db, ...i, labels: labels.get(i.id) ?? [] });
+    for (const { id: _, issue_id, ...n } of d.notes)
+      lines.push({ record: "note", db, issue: issue_id, ...n });
+    for (const s of d.seq)
+      lines.push({ record: "sequence", db, ...s });
+    counts[db] = d.issues.length;
+  }
+  const path = resolve2(out);
+  writeFileSync3(path, lines.map((l) => `${JSON.stringify(l)}
+`).join(""), { mode: 384 });
+  chmodSync2(path, 384);
+  warn(`warning: ${path} holds every issue, security findings included. Keep it private.`);
+  const top = git(["rev-parse", "--show-toplevel"], dirname3(path));
+  if (top.ok && !git(["check-ignore", "-q", path], top.out).ok) {
+    warn(`warning: ${path} is inside the git repo ${top.out} and not ignored; do not commit it.`);
+  }
+  return counts;
+}
+function parseExport(text) {
+  const dumps = {
+    issues: { milestones: [], issues: [], labels: [], notes: [], seq: [] },
+    security: { milestones: [], issues: [], labels: [], notes: [], seq: [] }
+  };
+  let meta = false;
+  text.split(`
+`).forEach((line, n) => {
+    if (!line.trim())
+      return;
+    let rec;
+    try {
+      rec = JSON.parse(line);
+    } catch {
+      throw new ValidationError(`Line ${n + 1} is not JSON.`);
+    }
+    const { record, db, ...rest } = rec;
+    if (record === "meta") {
+      meta = true;
+      if (Number(rest.schema) > LATEST_VERSION) {
+        throw new CliError(`The export has schema version ${rest.schema}; update the issue-tracker skill.`);
+      }
+      return;
+    }
+    const d = dumps[db];
+    if (!d)
+      throw new ValidationError(`Line ${n + 1}: unknown db "${db}".`);
+    if (record === "milestone")
+      d.milestones.push(rest);
+    else if (record === "issue") {
+      const { labels, ...row } = rest;
+      d.issues.push(row);
+      for (const label of labels ?? [])
+        d.labels.push({ issue_id: row.id, label });
+    } else if (record === "note") {
+      const { issue, ...note } = rest;
+      d.notes.push({ id: null, issue_id: issue, ...note });
+    } else if (record === "sequence")
+      d.seq.push(rest);
+    else
+      throw new ValidationError(`Line ${n + 1}: unknown record "${record}".`);
+  });
+  if (!meta)
+    throw new ValidationError("Not an issue-tracker export: no meta record.");
+  return dumps;
+}
+
 // src/format.ts
 function issueJson(db, issue, shownId) {
   const { client_id: _, ...rest } = issue;
@@ -2716,7 +2800,8 @@ function issueLine(db, issue, shownId) {
   return extras.length ? `${head}  (${extras.join("; ")})` : head;
 }
 function noteLine(n) {
-  return `- ${n.date}: ${n.text}`;
+  return `- ${n.date}: ${n.text.replace(/\n/g, `
+  `)}`;
 }
 function detailText(db, d, shownId) {
   const i = d.issue;
@@ -2759,20 +2844,280 @@ function milestoneLine(m) {
   return parts.join("  ");
 }
 
+// src/importer.ts
+import { existsSync as existsSync4, readFileSync as readFileSync4, readdirSync, rmSync, rmdirSync, statSync as statSync2 } from "fs";
+import { join as join4 } from "path";
+var V1_FOLDERS = ["triage", "open", "in-progress", "blocked", "closed", "security"];
+function parseFrontmatter(text) {
+  const m = /^---\r?\n([\s\S]*?)\r?\n---\r?\n?/.exec(text);
+  if (!m)
+    throw new ValidationError("no frontmatter");
+  const fields = {};
+  for (const line of m[1].split(/\r?\n/)) {
+    const kv = /^([A-Za-z_][\w-]*):\s*(.*)$/.exec(line);
+    if (!kv)
+      continue;
+    let value = kv[2].trim();
+    if (/^\[.*\]$/.test(value)) {
+      fields[kv[1]] = value.slice(1, -1).split(",").map((s) => s.trim().replace(/^["']|["']$/g, "")).filter(Boolean);
+      continue;
+    }
+    value = value.replace(/^["'](.*)["']$/, "$1");
+    fields[kv[1]] = value === "" || value === "~" || value === "null" ? null : value;
+  }
+  return { fields, body: text.slice(m[0].length) };
+}
+function findSection(lines, heading) {
+  const start = lines.findIndex((l) => l.trim() === heading);
+  if (start < 0)
+    return null;
+  let end = start + 1;
+  while (end < lines.length && !/^## /.test(lines[end]))
+    end++;
+  return { start, end };
+}
+function cut(lines, s) {
+  const out = [...lines.slice(0, s.start), ...lines.slice(s.end)];
+  return out.join(`
+`).replace(/\n{3,}/g, `
+
+`).split(`
+`);
+}
+var NOTE_RE = /^- (\d{4}-\d{2}-\d{2}): (.*)$/;
+function splitBody(body) {
+  let lines = body.split(/\r?\n/);
+  const sub = findSection(lines, "## Sub-issues");
+  if (sub)
+    lines = cut(lines, sub);
+  const notes = [];
+  const sec = findSection(lines, "## Notes");
+  if (sec) {
+    const items = lines.slice(sec.start + 1, sec.end);
+    let clean = true;
+    for (const line of items) {
+      const m = NOTE_RE.exec(line);
+      if (m)
+        notes.push({ date: m[1], text: m[2].trim() });
+      else if (/^\s{2,}\S/.test(line) && notes.length)
+        notes[notes.length - 1].text += `
+${line.trim()}`;
+      else if (line.trim())
+        clean = false;
+    }
+    if (clean && notes.length)
+      lines = cut(lines, sec);
+    else
+      notes.length = 0;
+  }
+  return { body: `${lines.join(`
+`).trim()}
+`.replace(/^\n$/, ""), notes };
+}
+function parseMilestones(text) {
+  const out = [];
+  let cur = null;
+  for (const line of text.split(/\r?\n/)) {
+    const h = /^## (.+)$/.exec(line);
+    if (h) {
+      cur = { name: h[1].trim(), goal: null, due: null, state: "open", github: null };
+      out.push(cur);
+      continue;
+    }
+    const f = /^- \*\*(Goal|Due|State|GitHub):\*\*\s*(.*)$/.exec(line);
+    if (!cur || !f)
+      continue;
+    const value = f[2].trim();
+    const real = value && !/^<.*>$/.test(value) ? value : null;
+    if (f[1] === "Goal")
+      cur.goal = real;
+    if (f[1] === "Due")
+      cur.due = real;
+    if (f[1] === "GitHub")
+      cur.github = real;
+    if (f[1] === "State")
+      cur.state = value === "closed" ? "closed" : "open";
+  }
+  return out;
+}
+var str = (v) => typeof v === "string" ? v : null;
+function readV1(path) {
+  if (!existsSync4(path) || !statSync2(path).isDirectory()) {
+    throw new UsageError(`No v1 issues folder at ${path}.`);
+  }
+  const tree = { path, issues: [], milestones: [], counts: {}, problems: [], warnings: [] };
+  for (const folder of V1_FOLDERS) {
+    const dir = join4(path, folder);
+    if (!existsSync4(dir))
+      continue;
+    const files = readdirSync(dir).filter((f) => f.endsWith(".md")).sort();
+    tree.counts[folder] = files.length;
+    for (const file of files) {
+      const rel = `${folder}/${file}`;
+      try {
+        const { fields, body } = parseFrontmatter(readFileSync4(join4(dir, file), "utf8"));
+        const idText = str(fields.id) ?? /^(\d+)-/.exec(file)?.[1] ?? null;
+        if (!idText || !/^\d+$/.test(idText))
+          throw new ValidationError("no numeric id");
+        const status = folder === "security" ? str(fields.status) ?? "triage" : folder;
+        if (!STATUSES.includes(status))
+          throw new ValidationError(`unknown status "${status}"`);
+        const split = splitBody(body);
+        const db = folder === "security" ? "security" : "issues";
+        const today = str(fields.created) ?? "1970-01-01";
+        const row = {
+          id: Number(idText),
+          client_id: null,
+          title: str(fields.title),
+          type: db === "security" ? "security" : str(fields.type),
+          status,
+          priority: str(fields.priority),
+          milestone: str(fields.milestone),
+          parent: str(fields.parent) ? Number(str(fields.parent)) : null,
+          github: str(fields.github),
+          resolution: str(fields.resolution),
+          created: today,
+          updated: str(fields.updated) ?? today,
+          closed: str(fields.closed),
+          body: split.body
+        };
+        if (!row.title)
+          throw new ValidationError("no title");
+        if (row.type === null && status !== "triage")
+          throw new ValidationError(`no type while ${status}`);
+        if (status === "closed" && !row.resolution)
+          throw new ValidationError("closed without a resolution");
+        if (status !== "closed" && row.resolution) {
+          tree.warnings.push(`${rel}: resolution ${row.resolution} dropped, since it is ${status}`);
+          row.resolution = null;
+        }
+        if (status === "closed" && !row.closed)
+          row.closed = row.updated;
+        if (status !== "closed")
+          row.closed = null;
+        for (const f of ["created", "updated", "closed"]) {
+          if (row[f] !== null && !DATE_RE.test(String(row[f])))
+            throw new ValidationError(`${f} is not YYYY-MM-DD`);
+        }
+        if (db === "security" && row.milestone) {
+          split.notes.push({ date: String(row.updated), text: `v1 milestone: ${row.milestone}` });
+          tree.warnings.push(`${rel}: security issues take no milestone; kept as a note`);
+          row.milestone = null;
+        }
+        const labels = Array.isArray(fields.labels) ? fields.labels : [];
+        tree.issues.push({ file: rel, folder, db, row, labels, notes: split.notes });
+      } catch (err) {
+        tree.problems.push(`${rel}: ${err.message}`);
+      }
+    }
+  }
+  const ms = join4(path, "MILESTONES.md");
+  if (existsSync4(ms))
+    tree.milestones = parseMilestones(readFileSync4(ms, "utf8"));
+  const seen = new Map;
+  for (const i of tree.issues) {
+    const key = `${i.db}:${i.row.id}`;
+    if (seen.has(key))
+      tree.problems.push(`${i.file}: id ${i.row.id} also used by ${seen.get(key)}`);
+    seen.set(key, i.file);
+  }
+  for (const i of tree.issues) {
+    const p = i.row.parent;
+    if (p !== null && !seen.has(`${i.db}:${p}`)) {
+      i.notes.push({ date: String(i.row.updated), text: `v1 parent: ${formatId(i.db, p)}` });
+      tree.warnings.push(`${i.file}: parent ${p} not found in the same database; kept as a note`);
+      i.row.parent = null;
+    }
+    const m = i.row.milestone;
+    if (m && !tree.milestones.some((x) => x.name === m)) {
+      tree.milestones.push({ name: m, goal: null, due: null, state: "open", github: null });
+      tree.warnings.push(`${i.file}: milestone ${m} is not in MILESTONES.md; created it`);
+    }
+  }
+  return tree;
+}
+function toDumps(tree) {
+  const make = (db) => {
+    const issues = tree.issues.filter((i) => i.db === db);
+    return {
+      milestones: db === "issues" ? tree.milestones.map((m) => ({ ...m })) : [],
+      issues: issues.map((i) => i.row),
+      labels: issues.flatMap((i) => i.labels.map((label) => ({ issue_id: i.row.id, label }))),
+      notes: issues.flatMap((i) => i.notes.map((n) => ({ id: null, client_id: null, issue_id: i.row.id, ...n }))),
+      seq: []
+    };
+  };
+  return { issues: make("issues"), security: make("security") };
+}
+async function conflicts(store, d) {
+  const out = [];
+  const ids = new Set((await store.query("SELECT id FROM issues")).map((r) => r.id));
+  for (const i of d.issues)
+    if (ids.has(i.id))
+      out.push(`id ${i.id}`);
+  const names = new Set((await store.query("SELECT name FROM milestones")).map((r) => r.name));
+  for (const m of d.milestones)
+    if (names.has(m.name))
+      out.push(`milestone ${m.name}`);
+  return out;
+}
+async function writeDumps(b, dumps) {
+  for (const db of ["issues", "security"]) {
+    const d = dumps[db];
+    if (d.issues.length + d.milestones.length === 0)
+      continue;
+    await b.run(db, async (s) => {
+      const clash = await conflicts(s, d);
+      if (clash.length) {
+        throw new ValidationError(`The ${db} database already has ${clash.slice(0, 5).join(", ")}${clash.length > 5 ? ", \u2026" : ""}. Import only into an empty project.`);
+      }
+      await s.batch([...loadStmts(d), ...seqStmts(d)]);
+    }, { write: true });
+  }
+}
+async function countRows(b, tree) {
+  const rows = { issues: new Map, security: new Map };
+  for (const db of ["issues", "security"]) {
+    const found = await b.run(db, (s) => s.query("SELECT id, status FROM issues"));
+    for (const r of found)
+      rows[db].set(r.id, r.status);
+  }
+  return Object.entries(tree.counts).map(([folder, files]) => ({
+    folder,
+    files,
+    rows: tree.issues.filter((i) => i.folder === folder && rows[i.db].get(i.row.id) === i.row.status).length
+  }));
+}
+function deleteV1(tree) {
+  for (const folder of V1_FOLDERS)
+    rmSync(join4(tree.path, folder), { recursive: true, force: true });
+  rmSync(join4(tree.path, "MILESTONES.md"), { force: true });
+  try {
+    rmdirSync(tree.path);
+  } catch {}
+}
+function assertClean(tree) {
+  if (tree.problems.length) {
+    throw new CliError(`Fix these v1 files first; nothing was imported:
+${tree.problems.map((p) => `  ${p}`).join(`
+`)}`);
+  }
+}
+
 // src/cli.ts
 var VERSION = "2.0.0";
-var str = (v, k) => v[k];
+var str2 = (v, k) => v[k];
 var json = { json: { type: "boolean" } };
 async function readBody(v) {
-  const file = str(v, "body-file");
-  if (file !== undefined && str(v, "body") !== undefined) {
+  const file = str2(v, "body-file");
+  if (file !== undefined && str2(v, "body") !== undefined) {
     throw new UsageError("Pass --body or --body-file, not both.");
   }
   if (file === "-")
     return Bun.stdin.text();
   if (file !== undefined)
     return Bun.file(file).text();
-  return str(v, "body");
+  return str2(v, "body");
 }
 function onePos(pos, what) {
   if (pos.length !== 1)
@@ -2800,19 +3145,19 @@ var VERBS = {
       ...json
     },
     async run(ctx, v) {
-      const title = str(v, "title");
+      const title = str2(v, "title");
       if (!title)
         throw new UsageError("new needs --title.");
-      const parentText = str(v, "parent");
-      const db = str(v, "type") === "security" || /^S/i.test(parentText ?? "") ? "security" : "issues";
+      const parentText = str2(v, "parent");
+      const db = str2(v, "type") === "security" || /^S/i.test(parentText ?? "") ? "security" : "issues";
       const parent = parentText ? parseLocalRef(db, parentText) : null;
       const input = {
         title,
-        type: str(v, "type"),
-        priority: str(v, "priority"),
+        type: str2(v, "type"),
+        priority: str2(v, "priority"),
         parent,
-        labels: splitList(str(v, "label")),
-        milestone: str(v, "milestone"),
+        labels: splitList(str2(v, "label")),
+        milestone: str2(v, "milestone"),
         body: await readBody(v)
       };
       const opts = { clientId: crypto.randomUUID(), date: today() };
@@ -2838,15 +3183,15 @@ var VERBS = {
       ...json
     },
     async run(ctx, v) {
-      const parentText = str(v, "parent");
-      const db = v.security || str(v, "type") === "security" || /^S/i.test(parentText ?? "") ? "security" : "issues";
-      const statusText = str(v, "status");
+      const parentText = str2(v, "parent");
+      const db = v.security || str2(v, "type") === "security" || /^S/i.test(parentText ?? "") ? "security" : "issues";
+      const statusText = str2(v, "status");
       const statuses = statusText === "all" ? [...STATUSES] : statusText ? splitList(statusText).map(checkStatus) : OPEN_STATUSES;
       const filters = {
         statuses,
-        type: str(v, "type"),
-        milestone: str(v, "milestone"),
-        label: str(v, "label"),
+        type: str2(v, "type"),
+        milestone: str2(v, "milestone"),
+        label: str2(v, "label"),
         parent: parentText ? parseLocalRef(db, parentText) : undefined
       };
       const b = ctx.backend();
@@ -2901,7 +3246,7 @@ var VERBS = {
           throw new UsageError(`--set needs key=value; got "${pair}".`);
         set[pair.slice(0, eq).trim()] = pair.slice(eq + 1);
       }
-      const changes = { title: str(v, "title"), body: await readBody(v), set };
+      const changes = { title: str2(v, "title"), body: await readBody(v), set };
       await ctx.backend().run(db, (s) => editIssue(s, db, id, changes, today()), { write: true });
       ctx.out(`Updated ${formatId(db, id)}.`);
     }
@@ -2914,7 +3259,7 @@ var VERBS = {
         throw new UsageError("move needs <id> and a status.");
       const { db, id } = parseRealId(pos[0]);
       const to = checkStatus(pos[1]);
-      const from = await ctx.backend().run(db, (s) => moveIssue(s, db, id, to, str(v, "note"), today()), { write: true });
+      const from = await ctx.backend().run(db, (s) => moveIssue(s, db, id, to, str2(v, "note"), today()), { write: true });
       ctx.out(`Moved ${formatId(db, id)}: ${from} \u2192 ${to}.`);
     }
   },
@@ -2932,15 +3277,15 @@ var VERBS = {
     },
     async run(ctx, v, pos) {
       const { db, id } = parseRealId(onePos(pos, "id"));
-      const resolution = str(v, "resolution");
+      const resolution = str2(v, "resolution");
       if (!resolution)
         throw new UsageError("close needs --resolution.");
-      const dup = str(v, "dup-of");
+      const dup = str2(v, "dup-of");
       const opts = {
         resolution,
         dupOf: dup ? parseLocalRef(db, dup) : undefined,
-        github: str(v, "github"),
-        note: str(v, "note"),
+        github: str2(v, "github"),
+        note: str2(v, "note"),
         keepChildren: Boolean(v["keep-children"])
       };
       await ctx.backend().run(db, (s) => closeIssue(s, db, id, opts, today()), { write: true });
@@ -2952,7 +3297,7 @@ var VERBS = {
     options: { note: { type: "string" } },
     async run(ctx, v, pos) {
       const { db, id } = parseRealId(onePos(pos, "id"));
-      const status = await ctx.backend().run(db, (s) => reopenIssue(s, db, id, str(v, "note"), today()), { write: true });
+      const status = await ctx.backend().run(db, (s) => reopenIssue(s, db, id, str2(v, "note"), today()), { write: true });
       ctx.out(`Reopened ${formatId(db, id)} (${status}).`);
     }
   },
@@ -2993,7 +3338,7 @@ var VERBS = {
     options: { goal: { type: "string" }, due: { type: "string" }, github: { type: "string" }, ...json },
     async run(ctx, v, pos) {
       const [action, ...rest] = pos;
-      const fields = { goal: str(v, "goal"), due: str(v, "due"), github: str(v, "github") };
+      const fields = { goal: str2(v, "goal"), due: str2(v, "due"), github: str2(v, "github") };
       const b = ctx.backend();
       if (action === "list") {
         const all = await b.run("issues", listMilestones);
@@ -3056,11 +3401,11 @@ var VERBS = {
       const [action] = pos;
       if (action === "enable") {
         const lines = await remoteEnable(b, {
-          issuesUrl: str(v, "issues-url"),
-          tokenEnv: str(v, "token-env"),
-          securityUrl: str(v, "security-url"),
-          securityTokenEnv: str(v, "security-token-env"),
-          slug: str(v, "slug")
+          issuesUrl: str2(v, "issues-url"),
+          tokenEnv: str2(v, "token-env"),
+          securityUrl: str2(v, "security-url"),
+          securityTokenEnv: str2(v, "security-token-env"),
+          slug: str2(v, "slug")
         });
         ctx.out(lines.join(`
 `));
@@ -3074,6 +3419,62 @@ var VERBS = {
       } else {
         throw new UsageError("remote needs enable, disable, or status.");
       }
+    }
+  },
+  export: {
+    usage: ["export --out <file.jsonl>"],
+    options: { out: { type: "string" } },
+    async run(ctx, v) {
+      const out = str2(v, "out");
+      if (!out)
+        throw new UsageError("export needs --out <file.jsonl>; there is no default location.");
+      const counts = await exportAll(ctx.backend(), out, ctx.err);
+      ctx.out(`Exported ${counts.issues} issues and ${counts.security} security issues to ${out}.`);
+    }
+  },
+  import: {
+    usage: ["import --from <file.jsonl>", "import --v1 [<path>] [--delete-old]"],
+    options: { from: { type: "string" }, v1: { type: "boolean" }, "delete-old": { type: "boolean" } },
+    async run(ctx, v, pos) {
+      const b = ctx.backend();
+      const from = str2(v, "from");
+      if (from) {
+        if (v.v1)
+          throw new UsageError("Pass --from or --v1, not both.");
+        const dumps = parseExport(readFileSync5(from, "utf8"));
+        await writeDumps(b, dumps);
+        ctx.out(`Imported ${dumps.issues.issues.length} issues and ${dumps.security.issues.length} security issues.`);
+        return;
+      }
+      if (!v.v1)
+        throw new UsageError("import needs --from <file.jsonl> or --v1.");
+      const path = pos[0] ?? (ctx.dir ? b.loc.dir : join5(b.loc.dir, "issues"));
+      const tree = readV1(path);
+      assertClean(tree);
+      if (!v["delete-old"]) {
+        await writeDumps(b, toDumps(tree));
+        for (const w of tree.warnings)
+          ctx.err(`warning: ${w}`);
+      }
+      const counts = await countRows(b, tree);
+      const lines = counts.map((c) => `${c.folder}/: ${c.files} files, ${c.rows} rows`);
+      lines.push(`MILESTONES.md: ${tree.milestones.length} milestones`);
+      if (counts.some((c) => c.files !== c.rows)) {
+        throw new ValidationError(`Counts do not match; the v1 folder stays:
+${lines.join(`
+`)}`);
+      }
+      if (v["delete-old"]) {
+        deleteV1(tree);
+        ctx.out(`${lines.join(`
+`)}
+Counts match. Deleted the v1 files in ${path}.`);
+        return;
+      }
+      const again = ["import", "--v1", ...pos[0] ? [pos[0]] : [], "--delete-old"].join(" ");
+      ctx.out(`${lines.join(`
+`)}
+Counts match. The v1 folder is untouched. After the user agrees, delete it with: ${again}`);
     }
   },
   check: {

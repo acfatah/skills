@@ -30,7 +30,7 @@ export function issueLine(db: DbName, issue: Issue, shownId?: string): string {
 }
 
 export function noteLine(n: Pick<Note, "date" | "text">): string {
-  return `- ${n.date}: ${n.text}`;
+  return `- ${n.date}: ${n.text.replace(/\n/g, "\n  ")}`;
 }
 
 export function detailText(db: DbName, d: IssueDetail, shownId?: string): string {

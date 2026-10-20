@@ -1,3 +1,5 @@
+import { readFileSync } from "node:fs";
+import { join } from "node:path";
 import { type ParseArgsConfig, parseArgs } from "node:util";
 import { Backend } from "./backend.ts";
 import { checkDb } from "./commands/check.ts";
@@ -16,9 +18,11 @@ import {
 import { addMilestone, closeMilestone, editMilestone, listMilestones } from "./commands/milestones.ts";
 import { matches, queueNew, queueNote, queuedIssues, queuedNotesOn } from "./commands/offline.ts";
 import { remoteDisable, remoteEnable, remoteStatus } from "./commands/remote.ts";
-import { CliError, Offline, UsageError } from "./errors.ts";
+import { CliError, Offline, UsageError, ValidationError } from "./errors.ts";
+import { exportAll, parseExport } from "./exporter.ts";
 import { detailText, issueJson, issueLine, milestoneLine } from "./format.ts";
 import { type DbName, formatId, parseId, parseRealId } from "./ids.ts";
+import { assertClean, countRows, deleteV1, readV1, toDumps, writeDumps } from "./importer.ts";
 import { resolveLocation } from "./location.ts";
 import { OPEN_STATUSES, type Status, checkStatus, splitList, today } from "./model.ts";
 import { STATUSES } from "./schema.ts";
@@ -385,6 +389,55 @@ export const VERBS: Record<string, Verb> = {
       } else {
         throw new UsageError("remote needs enable, disable, or status.");
       }
+    },
+  },
+
+  export: {
+    usage: ["export --out <file.jsonl>"],
+    options: { out: { type: "string" } },
+    async run(ctx, v) {
+      const out = str(v, "out");
+      if (!out) throw new UsageError("export needs --out <file.jsonl>; there is no default location.");
+      const counts = await exportAll(ctx.backend(), out, ctx.err);
+      ctx.out(`Exported ${counts.issues} issues and ${counts.security} security issues to ${out}.`);
+    },
+  },
+
+  import: {
+    usage: ["import --from <file.jsonl>", "import --v1 [<path>] [--delete-old]"],
+    options: { from: { type: "string" }, v1: { type: "boolean" }, "delete-old": { type: "boolean" } },
+    async run(ctx, v, pos) {
+      const b = ctx.backend();
+      const from = str(v, "from");
+      if (from) {
+        if (v.v1) throw new UsageError("Pass --from or --v1, not both.");
+        const dumps = parseExport(readFileSync(from, "utf8"));
+        await writeDumps(b, dumps);
+        ctx.out(`Imported ${dumps.issues.issues.length} issues and ${dumps.security.issues.length} security issues.`);
+        return;
+      }
+      if (!v.v1) throw new UsageError("import needs --from <file.jsonl> or --v1.");
+      // A declared folder held the v1 layout itself; otherwise it was .claude/issues/.
+      const path = pos[0] ?? (ctx.dir ? b.loc.dir : join(b.loc.dir, "issues"));
+      const tree = readV1(path);
+      assertClean(tree);
+      if (!v["delete-old"]) {
+        await writeDumps(b, toDumps(tree));
+        for (const w of tree.warnings) ctx.err(`warning: ${w}`);
+      }
+      const counts = await countRows(b, tree);
+      const lines = counts.map((c) => `${c.folder}/: ${c.files} files, ${c.rows} rows`);
+      lines.push(`MILESTONES.md: ${tree.milestones.length} milestones`);
+      if (counts.some((c) => c.files !== c.rows)) {
+        throw new ValidationError(`Counts do not match; the v1 folder stays:\n${lines.join("\n")}`);
+      }
+      if (v["delete-old"]) {
+        deleteV1(tree);
+        ctx.out(`${lines.join("\n")}\nCounts match. Deleted the v1 files in ${path}.`);
+        return;
+      }
+      const again = ["import", "--v1", ...(pos[0] ? [pos[0]] : []), "--delete-old"].join(" ");
+      ctx.out(`${lines.join("\n")}\nCounts match. The v1 folder is untouched. After the user agrees, delete it with: ${again}`);
     },
   },
 

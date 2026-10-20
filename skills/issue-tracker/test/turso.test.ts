@@ -1,6 +1,6 @@
 import { afterAll, beforeEach, describe, expect, test } from "bun:test";
 import { Database } from "bun:sqlite";
-import { chmodSync, existsSync, readFileSync, statSync, writeFileSync } from "node:fs";
+import { chmodSync, cpSync, existsSync, readFileSync, statSync, writeFileSync } from "node:fs";
 import { join } from "node:path";
 import { type Config, configPath, readConfig, writeConfig } from "../src/config.ts";
 import { AuthError, Offline } from "../src/errors.ts";
@@ -237,6 +237,15 @@ describe("Turso projects through the bundle", () => {
     expect(p.issues.db.query("SELECT COUNT(*) AS n FROM issues").get()).toEqual({ n: 0 });
     const st = JSON.parse((await ok(p.$("remote", "status", "--json"))).stdout);
     expect(st).toMatchObject({ project: "github.com/acfatah/demo", backend: "turso", security: { backend: "local" } });
+  });
+
+  test("import --v1 writes into a Turso project", async () => {
+    const p = project();
+    await ok(p.enable());
+    cpSync(join(import.meta.dir, "fixtures", "v1"), join(p.repo, ".claude", "issues"), { recursive: true });
+    const r = await ok(p.$("import", "--v1"));
+    expect(r.stdout).toContain("Counts match");
+    expect(p.issues.db.query("SELECT id FROM issues ORDER BY id").all().map((x) => (x as { id: number }).id)).toEqual([1, 2, 3, 4, 5, 7]);
   });
 
   test("remote disable flushes, pulls a final copy, and goes local", async () => {
