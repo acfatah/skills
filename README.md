@@ -201,7 +201,7 @@ existing top-level object; do not paste a second `{}` block.
     "type": "command",
     "command": "~/.claude/statusline.sh"
   },
-  "timeFormat": "%Y-%m-%d:%H:%M"
+  "timeFormat": "%Y-%m-%d %H:%M %Z"
 }
 ```
 
@@ -211,9 +211,9 @@ existing top-level object; do not paste a second `{}` block.
   stop and run-mode lines into the plan so they survive that clear.
 - **`statusLine`:** runs the [status line](#status-line) script above.
 - **`timeFormat`** (optional): a strftime pattern for the time after
-  "done" in the turn duration line, such as `done 2026-10-21:10:55`.
-  Needs Claude Code v2.1.257 or later; `/config` offers only the
-  presets.
+  "done" in the turn duration line, such as
+  `done 2026-10-21 14:16 +08`. Needs Claude Code v2.1.257 or later;
+  `/config` offers only the presets.
 
 ## License
 
