@@ -97,7 +97,8 @@ bunx skills update -g
 ```
 CLAUDE.md            rules for Claude when working in this repo
 claude/
-└── CLAUDE.md        global Claude Code instructions (see below)
+├── CLAUDE.md        global Claude Code instructions (see below)
+└── statusline.sh    status line script (see below)
 workflows/
 └── <name>/
     ├── <name>.js    Claude Code workflow script; symlink this file
@@ -157,6 +158,37 @@ PR at the end, see [`auto-pr`](skills/auto-pr). For logging and triaging
 issues as local files, see the [`issue-tracker`](skills/issue-tracker)
 skill.
 
+## Status line
+
+[`claude/statusline.sh`](claude/statusline.sh) is a Claude Code status
+line script. It shows the Claude Code process id, the session id, and
+how much of the context window is in use:
+
+```
+pid: 2159799 · session: <session_id> · context: 84k/1M (8%)
+```
+
+Claude Code pipes JSON to the script on stdin. The session comes from
+`session_id`, and the context numbers from `context_window.*`: tokens in
+use, window size, and the percentage used. The JSON has no process id, so
+the script walks up its parent processes with `ps` to the one named
+`claude`. It requires [`jq`](https://jqlang.org).
+
+Link it into `~/.claude/` the same way as `CLAUDE.md`, then enable it with
+the `statusLine` setting under Recommended settings:
+
+```bash
+ln -sfn "$PWD/claude/statusline.sh" ~/.claude/statusline.sh
+```
+
+This replaces any existing `~/.claude/statusline.sh`, so back that up
+first.
+
+- **Gotcha:** the numbers come from the last API response, so they can
+  trail `/context` a little.
+- **Gotcha:** the process id shows `?` when no parent process is named
+  `claude`, such as when you run the script by hand.
+
 ## Recommended settings
 
 Apply these by hand in `~/.claude/settings.json`. Add each key inside the
@@ -164,7 +196,12 @@ existing top-level object; do not paste a second `{}` block.
 
 ```json
 {
-  "showClearContextOnPlanAccept": true
+  "showClearContextOnPlanAccept": true,
+  "statusLine": {
+    "type": "command",
+    "command": "~/.claude/statusline.sh"
+  },
+  "timeFormat": "%Y-%m-%d:%H:%M"
 }
 ```
 
@@ -172,6 +209,11 @@ existing top-level object; do not paste a second `{}` block.
   context when you accept a plan, so work starts fresh from the plan file
   alone. The `plans-and-roadmaps` and `auto-commit` skills write their
   stop and run-mode lines into the plan so they survive that clear.
+- **`statusLine`:** runs the [status line](#status-line) script above.
+- **`timeFormat`** (optional): a strftime pattern for the time after
+  "done" in the turn duration line, such as `done 2026-10-21:10:55`.
+  Needs Claude Code v2.1.257 or later; `/config` offers only the
+  presets.
 
 ## License
 
