@@ -161,17 +161,18 @@ skill.
 ## Status line
 
 [`claude/statusline.sh`](claude/statusline.sh) is a Claude Code status
-line script. It shows the session id and how much of the context window
-is in use:
+line script. It shows the Claude Code process id, the session id, and
+how much of the context window is in use:
 
 ```
-session: <session_id> · context: 84k/1M (8%)
+pid: 2159799 · session: <session_id> · context: 84k/1M (8%)
 ```
 
 Claude Code pipes JSON to the script on stdin. The session comes from
 `session_id`, and the context numbers from `context_window.*`: tokens in
-use, window size, and the percentage used. It requires
-[`jq`](https://jqlang.org).
+use, window size, and the percentage used. The JSON has no process id, so
+the script walks up its parent processes with `ps` to the one named
+`claude`. It requires [`jq`](https://jqlang.org).
 
 Link it into `~/.claude/` the same way as `CLAUDE.md`, then enable it with
 the `statusLine` setting under Recommended settings:
@@ -185,6 +186,8 @@ first.
 
 - **Gotcha:** the numbers come from the last API response, so they can
   trail `/context` a little.
+- **Gotcha:** the process id shows `?` when no parent process is named
+  `claude`, such as when you run the script by hand.
 
 ## Recommended settings
 
