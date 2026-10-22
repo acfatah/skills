@@ -192,8 +192,9 @@ Gotchas:
 - **Plan files stay in the main checkout,** under `.claude/plans/` there,
   so removing the worktree cannot delete them. Writing them from inside
   the worktree may ask for permission.
-- **Auto-PR is hidden on a new worktree branch:** it has no upstream yet.
-  Run `git push -u origin <branch>` first.
+- **Auto-PR on a new worktree branch creates the upstream:** the branch
+  has none yet, so the first push at a clean finish creates
+  `origin/<branch>`.
 - **Leaving and removing the worktree is yours.** Claude stays in it and
   never removes it unless asked; after the merge, use
   [`post-merge-cleanup`](../post-merge-cleanup).

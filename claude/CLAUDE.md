@@ -114,7 +114,8 @@ should be untracked.
 Before approving or executing a plan, or when the user asks for several
 distinct changes, load the `auto-commit` skill. Two rules hold even
 without it: Pause is the default, and only Auto-PR pushes, and only to
-the branch's upstream; see the `auto-pr` skill.
+the branch's recorded upstream, which it may create on its first push;
+see the `auto-pr` skill.
 
 ## Worktrees
 

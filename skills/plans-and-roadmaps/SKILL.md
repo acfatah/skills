@@ -3,7 +3,7 @@ name: plans-and-roadmaps
 description: "Rules for plan documents and roadmaps: where plan files live, whether a plan runs in a worktree, which session a plan is written in, progress stamps, state directories, phased plans, multi-session roadmaps. Load before writing, executing, stamping, or moving a plan: the plan-mode file, any .md under .claude/plans/, or a PLAN*.md / TODO.md being executed."
 ---
 
-# Plans and Roadmaps v1.8.0
+# Plans and Roadmaps v1.9.0
 
 These rules apply to the plan-mode plan file, any `.md` under a
 `.claude/plans/` directory, and any `PLAN*.md` or `TODO.md` you are executing
@@ -180,9 +180,9 @@ Writes outside the worktree may ask for permission; that is expected.
 branch, and points to the `post-merge-cleanup` skill for after the merge.
 Never call `ExitWorktree` or remove the worktree unless asked.
 
-- **Auto-PR:** a new worktree branch has no upstream, so `auto-pr` stays
-  hidden with its usual line saying to run `git push -u origin <branch>`
-  first.
+- **Auto-PR:** a new worktree branch has no upstream, so `auto-pr` is
+  offered on its no-upstream path and creates `origin/<branch>` at the
+  first clean finish (see the `auto-pr` skill).
 
 ## Parallel sessions
 
@@ -576,8 +576,10 @@ into `<topic>/roadmap.md`, never over an existing file or link:
 4. Stop, show the phase's commit message, and wait, per Phased plans. In
    Auto-commit run mode, commit the phase with its message first, then
    stop. In Auto-PR run mode, commit, write the outcome, push and open or
-   update the PR (see the `auto-pr` skill), then stop. Never plan or start
-   the next phase.
+   update the PR (see the `auto-pr` skill), then stop. When that push
+   created the upstream, drop `, to create` from the run-mode line in the
+   phase plan and in the roadmap's Decisions. Never plan or start the next
+   phase.
 
 Phase plans stay in `<topic>/`, as real files, until the whole roadmap is
 complete.
