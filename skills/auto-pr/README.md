@@ -11,8 +11,10 @@ upstream and opens or updates a draft PR once the run finishes cleanly.
 - **Auto-commit plus one step.** Everything in `auto-commit` still applies:
   the question, the baseline, staging by path, checks, gaps and the report.
 - **Offered only when safe:** on a non-default branch that tracks a
-  non-default upstream, with `gh` signed in. Otherwise the option is
-  hidden and Claude says which check failed.
+  non-default upstream, with `gh` signed in. A branch with no upstream
+  qualifies too, when `origin` is the repo `gh` resolves to and the name
+  is free there; the first push then creates `origin/<branch>`. Otherwise
+  the option is hidden and Claude says which check failed.
 - **Records the upstream** in the plan's `> Run mode:` line, so a fresh
   session can check the branch before pushing.
 - **Pushes once, at a clean finish,** `HEAD` to its recorded upstream.
@@ -34,9 +36,8 @@ upstream and opens or updates a draft PR once the run finishes cleanly.
 
 - **You want to review the branch before anything goes public** → use
   Auto-commit, then push yourself.
-- **You are on the default branch, or the branch has no upstream** → the
-  option is hidden; create a topic branch and run
-  `git push -u origin <branch>` first.
+- **You are on the default branch** → the option is hidden; create a
+  topic branch first.
 - **Pushes trigger expensive or risky CI, deploys or webhooks** → use
   Auto-commit; a draft PR still runs CI.
 - **A single small task** → nothing to batch; Claude skips the question.
@@ -87,30 +88,34 @@ It also needs the [GitHub CLI](https://cli.github.com), signed in with
   .claude/plans/<topic>/roadmap.md." It commits the phase, writes the
   outcome, pushes, updates the roadmap's PR, and stops.
 - **Fresh worktree:** "Run the plan in a new worktree, auto-PR." The new
-  branch has no upstream, so Claude hides the option and tells you to run
-  `git push -u origin <branch>` first.
+  branch has no upstream, so Claude offers
+  `Auto-PR (creates origin/<branch> at finish)`, and the first push at a
+  clean finish creates it.
 - **Undo:** "Close the PR." Claude runs `gh pr close <n>`; the pushed
   commits stay on the remote.
 
 ### Walkthrough
 
-1. **Prepare the branch.** Create a topic branch and push it with
-   `git push -u origin <branch>`.
+1. **Prepare the branch.** Create a topic branch.
 2. **Plan the work.** In plan mode, ask for a two-phase change.
 3. **Choose the mode.** Before approval, pick Auto-PR. The plan gains
-   `> Run mode: Auto-PR (upstream: origin/<branch>) …` under its title.
+   `> Run mode: Auto-PR (upstream: origin/<branch>, to create) …` under
+   its title.
 4. **Let it run.** Claude commits Phase 1 and Phase 2. At the clean
    finish it re-checks the upstream, writes `drafts/PR_SUMMARY-<task>.md`,
-   pushes, and opens a draft PR.
-5. **Read the report.** It lists the commits, the PR URL, and whether the
-   PR was opened or updated.
+   pushes with `-u` to create `origin/<branch>`, drops `, to create` from
+   the run-mode line, and opens a draft PR.
+5. **Read the report.** It lists the commits, the PR URL, whether the PR
+   was opened or updated, and that it created `origin/<branch>`.
 
 Gotchas:
 
 - **Needs `auto-commit` installed.** Auto-PR is offered from its question
   and uses its commit loop.
-- **A fresh worktree branch has no upstream.** Push it with
-  `git push -u origin <branch>` before the run, or the option is hidden.
+- **The first push creates `origin/<branch>`,** at the first clean
+  finish, and undo does not delete it; that needs its own request.
+- **A name already taken on `origin` hides the option** for a branch with
+  no upstream.
 - **Pushes trigger CI,** even for a draft PR.
 - **A stopped run pushes nothing.** Its commits stay local, as in
   Auto-commit, and the report says why.
