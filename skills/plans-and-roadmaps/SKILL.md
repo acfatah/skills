@@ -109,9 +109,26 @@ run-mode question, never as a second prompt. Offer, in this order:
 - **Worktree from HEAD:** a new branch `<type>/<topic>` (e.g.
   `feat/<topic>`) at `.claude/worktrees/<topic>`. Show the real branch name
   and path in the option.
+- **Worktree from origin/<base>:** the same branch name and path, but
+  based on the remote base branch. Show the real base, branch and path in
+  the option, e.g. "Worktree from origin/dev".
 
-The base is always the current local HEAD, not `origin/main`, and
-`worktree.baseRef` is ignored.
+Worktree from HEAD uses the current local HEAD; Worktree from
+origin/<base> uses the detected remote branch. `worktree.baseRef` is
+ignored either way.
+
+**Base detection.** Check remote-tracking refs, first match wins, without
+fetching (plan mode cannot write refs):
+
+```bash
+for b in dev development main master; do
+  git rev-parse --verify --quiet "refs/remotes/origin/$b" >/dev/null && { echo "$b"; break; }
+done
+```
+
+- **Hide the option** when nothing matches or there is no `origin`
+  remote, and say so in one line, e.g. "Worktree from origin is hidden:
+  no origin/dev, development, main or master ref."
 
 **Dirty tree.** Only when `git status --short` is not empty and the user
 may pick a worktree, add a question to the same call: what happens to the
@@ -134,16 +151,22 @@ uncommitted changes. Untracked files count; ignored files do not.
 
 - **Carried edits are the user's.** In the worktree, `auto-commit`'s
   dirty-tree check reports them like any other uncommitted change.
+- **Remote base:** the changes were made against HEAD, so `stash apply`
+  or `pop` in a worktree from origin/<base> may conflict. On conflict,
+  stop and report. For Move, nothing is lost: `pop` keeps the stash in
+  the list when it conflicts.
 
 **Recording.** Write the answer as a line under the title, below the stop
 line and the run-mode line. Write `none` too, so execution does not ask
 again:
 
     > Worktree: feat/<topic> from <sha> at <main>/.claude/worktrees/<topic>; carry: copy. Create it if missing, then EnterWorktree with path. See the plans-and-roadmaps skill.
+    > Worktree: feat/<topic> from origin/dev at <main>/.claude/worktrees/<topic>; carry: leave. Create it if missing, then EnterWorktree with path. See the plans-and-roadmaps skill.
     > Worktree: none.
 
 `<sha>` is the HEAD at approval, `<main>` the absolute main-checkout path,
-and `carry` is `leave`, `copy` or `move`.
+and `carry` is `leave`, `copy` or `move`. A remote base is recorded as its
+ref, not a SHA, because the SHA is only known after the fetch.
 
 **Creating and entering.** After approval, before the first edit:
 
@@ -154,6 +177,19 @@ and `carry` is `leave`, `copy` or `move`.
    create it with git:
 
        git worktree add -b <type>/<topic> <main>/.claude/worktrees/<topic> <sha>
+
+   For a remote base, fetch it first and never track it:
+
+       git fetch origin <base>
+       git worktree add --no-track -b <type>/<topic> <main>/.claude/worktrees/<topic> origin/<base>
+
+   - **`--no-track` is required.** With the default
+     `branch.autoSetupMerge`, a remote-tracking start point becomes the
+     new branch's upstream, so a later `git push` or Auto-PR would target
+     `dev` or `main`.
+   - **Fetch fails** (offline, auth): stop and ask. Offer to use the
+     existing `origin/<base>` ref as is, or to switch to Worktree from
+     HEAD.
 
 3. Carry the changes as recorded, then call `EnterWorktree` with
    `path=<main>/.claude/worktrees/<topic>`.
@@ -493,8 +529,8 @@ so the roadmap must hold:
   unless the roadmap says its phases merge on their own. Under Auto-PR the
   phases then share one draft PR.
 - **The worktree answer,** recorded under `## Decisions` next to the topic
-  branch: its branch and path, or none (see Worktrees). Phase 1 creates
-  it; later phases enter it.
+  branch: its branch, base (a SHA or `origin/<base>`) and path, or none
+  (see Worktrees). Phase 1 creates it; later phases enter it.
 - One `## Phase N. <title>` per phase, one commit each, with scope and
   done-criteria. No `Step N.M` items yet; the phase plan writes those.
 - Under each finished phase, `### Phase N outcome`: what actually changed
