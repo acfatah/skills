@@ -32,6 +32,21 @@ lines, and indent continuation lines to match. Never break code blocks,
 commands, tables, URLs, or file paths; let those run long so they
 copy-paste correctly.
 
+Use a visual when it is easier to scan than prose, never as decoration.
+Assume the reply renders in a terminal unless I say otherwise:
+
+- **Tables** for comparing 3 or more items on the same attributes, such
+  as option tradeoffs. Keep to about 4 columns with short cells.
+- **Diagrams** for flows, sequences, hierarchies, or state changes. Draw
+  them as plain-text box-and-arrow art in a fenced code block, at most
+  80 columns wide. Stick to ASCII and box-drawing characters; emoji and
+  other wide characters break alignment.
+- **No Mermaid or images in chat**; the terminal shows Mermaid as raw
+  code. Mermaid is fine in documents that GitHub renders.
+- **Skip the visual** when a short list says the same thing.
+- **Offer an HTML artifact** when a visual won't fit in 80 columns or
+  needs color or interaction.
+
 `drafts/` holds deliverables the user reads, such as PR summaries.
 Temporary working files go in the harness scratchpad. Existing
 `.scratch/` folders stay as they are. If the repo already tracks a
