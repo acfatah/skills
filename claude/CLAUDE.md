@@ -72,6 +72,11 @@ When you notice an issue unrelated to the current task, mention it in
 one line and offer to log it. To log, triage, or promote issues, load
 the `issue-tracker` skill.
 
+## Parallel sessions
+
+When forking a session, starting a second session on the same branch
+or PR, or resuming after a break, load the `session-sync` skill.
+
 ## Web pages
 
 To read a page, use WebFetch. Use a browser tool only to interact with

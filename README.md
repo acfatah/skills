@@ -32,6 +32,7 @@ problem‑solving.
 | [plans-and-roadmaps](skills/plans-and-roadmaps) | Rules for plan documents: file location, whether a plan runs in a worktree, which session plans, progress stamps, state directories, phased plans, and multi-session roadmaps. |
 | [post-merge-cleanup](skills/post-merge-cleanup) | After a PR merges, remove its worktree, local branch and remote branch, after safety checks and one confirmation. |
 | [readme-badges](skills/readme-badges) | Add, audit, or repair a README's badge block: shields.io and qlty badges in one HTML format, each verified before writing. |
+| [session-sync](skills/session-sync) | Keep several Claude sessions on one branch or PR in sync: forks on sub-branches, a shared sessions file, a sync step before acting, and a repo-checked recap after a break. |
 | [windows-screenshots](skills/windows-screenshots) | Locate, list, and read Windows screenshots (Win+PrtScn, Snipping Tool) from WSL or native Windows shells. |
 
 Each skill loads when your request matches its description, and naming
@@ -141,7 +142,7 @@ the `VERSION` constant in its `.js` file, the one file users install.
 [`claude/CLAUDE.md`](claude/CLAUDE.md) holds my global instructions for
 Claude Code: response style, line width, PR and commit conventions, a
 worktree prompt, and pointers to the `plans-and-roadmaps`, `auto-commit`,
-`auto-pr` and `issue-tracker` skills. Claude Code loads it from
+`auto-pr`, `issue-tracker` and `session-sync` skills. Claude Code loads it from
 `~/.claude/CLAUDE.md`, so link it there:
 
 ```bash

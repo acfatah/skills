@@ -3,7 +3,7 @@ name: plans-and-roadmaps
 description: "Rules for plan documents and roadmaps: where plan files live, whether a plan runs in a worktree, which session a plan is written in, progress stamps, state directories, phased plans, multi-session roadmaps. Load before writing, executing, stamping, or moving a plan: the plan-mode file, any .md under .claude/plans/, or a PLAN*.md / TODO.md being executed."
 ---
 
-# Plans and Roadmaps v1.7.0
+# Plans and Roadmaps v1.8.0
 
 These rules apply to the plan-mode plan file, any `.md` under a
 `.claude/plans/` directory, and any `PLAN*.md` or `TODO.md` you are executing
@@ -183,6 +183,14 @@ Never call `ExitWorktree` or remove the worktree unless asked.
 - **Auto-PR:** a new worktree branch has no upstream, so `auto-pr` stays
   hidden with its usual line saying to run `git push -u origin <branch>`
   first.
+
+## Parallel sessions
+
+These rules assume one session per plan. Before executing a plan or
+roadmap phase that carries a `> Sessions:` line under its title, or whose
+branch has another active session, load the `session-sync` skill and
+run its sync step first. It owns the sessions file, forks and merging
+back; this skill still owns the plan.
 
 ## Plan where the tools load
 
