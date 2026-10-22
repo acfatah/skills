@@ -142,7 +142,7 @@ the `VERSION` constant in its `.js` file, the one file users install.
 [`claude/CLAUDE.md`](claude/CLAUDE.md) holds my global instructions for
 Claude Code: response style, line width, PR and commit conventions, a
 worktree prompt, and pointers to the `plans-and-roadmaps`, `auto-commit`,
-`auto-pr` and `issue-tracker` skills. Claude Code loads it from
+`auto-pr`, `issue-tracker` and `session-sync` skills. Claude Code loads it from
 `~/.claude/CLAUDE.md`, so link it there:
 
 ```bash
