@@ -167,7 +167,7 @@ how much of the context window is in use:
 
 ```
 pid: 2159799 · session: <session_id> · context: 84k/1M (8%)
-forked from session: <session_id>
+branched from: <session_id>
 ```
 
 Claude Code pipes JSON to the script on stdin. The session comes from
@@ -176,9 +176,22 @@ use, window size, and the percentage used. The JSON has no process id, so
 the script walks up its parent processes with `ps` to the one named
 `claude`. It requires [`jq`](https://jqlang.org).
 
-The second line appears only in a session made with `/branch`. It names
-the session the branch came from, read from the `forkedFrom.sessionId`
-field that `/branch` writes into the new session's transcript.
+The second line appears only in a branched or forked session, and names
+the session it came from. Its label tells the two apart, because the
+other session behaves differently:
+
+- **`branched from:`** after `/branch`. You switched away from the original
+  session, which stopped there; `/resume <id>` returns to it.
+- **`forked from:`** in a background fork (⑂). The original runs in parallel
+  and may still be changing the same files.
+
+The script reads the id from the transcript at `transcript_path`:
+
+- **`/branch`:** the `forkedFrom.sessionId` field on the copied messages.
+- **Background fork (⑂):** the `session_id` of the last copied message,
+  but only when the transcript has the `<fork-source>` notice. `/clear`
+  also copies messages from another session, so the notice keeps it from
+  showing a false line.
 
 Link it into `~/.claude/` the same way as `CLAUDE.md`, then enable it with
 the `statusLine` setting under Recommended settings:
@@ -194,9 +207,13 @@ first.
   trail `/context` a little.
 - **Gotcha:** the process id shows `?` when no parent process is named
   `claude`, such as when you run the script by hand.
-- **Gotcha:** `forkedFrom` is an undocumented transcript field, checked
-  against Claude Code 2.1.309. If a later version renames it, the second
-  line silently stops showing.
+- **Gotcha:** `forkedFrom`, `session_id` and the `<fork-source>` notice
+  are undocumented transcript details, checked against Claude Code
+  2.1.309. If a later version changes them, the second line silently
+  stops showing.
+- **Gotcha:** for a fork of a fork, the second line can name the
+  grandparent if the parent wrote nothing before it was forked.
+- **Gotcha:** the background-fork check uses `tac`, which macOS lacks.
 
 ## Recommended settings
 
