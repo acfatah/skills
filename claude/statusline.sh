@@ -4,6 +4,7 @@
 # https://code.claude.com/docs/en/statusline
 #
 # Output:   pid: 2159799 · session: <session_id> · context: 84k/1M (8%)
+#           forked from session: <session_id>   (only after /branch)
 # Enabled by statusLine.command in ~/.claude/settings.json.
 #
 # Written with Claude Opus 5.5 (Claude Code), 2026-10-21.
@@ -16,7 +17,19 @@ while [ "${pid:-1}" -gt 1 ] && [ "$(ps -o comm= -p "$pid")" != claude ]; do
 done
 [ "${pid:-1}" -gt 1 ] || pid='?'
 
-jq -r --arg pid "$pid" '
+input=$(cat)
+
+# /branch stamps each message it copies into the new transcript with
+# forkedFrom.sessionId, the session it branched from. The copied lines
+# come first, so grep -m1 stops early even in a long transcript.
+transcript=$(jq -r '.transcript_path // empty' <<<"$input")
+parent=''
+if [ -f "$transcript" ]; then
+  parent=$(grep -m1 '"forkedFrom"' "$transcript" \
+    | jq -r '.forkedFrom.sessionId // empty' 2>/dev/null)
+fi
+
+jq -r --arg pid "$pid" --arg parent "$parent" <<<"$input" '
   # Shorten a token count: 84213 -> 84k, 1000000 -> 1M.
   def k:
     if . >= 1000000 then "\(. / 1000000 * 10 | floor / 10)M"
@@ -32,4 +45,5 @@ jq -r --arg pid "$pid" '
     + " · context: \(($c.total_input_tokens // 0) | k)"
     + "/\(($c.context_window_size // 200000) | k)"
     + " (\(($c.used_percentage // 0) | floor)%)"
+    + if $parent != "" then "\n  forked from session: \($parent)" else "" end
 '

@@ -167,6 +167,7 @@ how much of the context window is in use:
 
 ```
 pid: 2159799 · session: <session_id> · context: 84k/1M (8%)
+forked from session: <session_id>
 ```
 
 Claude Code pipes JSON to the script on stdin. The session comes from
@@ -174,6 +175,10 @@ Claude Code pipes JSON to the script on stdin. The session comes from
 use, window size, and the percentage used. The JSON has no process id, so
 the script walks up its parent processes with `ps` to the one named
 `claude`. It requires [`jq`](https://jqlang.org).
+
+The second line appears only in a session made with `/branch`. It names
+the session the branch came from, read from the `forkedFrom.sessionId`
+field that `/branch` writes into the new session's transcript.
 
 Link it into `~/.claude/` the same way as `CLAUDE.md`, then enable it with
 the `statusLine` setting under Recommended settings:
@@ -189,6 +194,9 @@ first.
   trail `/context` a little.
 - **Gotcha:** the process id shows `?` when no parent process is named
   `claude`, such as when you run the script by hand.
+- **Gotcha:** `forkedFrom` is an undocumented transcript field, checked
+  against Claude Code 2.1.309. If a later version renames it, the second
+  line silently stops showing.
 
 ## Recommended settings
 
