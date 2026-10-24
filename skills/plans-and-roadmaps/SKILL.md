@@ -309,10 +309,11 @@ a `completed/` move or a roadmap edit:
   the worktree stays.
 - **A `name=` worktree** re-entered with `path=` loses its exit prompt and
   `ExitWorktree action=remove`. Say so in the final report.
-- **Fallback:** if the exit or re-entry fails, or a write is still
-  refused, skip it and go on. List each skipped write in the final report,
-  with the exact change, for the user to make with `!` or from a
-  main-checkout session.
+- **Fallback:** if the exit fails, or a write is still refused, skip it
+  and go on. List each skipped write in the final report, with the exact
+  change, for the user to make with `!` or from a main-checkout session.
+- **Re-entry fails:** stop and ask. The session is now in the main
+  checkout, so going on would put the worktree's edits there.
 - **No shell workarounds.** Never write `<main>` paths with `sed -i`,
   `cat >>` or `cp` to get past the guard.
 

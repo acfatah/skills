@@ -85,9 +85,11 @@ there, without a permission prompt. Make a round trip instead:
   trip.
 - **Allowed, though `ExitWorktree` is otherwise asked-only:** the session
   returns at once, and the worktree stays.
-- **Fallback:** if the trip fails or a write is still refused, skip it and
-  report the exact change, for the user to make with `!` or from a
+- **Fallback:** if the exit fails or a write is still refused, skip it
+  and report the exact change, for the user to make with `!` or from a
   main-checkout session.
+- **Re-entry fails:** stop and ask. The session is now in the main
+  checkout, so going on would put the fork's edits there.
 - **No shell workarounds,** such as `sed -i`, `cat >>` or `mv` on `<main>`
   paths.
 
@@ -291,7 +293,8 @@ When a sub-branch's piece is done:
    - **Back afterwards:** `EnterWorktree path=<fork-worktree>`. This round
      trip is allowed, though `ExitWorktree` is otherwise asked-only.
    - **Fallback:** if the move fails, stop and give the user the commands
-     below, to run with `!` or from the topic checkout's session.
+     below, to run with `!` or from the topic checkout's session. If the
+     way back fails, stop and ask before any further edit.
 
 5. **Integrate** per the recorded strategy, from the topic checkout:
 
