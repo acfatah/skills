@@ -19,7 +19,9 @@ upstream and opens or updates a draft PR once the run finishes cleanly.
   session can check the branch before pushing.
 - **Pushes once, at a clean finish,** `HEAD` to its recorded upstream.
 - **Draft PRs only.** Opens one with `gh pr create --draft`, or updates
-  the open PR's body, from `drafts/PR_SUMMARY-<task>.md`.
+  the open PR's body, from `drafts/PR_SUMMARY-<task>.md`. If the open PR
+  is already ready for review, it asks before pushing, since the push
+  notifies reviewers.
 - **One PR per roadmap.** Each phase pushes and updates the same PR,
   unless the roadmap says its phases merge on their own.
 
@@ -73,10 +75,11 @@ It also needs the [GitHub CLI](https://cli.github.com), signed in with
 - **By trigger phrase.** "auto-PR", "open a PR when done" and "push and
   open a PR".
 - **By name, always.** `/auto-pr …` or "use the auto-pr skill".
-- **What Claude asks back:** nothing extra. Choosing Auto-PR up front is
-  the request to push and open the PR; there is no second question at the
-  end. If a precondition fails, Claude says which one instead of offering
-  the option.
+- **What Claude asks back:** usually nothing extra. Choosing Auto-PR up
+  front is the request to push and open the PR. If a precondition fails,
+  Claude says which one instead of offering the option. One question can
+  come at the finish, before the push: when the open PR is ready for
+  review, or its body was edited on GitHub since the last summary.
 
 ### Example prompts
 
@@ -126,6 +129,20 @@ Gotchas:
   Auto-commit, and the report says why.
 - **A changed upstream stops the run.** If `@{u}` no longer matches the
   run-mode line, Claude stops before pushing.
+- **A ready PR asks before the push.** Pushing alone notifies its
+  reviewers, so Claude asks: push and replace the body, push and keep it,
+  or don't push (the default). If the PR is already ready at the run-mode
+  question, Claude offers two Auto-PR options instead, and the answer goes
+  into the run-mode line.
+- **An edited draft body asks too.** If the draft PR's body differs from
+  the last `drafts/PR_SUMMARY-<task>.md`, Claude asks before replacing
+  it. A missing summary file counts as edited.
+- **Only open, same-repo PRs are updated.** Closed and merged PRs, and
+  fork PRs with the same branch name, are ignored; a new draft PR is
+  opened instead.
+- **A failed PR step after the push is reported,** as "Pushed, no PR" or
+  "Pushed, PR not updated" with the `gh` error. Claude never retries
+  without `--draft`.
 - **Undo does not reach the remote.** `git reset --soft` cannot undo
   pushed commits; closing the PR is the undo.
 
