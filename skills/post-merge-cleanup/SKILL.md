@@ -3,7 +3,7 @@ name: post-merge-cleanup
 description: "Clean up after a merged PR: remove its worktree, then its local branch, then its remote branch, after safety checks and one confirmation. Load when the user says \"PR merged\", \"clean up the branch\", \"remove the worktree\", \"delete the merged branch\", or /post-merge-cleanup. \"cleanup\" and \"housekeeping\" load it only next to PR, branch, merged, or worktree context, never alone. Not for code cleanup."
 ---
 
-# Post-merge Cleanup v1.0.0
+# Post-merge Cleanup v1.1.0
 
 After a PR merges, the same three things are left behind: its worktree, its
 local branch, and its remote branch. This skill removes them, in that order,
@@ -23,6 +23,10 @@ The input is one of:
   in `git worktree list --porcelain`;
 - **nothing:** the branch of the current worktree
   (`git branch --show-current`).
+
+A worktree made with the built-in `EnterWorktree name=<n>` has the branch
+`worktree-<n>`, with any `/` in `<n>` turned into `+`. That name is
+expected; resolve it like any other.
 
 Then gather, for that branch `<b>`:
 
@@ -77,8 +81,8 @@ which check failed and why. Do not offer a way around it.
   user repoints or removes them, then runs the skill again. Removing the
   worktree would leave them dangling.
 - **Session inside the worktree.** If the session's working directory is
-  inside `<wt>`, run every command as `git -C <main> …` and warn, in the
-  summary, that this directory will disappear.
+  inside `<wt>`, the session leaves it first (see Execute), and every
+  command runs as `git -C <main> …`. Say so in the summary.
 - **Branch checked out in the main checkout.** When `<b>` is checked out in
   `<main>` rather than in its own worktree, there is no worktree to remove.
   Instead, the summary adds a first step that switches `<main>` to the
@@ -95,16 +99,28 @@ Ask with AskUserQuestion, one question, options **Clean up** and
 - **Local branch:** `<b>` and its tip SHA, or "already gone";
 - **Remote branch:** `origin/<b>`, or "already gone";
 - **Ignored files** that will be deleted with the worktree, or "none";
-- **Warnings:** the session directory that will disappear, or the switch
-  of `<main>` to the default branch.
+- **Warnings:** that the session leaves `<wt>` first, or the switch of
+  `<main>` to the default branch.
 
 One "Clean up" runs every step below. The approval covers this run only:
 never remember it, and ask again on the next run, even for the same branch.
 
 ## Execute
 
-Run in this order, each as `git -C <main> …`. If a step fails, stop there
-and report what was done and what was not.
+**Leave the worktree first.** Only when the session is inside `<wt>`,
+call `ExitWorktree` with `action: "keep"` before any step. It returns the
+session to its launch directory, for worktrees entered with `name=` and
+`path=` alike, so the session does not sit in a deleted directory.
+
+- **Never `action: "remove"`.** It deletes the branch without the
+  merged-tip check above.
+- **No active worktree session** (the session was launched inside
+  `<wt>`): continue with `git -C <main> …`, and say in the report that
+  the session's directory is gone, so the user should restart it from
+  `<main>`.
+
+Then run in this order, each as `git -C <main> …`. If a step fails, stop
+there and report what was done and what was not.
 
 0. **Only when `<b>` is checked out in `<main>`:**
    `git -C <main> switch <default>`.

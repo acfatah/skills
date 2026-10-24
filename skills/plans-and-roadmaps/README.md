@@ -27,10 +27,12 @@ split into phased plans and multi-session roadmaps.
   when `auto-commit` is missing too.
 - **Offers a worktree at plan approval,** in the same prompt as the
   run-mode question. No worktree is the default. A worktree branches from
-  the current HEAD or from `origin/dev`/`development`, falling back to
-  `origin/main`/`master`, as `<type>/<topic>` under `.claude/worktrees/`,
-  and can carry uncommitted changes over by copy or move. The choice is
-  written into the plan, so it survives a context clear.
+  the current HEAD or from the repo's default branch on `origin` (falling
+  back to `dev`, `development`, `main`, `master`), under
+  `.claude/worktrees/`, and can carry uncommitted changes over by copy or
+  move. When the base matches `worktree.baseRef`, it uses Claude Code's
+  built-in `EnterWorktree name=`; otherwise `git worktree add`. The
+  choice is written into the plan, so it survives a context clear.
 - **Plans in the session that has the tools.** When a tool, such as an
   MCP server, loads only in a session started from another directory,
   it hands off a brief and a launch command instead of planning here.
@@ -126,9 +128,9 @@ ln -sfn "$PWD/skills/plans-and-roadmaps" ~/.claude/skills/plans-and-roadmaps
 - **Roadmap:** "Make a roadmap for moving to Postgres." / "Plan phase 2
   of .claude/plans/postgres/roadmap.md."
 - **Run:** "Implement the plan." Claude stamps each step as it finishes.
-- **Worktree:** pick "Worktree from HEAD" or "Worktree from origin/dev" at
-  approval. Claude creates `feat/<topic>` under `.claude/worktrees/` and
-  works there.
+- **Worktree:** pick "Worktree from origin/main" or "Worktree from HEAD"
+  at approval. Claude creates `worktree-<topic>` (built-in) or
+  `feat/<topic>` (git) under `.claude/worktrees/` and works there.
 - **Handoff:** "Plan the Boost-side fix" while Boost isn't loaded. Claude
   writes a brief and ends with a launch command; the new session plans.
 - **Shelve:** "Pause this plan: waiting on the API key." / "Drop the
@@ -190,8 +192,15 @@ Gotchas:
   the new session.
 
 - **Each worktree option has its own base.** Worktree from HEAD uses
-  local HEAD. Worktree from origin fetches the base first and never tracks
-  it, so the new branch has no upstream. Both ignore `worktree.baseRef`.
+  local HEAD. Worktree from origin uses the default branch when it can
+  find it (`origin/HEAD`, then `gh`); `git remote set-head origin -a`
+  fixes a missing `origin/HEAD`. Neither tracks its base, so the new
+  branch has no upstream.
+- **`worktree.baseRef` picks the order and the tool.** Its option comes
+  first, and uses the built-in `EnterWorktree name=<topic>`, which names
+  the branch `worktree-<topic>`. The other option uses `git worktree add`
+  and `<type>/<topic>`. Only the built-in one, in the session that made
+  it, gets Claude Code's exit prompt and hooks.
 - **Plan files stay in the main checkout,** under `.claude/plans/` there,
   so removing the worktree cannot delete them. Writing them from inside
   the worktree may ask for permission.

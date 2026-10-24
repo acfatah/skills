@@ -3,7 +3,7 @@ name: plans-and-roadmaps
 description: "Rules for plan documents and roadmaps: where plan files live, whether a plan runs in a worktree, which session a plan is written in, progress stamps, state directories, phased plans, multi-session roadmaps. Load before writing, executing, stamping, or moving a plan: the plan-mode file, any .md under .claude/plans/, or a PLAN*.md / TODO.md being executed."
 ---
 
-# Plans and Roadmaps v1.9.0
+# Plans and Roadmaps v1.10.0
 
 These rules apply to the plan-mode plan file, any `.md` under a
 `.claude/plans/` directory, and any `PLAN*.md` or `TODO.md` you are executing
@@ -103,32 +103,81 @@ worktree or in the current checkout.
 - **One file:** the plan edits exactly one file.
 
 **The question.** Ask in the same AskUserQuestion call as the `auto-commit`
-run-mode question, never as a second prompt. Offer, in this order:
+run-mode question, never as a second prompt. Offer:
 
-- **No worktree** (default): run in the current checkout.
-- **Worktree from HEAD:** a new branch `<type>/<topic>` (e.g.
-  `feat/<topic>`) at `.claude/worktrees/<topic>`. Show the real branch name
-  and path in the option.
-- **Worktree from origin/<base>:** the same branch name and path, but
-  based on the remote base branch. Show the real base, branch and path in
-  the option, e.g. "Worktree from origin/dev".
+- **No worktree** (default): run in the current checkout. Always first.
+- **Worktree from HEAD:** a new branch at `.claude/worktrees/<topic>`,
+  based on the current local HEAD.
+- **Worktree from origin/<base>:** the same path, based on the detected
+  remote base branch, e.g. "Worktree from origin/main".
 
-Worktree from HEAD uses the current local HEAD; Worktree from
-origin/<base> uses the detected remote branch. `worktree.baseRef` is
-ignored either way.
+Show the real base, branch and path in each option. The branch is
+`worktree-<topic>` when the option uses the built-in tool, else
+`<type>/<topic>` (e.g. `feat/<topic>`); see Built-in or git below.
 
-**Base detection.** Check remote-tracking refs, first match wins, without
-fetching (plan mode cannot write refs):
+**Option order follows `worktree.baseRef`.** It is the setting that picks
+the base of the built-in `EnterWorktree name=`: `fresh` (the default)
+branches from `origin/<default-branch>`, `head` from local HEAD. Read it
+from the main checkout; the first file that sets it wins, and none means
+`fresh`:
 
 ```bash
-for b in dev development main master; do
-  git rev-parse --verify --quiet "refs/remotes/origin/$b" >/dev/null && { echo "$b"; break; }
+for f in .claude/settings.local.json .claude/settings.json ~/.claude/settings.json; do
+  v=$(jq -r '.worktree.baseRef // empty' "$f" 2>/dev/null)
+  [ -n "$v" ] && { echo "$v"; break; }
 done
 ```
 
+- **`fresh`:** Worktree from origin/<base> comes before Worktree from HEAD.
+- **`head`:** Worktree from HEAD comes first.
+- **Only this key.** This is the one setting the skill reads from settings
+  files.
+- **No `jq`:** the loop prints nothing, which reads as `fresh`. Read the
+  three files instead.
+
+**Base detection.** Prefer the repo's default branch, without fetching
+(plan mode cannot write refs). First match wins:
+
+```bash
+b=$(git symbolic-ref --short refs/remotes/origin/HEAD 2>/dev/null | sed 's|^origin/||')
+if [ -z "$b" ] && gh auth status >/dev/null 2>&1; then
+  b=$(gh repo view --json defaultBranchRef -q .defaultBranchRef.name 2>/dev/null)
+fi
+if [ -n "$b" ] && git rev-parse --verify --quiet "refs/remotes/origin/$b" >/dev/null; then
+  echo "default $b"
+else
+  for b in dev development main master; do
+    git rev-parse --verify --quiet "refs/remotes/origin/$b" >/dev/null && { echo "fallback $b"; break; }
+  done
+fi
+```
+
+- **`default`** means the base is the default branch; **`fallback`** means
+  the default branch is unknown, so the base may not be it.
+- **Missing `origin/HEAD`** falls through to `gh`, then the loop. Outside
+  plan mode, `git remote set-head origin -a` sets it.
 - **Hide the option** when nothing matches or there is no `origin`
   remote, and say so in one line, e.g. "Worktree from origin is hidden:
-  no origin/dev, development, main or master ref."
+  no origin/HEAD, and no origin/dev, development, main or master ref."
+
+**Built-in or git.** Use the built-in `EnterWorktree name=<topic>` when
+the chosen base is what `worktree.baseRef` gives it:
+
+- **`fresh`** and Worktree from origin/<base>, with a `default` base.
+- **`head`** and Worktree from HEAD.
+
+Every other case uses `git worktree add`, such as a `fallback` base, or
+an origin base under `head`. Use git for a matching case too when the repo
+or the user requires `<type>/<topic>` branch names, for example in
+`CLAUDE.md` or a branch-name check in CI.
+
+- **What the built-in does:** `name=<topic>` creates the branch
+  `worktree-<topic>` at `.claude/worktrees/<topic>`, with no upstream. A
+  `/` in the name becomes `+` in both, so use a plain `<topic>`.
+- **Why prefer it:** a worktree created with `name=` gets the exit-time
+  keep-or-remove prompt, `ExitWorktree action=remove`, and the
+  `WorktreeCreate`/`WorktreeRemove` hooks. One entered with `path=` gets
+  none of these.
 
 **Dirty tree.** Only when `git status --short` is not empty and the user
 may pick a worktree, add a question to the same call: what happens to the
@@ -162,19 +211,33 @@ again:
 
     > Worktree: feat/<topic> from <sha> at <main>/.claude/worktrees/<topic>; carry: copy. Create it if missing, then EnterWorktree with path. See the plans-and-roadmaps skill.
     > Worktree: feat/<topic> from origin/dev at <main>/.claude/worktrees/<topic>; carry: leave. Create it if missing, then EnterWorktree with path. See the plans-and-roadmaps skill.
+    > Worktree: built-in worktree-<topic> from origin/main at <main>/.claude/worktrees/<topic>; carry: leave. EnterWorktree name=<topic>, or path= if it exists. See the plans-and-roadmaps skill.
     > Worktree: none.
 
 `<sha>` is the HEAD at approval, `<main>` the absolute main-checkout path,
 and `carry` is `leave`, `copy` or `move`. A remote base is recorded as its
-ref, not a SHA, because the SHA is only known after the fetch.
+ref, not a SHA, because the SHA is only known after the fetch. A built-in
+line under `head` reads `from <sha>`, like the first example.
 
 **Creating and entering.** After approval, before the first edit:
 
 1. Git-ignore `.claude/worktrees/`: unless `git check-ignore -q
    .claude/worktrees/` succeeds, append it to
    `git rev-parse --git-path info/exclude`, as for `.claude/plans/`.
-2. Create the worktree. Plain `EnterWorktree name=` cannot take a base, so
-   create it with git:
+2. **Built-in line:** call `EnterWorktree name=<topic>`. No fetch and no
+   `git worktree add`; the tool picks the base itself.
+
+   - **Check the base** right after entering: for `from origin/<base>`,
+     `git merge-base --is-ancestor origin/<base> HEAD`; for `from <sha>`,
+     `git rev-parse HEAD` must equal `<sha>`. On a mismatch (the setting
+     or HEAD changed since approval), stop and ask.
+   - **The tool refuses** when the session is already in a worktree, or
+     was launched outside the repo. Fall back to the git commands below,
+     with the recorded branch name `worktree-<topic>`, then
+     `EnterWorktree path=`. Say so in the final report: this worktree
+     gets no exit prompt.
+
+3. **Git line:** create the worktree with git:
 
        git worktree add -b <type>/<topic> <main>/.claude/worktrees/<topic> <sha>
 
@@ -191,12 +254,21 @@ ref, not a SHA, because the SHA is only known after the fetch.
      existing `origin/<base>` ref as is, or to switch to Worktree from
      HEAD.
 
-3. Carry the changes as recorded, then call `EnterWorktree` with
+   Then carry the changes as recorded, and call `EnterWorktree` with
    `path=<main>/.claude/worktrees/<topic>`.
 
+4. **Carry on a built-in line:** run `git stash push -u` before the
+   `EnterWorktree name=` call. After it, the session is in the worktree:
+   run `git stash apply` there, then `git -C <main> stash pop` for Copy;
+   just `git stash pop` there for Move.
+
 A fresh session, such as after a context clear, follows the line: if the
-path exists, enter it; if not, create it first. Carry changes only when
-creating it.
+path exists, enter it with `path=`, for a built-in line too; if not,
+create it first. Carry changes only when creating it.
+
+- **Only this session's `name=` worktree** gets the exit prompt and
+  `ExitWorktree action=remove`. Re-entered with `path=`, a built-in
+  worktree behaves like a git one.
 
 **Plan files stay in the main checkout.** The link, `completed/` copies and
 roadmap directories go to `<main>/.claude/plans/`, so removing the worktree
@@ -216,9 +288,13 @@ Writes outside the worktree may ask for permission; that is expected.
 branch, and points to the `post-merge-cleanup` skill for after the merge.
 Never call `ExitWorktree` or remove the worktree unless asked.
 
-- **Auto-PR:** a new worktree branch has no upstream, so `auto-pr` is
-  offered on its no-upstream path and creates `origin/<branch>` at the
-  first clean finish (see the `auto-pr` skill).
+- **Auto-PR:** a new worktree branch has no upstream, from `git worktree
+  add --no-track` and from the built-in alike, so `auto-pr` is offered on
+  its no-upstream path and creates `origin/<branch>` at the first clean
+  finish (see the `auto-pr` skill).
+- **Removal:** a worktree entered with `path=` is never removed by
+  `ExitWorktree` or the exit prompt. After the merge, `post-merge-cleanup`
+  removes it, built-in or not.
 
 ## Parallel sessions
 

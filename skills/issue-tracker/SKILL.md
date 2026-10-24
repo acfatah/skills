@@ -3,7 +3,7 @@ name: issue-tracker
 description: Issue tracking in local .claude/issues/ files, with GitHub as a second step. Load when logging or capturing an issue (bug, idea, feedback, task), triaging issues, starting, blocking, closing, or reopening one, managing sub-issues or milestones, recording a security finding, or promoting an issue to GitHub Issues or a GitHub Project.
 ---
 
-# Issue Tracker v1.3.0
+# Issue Tracker v1.3.1
 
 Track issues while you work: every issue starts as a local file, and moves
 to GitHub only when it must be shared. Capture fast, triage later, and keep
@@ -50,9 +50,11 @@ fi
 - **Linked worktree** (`EnterWorktree`, or a subagent run with
   `isolation: "worktree"`): the root is the main checkout. Never create
   `.claude/issues/` inside the worktree. Ignored files are not checked out
-  there, and the harness can delete an unchanged-looking worktree, issues
-  and all. Writing outside the worktree may show a permission prompt;
-  that is expected.
+  there, and the harness can delete a worktree, issues and all: it
+  removes an unchanged subagent `isolation: "worktree"` worktree on its
+  own, and offers to remove one made with `EnterWorktree name=` when the
+  session exits. Writing outside the worktree may show a permission
+  prompt; that is expected.
 - **Tracked issues in a worktree:** if the project tracks its issues, tell
   the user the issue goes to the main checkout, not this branch.
 - **Bare repo:** if the first entry of `git worktree list --porcelain` is

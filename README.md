@@ -141,9 +141,10 @@ the `VERSION` constant in its `.js` file, the one file users install.
 
 [`claude/CLAUDE.md`](claude/CLAUDE.md) holds my global instructions for
 Claude Code: response style, line width, PR and commit conventions, a
-worktree prompt, and pointers to the `plans-and-roadmaps`, `auto-commit`,
-`auto-pr`, `issue-tracker` and `session-sync` skills. Claude Code loads it from
-`~/.claude/CLAUDE.md`, so link it there:
+worktree prompt and one-off worktree rule, and pointers to the
+`plans-and-roadmaps`, `auto-commit`, `auto-pr`, `issue-tracker` and
+`session-sync` skills. Claude Code loads it from `~/.claude/CLAUDE.md`, so
+link it there:
 
 ```bash
 ln -sfn "$PWD/claude/CLAUDE.md" ~/.claude/CLAUDE.md
@@ -240,6 +241,10 @@ existing top-level object; do not paste a second `{}` block.
   "done" in the turn duration line, such as
   `done 2026-10-21 14:16 +08`. Needs Claude Code v2.1.257 or later;
   `/config` offers only the presets.
+- **`worktree.baseRef`** (optional, not in the block above): `fresh`
+  (the default) or `head`, the base of Claude Code's built-in
+  `EnterWorktree name=`. `plans-and-roadmaps` reads it to order its
+  worktree options and to decide when to use the built-in tool.
 
 ## License
 

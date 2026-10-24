@@ -3,7 +3,7 @@ name: auto-pr
 description: "Opt-in Auto-PR run mode: commit each change as Auto-commit does, then push the branch to its upstream and open or update a draft PR after a clean finish. Load when the user picks Auto-PR in the auto-commit run-mode question, when a plan's run-mode line says Auto-PR, or when the user says \"auto-PR\", \"open a PR when done\", or \"push and open a PR\". Depends on the auto-commit skill for the commit loop."
 ---
 
-# Auto-PR v1.1.0
+# Auto-PR v1.1.1
 
 ## What it adds to Auto-commit
 
@@ -32,6 +32,13 @@ say in one line which check failed.
 upstream is not the default branch either. A topic branch tracking
 `origin/main` fails this check.
 
+- **Fix for an upstream on the default branch.** A branch created from
+  `origin/<default>` without `--no-track` tracks it. Offer, in the
+  run-mode question, to run `git branch --unset-upstream` first, so the
+  branch takes the no-upstream path below. Label it
+  `Auto-PR (unsets origin/<default> upstream, creates origin/<branch> at finish)`.
+  Run it only when the user picks that option; never unset it silently.
+
 **No upstream.** `@{u}` does not resolve, and all of these pass. The first
 push at a clean finish then creates the upstream.
 
@@ -47,7 +54,9 @@ push at a clean finish then creates the upstream.
 On this path, the option label says what happens:
 `Auto-PR (creates origin/<branch> at finish)`. A fresh
 `git worktree add -b <branch>` branch has no upstream, so it takes this
-path.
+path. So does a `worktree-<name>` branch from the built-in
+`EnterWorktree name=`, which branches from `origin/<default>` without
+tracking it.
 
 ## Recording the choice
 
