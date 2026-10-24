@@ -55,6 +55,9 @@ bun ${CLAUDE_SKILL_DIR}/scripts/issues.js <verb> [options]
   turn that loads this skill; Claude Code clears the grant on the user's
   next message. If later calls keep prompting, suggest a permission rule
   for `Bash(bun ${CLAUDE_SKILL_DIR}/scripts/issues.js *)`.
+- **Write the path out in full.** Never put the CLI path in a shell
+  variable such as `$D/scripts/issues.js`: Claude Code cannot match it to
+  the grant, and refuses or prompts.
 - **Sandbox refusals:** if the Bash sandbox blocks a write or a Turso
   connection, do not rerun with the sandbox off. Tell the user which path
   or host to allow; see the sandbox gotcha in
