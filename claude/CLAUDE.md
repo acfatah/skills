@@ -126,6 +126,10 @@ the same question, in the same prompt as the auto-commit run-mode
 question. Two rules hold even without it: No worktree is the default,
 and never exit or remove a worktree unless asked.
 
+A single request that says "use a worktree", with no plan, goes straight
+to the built-in `EnterWorktree name=<topic>`, with the base that
+`worktree.baseRef` picks. Do not ask the plan worktree question then.
+
 ## Writing Commit
 
 Never run `git commit` unless the user explicitly asks, or chose
