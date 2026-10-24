@@ -174,6 +174,10 @@ Gotchas:
   parent.
 - **WSL and `/mnt/c`:** SQLite locking is unreliable on Windows drives in
   WSL. Keep repos in the Linux filesystem.
+- **Claude Code's Bash sandbox** blocks writes outside the working
+  directory and all hosts by default. From a worktree, allow the main
+  checkout's `.claude/` folder, and the Turso host on a Turso project; see
+  [`references/setup.md`](references/setup.md#gotchas).
 - **Tokens in cloud sandboxes** are readable by whatever runs there. Never
   put the security token in one.
 - **Exports hold security findings.** Keep export files out of any repo.

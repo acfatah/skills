@@ -130,6 +130,14 @@ when others can read it.
 - **WSL and `/mnt/c`:** SQLite file locking is unreliable on the Windows
   drives mounted in WSL. Keep repos in the Linux filesystem, such as
   `~/projects`.
+- **Claude Code's Bash sandbox:** it allows writes only under the working
+  directory and reaches no host until one is allowed. From a linked
+  worktree, the issues live in the main checkout's `.claude/`, outside the
+  worktree. Allow these in the sandbox settings:
+  - `sandbox.filesystem`: the main checkout's `.claude/` folder, and
+    `~/.config/issue-tracker/` for `remote enable`.
+  - `sandbox.network.allowedDomains`: the Turso host, such as
+    `*.turso.io`, on a Turso project.
 - **Cloud sandboxes:** a token in a sandbox's environment is readable by
   whatever runs there. Never put the security token in one.
 - **Exports hold everything.** `export --out` writes security findings
