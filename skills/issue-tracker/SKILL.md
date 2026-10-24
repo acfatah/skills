@@ -36,11 +36,13 @@ keep the user in control: you propose, the user decides.
 Every read and write goes through the bundled CLI:
 
 ```bash
-bun <base directory>/scripts/issues.js <verb> [options]
+bun ${CLAUDE_SKILL_DIR}/scripts/issues.js <verb> [options]
 ```
 
-- **`<base directory>`** is the path Claude Code prints when it loads this
-  skill ("Base directory for this skill: …"). Use it as printed.
+- **`${CLAUDE_SKILL_DIR}`** is this skill's folder. Claude Code fills it in
+  when it loads this file. If it shows up unfilled, use the "Base directory
+  for this skill" path instead. `<skill directory>` in the reference files
+  means the same folder.
 - **Run it from the project,** anywhere inside the repo. The CLI finds the
   issues root itself: the top folder, or the main checkout from a linked
   worktree. It also adds `.claude/issues*` to `info/exclude` on first use.

@@ -67,7 +67,7 @@ database is optional; without it, security issues stay local.
 6. **Enable it for the project,** from inside the repo:
 
    ```bash
-   bun <base directory>/scripts/issues.js remote enable \
+   bun <skill directory>/scripts/issues.js remote enable \
      --issues-url libsql://<project>-issues-<org>.turso.io --token-env DEMO_ISSUES_TOKEN \
      --security-url libsql://<project>-security-<org>.turso.io --security-token-env DEMO_SECURITY_TOKEN
    ```
