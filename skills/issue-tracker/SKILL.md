@@ -51,6 +51,10 @@ bun ${CLAUDE_SKILL_DIR}/scripts/issues.js <verb> [options]
 - **`--json`** gives structured output for `list`, `show`, `new`, `promote`,
   `milestone list`, and `remote status`.
 - **`--help`** lists every verb and option; `<verb> --help` shows one.
+- **Permission prompts:** `allowed-tools` pre-approves the CLI only in the
+  turn that loads this skill; Claude Code clears the grant on the user's
+  next message. If later calls keep prompting, suggest a permission rule
+  for `Bash(bun ${CLAUDE_SKILL_DIR}/scripts/issues.js *)`.
 - **Sandbox refusals:** if the Bash sandbox blocks a write or a Turso
   connection, do not rerun with the sandbox off. Tell the user which path
   or host to allow; see the sandbox gotcha in
