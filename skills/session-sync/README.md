@@ -126,7 +126,12 @@ Gotchas:
 
 - **The merge runs in another session's checkout.** Merging into the topic
   branch happens where it is checked out, often the parent's worktree.
-  Claude stops if that checkout has uncommitted changes.
+  Claude moves there to merge, then returns, and stops if that checkout
+  has uncommitted changes.
+- **Sessions file writes need a round trip.** From a worktree, Claude Code
+  refuses writes to the main checkout, so Claude briefly leaves the
+  worktree to update the sessions file. If that fails, Claude reports the
+  change for you to make.
 - **Rebase rewrites the fork's commits.** Claude refuses it on a pushed
   sub-branch unless you confirm.
 - **Concurrent edits to the sessions file.** Each session re-reads the file

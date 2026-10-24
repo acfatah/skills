@@ -3,7 +3,7 @@ name: session-sync
 description: "Keep several Claude sessions on one branch or PR in sync, and recap from the repo, not the transcript, after a break: forks on sub-branches, a shared sessions file, and a sync step before acting. Load when forking a session, starting a second session on the same branch or PR, resuming after a break, merging a fork back, or when the user says \"sync\", \"catch up\", \"what changed\", \"outline progress\", or \"merge the fork back\"."
 ---
 
-# Session Sync v1.0.1
+# Session Sync v1.1.0
 
 A session's context is private and goes stale as soon as another session,
 or the user, changes the repo. Do not sync memories, which load only at
@@ -71,15 +71,25 @@ absolute path and removing a worktree cannot delete it:
 
     <main>/.claude/sessions/<topic>.md
 
-Find `<main>` from inside any worktree with:
+Find `<main>` with `git worktree list --porcelain`: the path on its first
+`worktree` line is the main checkout, from any worktree and from the main
+checkout itself.
 
-```bash
-if [ "$(git rev-parse --absolute-git-dir)" != "$(git rev-parse --path-format=absolute --git-common-dir)" ]; then
-  git worktree list --porcelain | sed -n '1s/^worktree //p'
-else
-  git rev-parse --show-toplevel
-fi
-```
+**Writing it from a worktree.** A worktree-isolated session cannot write
+to `<main>`: Claude Code's guard refuses Edit, Write and `git -C <main>`
+there, without a permission prompt. Make a round trip instead:
+`ExitWorktree action=keep`, write the file from the main checkout, then
+`EnterWorktree path=<wt>` back.
+
+- **Group the writes,** such as your row and a Decisions line, into one
+  trip.
+- **Allowed, though `ExitWorktree` is otherwise asked-only:** the session
+  returns at once, and the worktree stays.
+- **Fallback:** if the trip fails or a write is still refused, skip it and
+  report the exact change, for the user to make with `!` or from a
+  main-checkout session.
+- **No shell workarounds,** such as `sed -i`, `cat >>` or `mv` on `<main>`
+  paths.
 
 - **Git-ignore it.** Unless `git check-ignore -q .claude/sessions/`
   succeeds, append `.claude/sessions/` to
@@ -209,6 +219,8 @@ session starts on it:
 4. **Write the sessions file.** Create it from the template if missing,
    with the integration strategy under `## Topic branch` and the parent's
    row. Add this session's row. Add the `> Sessions:` line to the plan.
+   From the new worktree, this needs a round trip (see Writing it from a
+   worktree).
 5. **Suggest a session name** matching the role, such as `login-tests`, so
    the user can find it in `/resume`.
 
@@ -219,14 +231,18 @@ another session reports a merge, or when the user says "sync". Nothing
 notifies a session of another one's change; it learns only by syncing.
 
 1. **Re-read** the sessions file and the plan, if any.
-2. **Fetch and list** what this branch does not have yet:
+2. **Fetch and list** what this branch does not have yet, each line as
+   its own command:
 
    ```bash
    git fetch --quiet
    git log --oneline HEAD..<topic-branch>
-   git for-each-ref --format='%(refname:short)' 'refs/heads/<topic-branch>--*' \
-     | while read -r b; do echo "== $b"; git log --oneline "HEAD..$b"; done
+   git for-each-ref --format='%(refname:short)' 'refs/heads/<topic-branch>--*'
    ```
+
+   Then run `git log --oneline HEAD..<sub-branch>` once for each branch
+   the last command lists. No loop: a worktree-isolated session refuses
+   compound shell forms, such as `| while read`.
 
    Skip the fetch when there is no remote. Also check
    `HEAD..origin/<topic-branch>` when the topic branch is pushed.
@@ -262,24 +278,37 @@ When a sub-branch's piece is done:
    conflicts surface in the sub-branch.
 3. **Find the topic checkout:**
    `git worktree list --porcelain` shows where the topic branch is
-   checked out. If it is nowhere, ask where to merge. Its
-   `git status --short` must be clean; if not, stop and ask, since another
-   session may be mid-edit there.
-4. **Integrate** per the recorded strategy:
+   checked out. If it is nowhere, ask where to merge.
+4. **Go to the topic checkout.** A worktree-isolated session cannot run
+   `git -C <topic-checkout>`; the guard refuses it. So move the session:
+
+   - **It is `<main>`:** `ExitWorktree action=keep`.
+   - **It is a worktree** under `.claude/worktrees/`:
+     `EnterWorktree path=<topic-checkout>`.
+   - **Check it is clean:** `git status --short` there must be empty; if
+     not, go back, then stop and ask, since another session may be
+     mid-edit there.
+   - **Back afterwards:** `EnterWorktree path=<fork-worktree>`. This round
+     trip is allowed, though `ExitWorktree` is otherwise asked-only.
+   - **Fallback:** if the move fails, stop and give the user the commands
+     below, to run with `!` or from the topic checkout's session.
+
+5. **Integrate** per the recorded strategy, from the topic checkout:
 
    | Strategy | Commands |
    |---|---|
-   | Merge | `git -C <topic-checkout> merge --no-ff <sub-branch>` |
-   | Rebase | `git rebase <topic-branch>` in the sub-branch, then `git -C <topic-checkout> merge --ff-only <sub-branch>` |
-   | Squash | `git -C <topic-checkout> merge --squash <sub-branch>`, then commit with a message that summarizes the fork's commits |
+   | Merge | `git merge --no-ff <sub-branch>` |
+   | Rebase | `git rebase <topic-branch>` in the sub-branch, before step 4; then `git merge --ff-only <sub-branch>` |
+   | Squash | `git merge --squash <sub-branch>`, then commit with a message that summarizes the fork's commits |
 
    - **Rebase on a pushed sub-branch:** refuse unless the user confirms.
      Check with `git ls-remote --exit-code --heads origin <sub-branch>`;
      exit 0 means it is pushed.
-5. **Append to Merge log:** time, session, sub-branch into topic branch,
+6. **Append to Merge log:** time, session, sub-branch into topic branch,
    strategy, and the resulting short SHA. Set your row to `done`, or back
-   to `active` for more work.
-6. **Others pick it up** at their next sync; never merge into another
+   to `active` for more work. When the topic checkout is `<main>`, write
+   this before going back, so one trip covers it.
+7. **Others pick it up** at their next sync; never merge into another
    session's sub-branch.
 
 **On conflict, stop and ask.** Never resolve a conflict in another
@@ -321,9 +350,11 @@ When the topic branch is merged, or the user ends the topic:
        mv <main>/.claude/sessions/<topic>.md <main>/.claude/sessions/completed/
 
    Add a state line under the title, with the time from `date`:
-   `> Completed 2026-10-22 18:30.`
+   `> Completed 2026-10-22 18:30.` From a worktree, do this step in a
+   round trip (see Writing it from a worktree).
 4. **Point to `post-merge-cleanup`** for the worktrees and sub-branches.
-   Never remove a worktree, or call `ExitWorktree`, unless asked.
+   Never remove a worktree, or call `ExitWorktree`, unless asked, apart
+   from the round trips in Writing it from a worktree and Merging back.
 
 ## Relation to other skills
 
