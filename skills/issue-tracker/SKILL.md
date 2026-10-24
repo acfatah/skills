@@ -1,13 +1,14 @@
 ---
 name: issue-tracker
-description: Issue tracking in local .claude/issues/ files, with GitHub as a second step. Load when logging or capturing an issue (bug, idea, feedback, task), triaging issues, starting, blocking, closing, or reopening one, managing sub-issues or milestones, recording a security finding, or promoting an issue to GitHub Issues or a GitHub Project.
+description: Issue tracking in a local SQLite database through a bundled Bun CLI, with optional Turso sync between your own machines and GitHub as a second step. Load when logging or capturing an issue (bug, idea, feedback, task), triaging issues, starting, blocking, closing, or reopening one, managing sub-issues or milestones, recording a security finding, promoting an issue to GitHub Issues or a GitHub Project, importing v1 issues, exporting issues, or syncing issues.
+allowed-tools: Bash(bun ${CLAUDE_SKILL_DIR}/scripts/issues.js *)
 ---
 
-# Issue Tracker v1.3.1
+# Issue Tracker v2.0.0
 
-Track issues while you work: every issue starts as a local file, and moves
-to GitHub only when it must be shared. Capture fast, triage later, and keep
-the user in control: you propose, the user decides.
+Track issues while you work: every issue starts in a local database, and
+moves to GitHub only when it must be shared. Capture fast, triage later, and
+keep the user in control: you propose, the user decides.
 
 ## Vocabulary
 
@@ -23,125 +24,92 @@ the user in control: you propose, the user decides.
 | Checklist | `- [ ]` items in an issue body, used for acceptance criteria and small steps. Plain text, not linked issues. |
 | Priority  | How urgent an issue is: `low`, `medium`, or `high`.              |
 
-## Location
+## Requirements
 
-Issues live in `.claude/issues/` under the **issues root**, unless a
-`CLAUDE.md` declares a folder.
+- **Bun.** Check with `bun --version` once per session. If it is missing,
+  stop: say the skill needs Bun, and offer the install command. There is no
+  fallback; never edit the database or write issue files by hand.
+  - Linux, macOS, WSL: `curl -fsSL https://bun.sh/install | bash`
+  - Windows PowerShell: `powershell -c "irm bun.sh/install.ps1 | iex"`
 
-- **Declared folder wins.** If a loaded `CLAUDE.md` names an issues folder,
-  use it in place of `<root>/.claude/issues/`, with the same layout inside.
-  Skip root detection, and skip the gitignore step when the folder is
-  outside a git repo.
-- **Follow its conventions**, such as repository labels, GitHub targets, or
-  a format reference that wins on conflict.
+## Running the CLI
 
-Otherwise, find the root once per session, and use its absolute path for
-every read, write, move, and search:
+Every read and write goes through the bundled CLI:
 
 ```bash
-if [ "$(git rev-parse --absolute-git-dir)" != "$(git rev-parse --path-format=absolute --git-common-dir)" ]; then
-  git worktree list --porcelain | sed -n '1s/^worktree //p'
-else
-  git rev-parse --show-toplevel
-fi
+bun ${CLAUDE_SKILL_DIR}/scripts/issues.js <verb> [options]
 ```
 
-- **Normal checkout or submodule:** the root is its top folder.
-- **Linked worktree** (`EnterWorktree`, or a subagent run with
-  `isolation: "worktree"`): the root is the main checkout. Never create
-  `.claude/issues/` inside the worktree. Ignored files are not checked out
-  there, and the harness can delete a worktree, issues and all: it
-  removes an unchanged subagent `isolation: "worktree"` worktree on its
-  own, and offers to remove one made with `EnterWorktree name=` when the
-  session exits. Writing outside the worktree may show a permission
-  prompt; that is expected.
-- **Tracked issues in a worktree:** if the project tracks its issues, tell
-  the user the issue goes to the main checkout, not this branch.
-- **Bare repo:** if the first entry of `git worktree list --porcelain` is
-  followed by a `bare` line, there is no main checkout. Unless a folder is
-  declared, ask the user where to put the issues.
-- **Outside a git repo,** unless a folder is declared, ask the user where
-  to put them before creating anything.
+- **`${CLAUDE_SKILL_DIR}`** is this skill's folder. Claude Code fills it in
+  when it loads this file. If it shows up unfilled, use the "Base directory
+  for this skill" path instead. `<skill directory>` in the reference files
+  means the same folder.
+- **Run it from the project,** anywhere inside the repo. The CLI finds the
+  issues root itself: the top folder, or the main checkout from a linked
+  worktree. It also adds `.claude/issues*` to `info/exclude` on first use.
+- **Long bodies** go through stdin: `--body-file -` with a quoted heredoc.
+- **`--json`** gives structured output for `list`, `show`, `new`, `promote`,
+  `milestone list`, and `remote status`.
+- **`--help`** lists every verb and option; `<verb> --help` shows one.
+- **Permission prompts:** `allowed-tools` pre-approves the CLI only in the
+  turn that loads this skill; Claude Code clears the grant on the user's
+  next message. If later calls keep prompting, suggest a permission rule
+  for `Bash(bun ${CLAUDE_SKILL_DIR}/scripts/issues.js *)`.
+- **Write the path out in full.** Never put the CLI path in a shell
+  variable such as `$D/scripts/issues.js`: Claude Code cannot match it to
+  the grant, and refuses or prompts.
+- **Sandbox refusals:** if the Bash sandbox blocks a write or a Turso
+  connection, do not rerun with the sandbox off. Tell the user which path
+  or host to allow; see the sandbox gotcha in
+  [`references/setup.md`](references/setup.md#gotchas).
 
-```
-.claude/issues/
-├── MILESTONES.md
-├── triage/        # captured, not yet reviewed
-├── open/          # accepted, waiting for work
-├── in-progress/   # being worked on
-├── blocked/       # waiting on something else
-├── closed/        # finished, dropped, or moved to GitHub
-└── security/      # private; see "Security issues"
-```
+### Location
 
-- **The folder is the status.** Move a file between folders to change its
-  status. Only files in `security/` carry a `status` field.
-- Create each folder when its first issue needs it.
+- **Declared directory wins.** If a loaded `CLAUDE.md` names an issues
+  directory, pass it on every call: `--dir <path>`.
+- **Follow its conventions,** such as repository labels or GitHub targets.
+- **Exit code 3** means the CLI cannot pick a location: a bare repository,
+  or no git repo at all. Ask the user where to keep the issues, then pass
+  `--dir <path>`.
 
-### Gitignore
+### Exit codes
 
-- **Ignore by default.** On first use, run
-  `git -C <root> check-ignore -q .claude/issues/`. If it fails, append
-  `.claude/issues/` to `git rev-parse --git-path info/exclude`, leaving the
-  tracked `.gitignore` untouched. Issues hold paths, error output, and rough
-  notes that must not leak into a public repo.
-- **Tracking is opt-in per project**, on the user's request: remove that
-  exclude rule and exclude only `.claude/issues/security/` instead.
-- **`security/` stays ignored** in every project.
+| Code | Meaning                       | Do                                      |
+|------|-------------------------------|-----------------------------------------|
+| 0    | Done                          | Continue.                               |
+| 1    | Usage or validation error     | Read the message; fix the command or ask. |
+| 2    | Offline on a Turso project    | See [Offline](#offline).                |
+| 3    | Location needs a decision     | Ask the user, then pass `--dir`.        |
 
-## Issue files
+## Verbs
 
-### Naming
+Ids are accepted as `7`, `0007`, or `S0007`, and printed zero-padded.
 
-`NNNN-short-slug.md`, e.g. `0007-login-fails-on-empty-password.md`.
+| Verb        | Example                                                              |
+|-------------|----------------------------------------------------------------------|
+| `new`       | `new --title "Login fails on empty password" --type bug --body-file -` |
+| `list`      | `list --status open,in-progress --label auth`                        |
+| `show`      | `show 0007`                                                          |
+| `edit`      | `edit 7 --set priority=high --set milestone=v1.0`                    |
+| `move`      | `move 7 blocked --note "waits for the API key"`                      |
+| `close`     | `close 7 --resolution duplicate --dup-of 3`                          |
+| `reopen`    | `reopen 7 --note "regressed in 1.2"`                                 |
+| `note`      | `note 7 "Also fails on Safari"`                                      |
+| `delete`    | `delete 7`                                                           |
+| `milestone` | `milestone add v1.0 --due 2026-12-01 --goal "First release"`         |
+| `check`     | `check`                                                              |
+| `promote`   | `promote 7 --dry-run`                                                |
+| `export`    | `export --out ~/backups/issues.jsonl`                                |
+| `import`    | `import --v1`                                                        |
+| `remote`    | `remote status`                                                      |
+| `flush`     | `flush`                                                              |
 
-- `NNNN` is a zero-padded counter. **Next number** = the highest number in
-  any folder, including `closed/` and `security/`, plus 1. Numbers are never
-  reused.
-- **One issue at a time.** Create issue files one after another, never in
-  parallel tool calls; each new number depends on the files before it.
-- **Check after writing.** List `NNNN-*` files across all folders. If
-  another file shares your number, rename yours to the next free number,
-  update its `id` and any `## Sub-issues` mirror line that names it, and
-  check again.
-- The slug is 2–5 lowercase words from the title, joined with hyphens.
-
-### Frontmatter
-
-```yaml
----
-id: 0007
-title: Login fails on empty password
-type: bug
-priority: medium
-labels: []
-milestone:
-parent:
-created: 2026-10-09
-updated: 2026-10-09
-github:
-resolution:
-closed:
----
-```
-
-| Field        | Required | Values                                                   |
-|--------------|----------|----------------------------------------------------------|
-| `id`         | yes      | Same number as the file name.                            |
-| `title`      | yes      | Short, specific, no trailing period.                     |
-| `type`       | yes      | See [Types](#types). May stay empty in `triage/`.        |
-| `priority`   | no       | `low`, `medium`, `high`. Set during triage.              |
-| `labels`     | no       | Free-form list, e.g. `[auth, ui]`.                       |
-| `milestone`  | no       | A milestone name from `MILESTONES.md`.                   |
-| `parent`     | no       | `id` of the parent issue, for sub-issues.                |
-| `created`    | yes      | `YYYY-MM-DD`, set once.                                  |
-| `updated`    | yes      | `YYYY-MM-DD`, set on every change, including moves.      |
-| `github`     | no       | Issue URL, once promoted to GitHub.                      |
-| `resolution` | closed   | `done`, `duplicate`, `wont-fix`, `invalid`, `moved`.     |
-| `closed`     | closed   | `YYYY-MM-DD` the issue was closed.                       |
-
-Keep every field in every file; leave unused ones empty, so all files share
-one shape. Get dates from `date +%F`.
+- **`list`** shows the four open statuses by default; `--status all` adds
+  closed ones. `--security` lists security issues.
+- **`edit --set`** takes `type`, `priority`, `milestone`, `parent`,
+  `github`, and `labels` (comma-separated); an empty value clears it.
+- **`milestone`** takes `add`, `list`, `edit`, and `close`. `close` refuses
+  while open issues name the milestone.
 
 ### Types
 
@@ -156,13 +124,14 @@ one shape. Get dates from `date +%F`.
 | `docs`     | Documentation that is missing, wrong, or unclear.               |
 | `refactor` | Code that works but should be restructured, with no behavior change. |
 | `question` | Something unclear that needs an answer before work can start.   |
-| `security` | A possible vulnerability. Always stored in `security/`.         |
+| `security` | A possible vulnerability. Always in the security database.      |
 
 ### Body
 
 Use the sections that apply and drop the rest. Bugs usually need the first
 five. Write each paragraph on one line; do not hard-wrap. Promotion sends
 the body to GitHub as-is, and GitHub shows single newlines as line breaks.
+Dated notes go through `note`, not the body.
 
 ```markdown
 ## Summary
@@ -179,7 +148,6 @@ the body to GitHub as-is, and GitHub shows single newlines as line breaks.
 
 ## How to reproduce
 1. <Step>
-2. <Step>
 
 ## Suggested fix
 <Optional. Proposed approach.>
@@ -189,42 +157,7 @@ the body to GitHub as-is, and GitHub shows single newlines as line breaks.
 
 ## Acceptance criteria
 - [ ] <How we know it is done.>
-
-## Notes
-- 2026-10-09: <Dated note added while working on it.>
 ```
-
-## Sub-issues
-
-A sub-issue is its own issue file, linked to its parent. A checklist item is
-only text in a body. Keep the two apart.
-
-- **`parent` is the source of truth.** A child sets `parent: <id>` in its
-  frontmatter; that field alone decides its parent.
-- **The parent mirrors its children** in a `## Sub-issues` section, so
-  reading the parent shows them:
-
-  ```markdown
-  ## Sub-issues
-  - [ ] 0008 Validate password field
-  - [x] 0009 Show error message
-  ```
-
-- **The mirror lists only issue files**, one id and title per line. Ticked
-  means the child is closed.
-- **On conflict, the `parent` fields win.** Rebuild the mirror from the
-  issues whose `parent` matches.
-- **Update the mirror** in the same step that creates, closes, reopens,
-  re-parents, or retitles a child. A mirror edit is a change to the parent,
-  so it updates the parent's `updated`.
-- **Placement:** the section sits after `## Steps`, and exists only while
-  the parent has children.
-- **A new child of an accepted parent starts in `open/`**, with the
-  parent's `milestone` and `priority`. Propose its `type`.
-- **Small steps go in `## Steps`**, as plain checklist items with no file of
-  their own.
-- **The mirror stays local.** Promotion strips it; see
-  [`references/github.md`](references/github.md).
 
 ## Lifecycle
 
@@ -233,10 +166,12 @@ only text in a body. Keep the two apart.
 | `triage`      | Captured, not reviewed.                    | `open`, `closed`            |
 | `open`        | Accepted, waiting for work.                | `in-progress`, `closed`     |
 | `in-progress` | Being worked on.                           | `blocked`, `closed`, `open` |
-| `blocked`     | Waiting on something; say what in Notes.   | `open`, `in-progress`       |
-| `closed`      | Finished or dropped. Has a `resolution`.   | `open` (reopen)             |
+| `blocked`     | Waiting on something; `--note` says what.  | `open`, `in-progress`       |
+| `closed`      | Finished or dropped. Has a resolution.     | `open` (reopen)             |
 
-Every change to an issue, including a move, updates `updated`.
+The CLI enforces this table, sets the dates, and adds the notes for
+duplicates and reopens. Resolutions: `done`, `duplicate`, `wont-fix`,
+`invalid`, `moved`.
 
 ### Capture
 
@@ -244,50 +179,66 @@ When you notice an issue **unrelated to the current task**:
 
 1. **Mention it in one line**, e.g. "Possible issue: X in `src/a.ts:42`.
    Log it?"
-2. **Log it only if the user agrees.** Create the file in `triage/` with
-   what you know right now: exact path and line, error text, how you found
-   it. A later session won't have that context.
+2. **Log it only if the user agrees,** with `new`. Put in what you know
+   right now: exact path and line, error text, how you found it. A later
+   session won't have that context.
 3. **Return to the current task.** Fix the side issue only when asked.
 
-When the user asks you to log an issue, of any type, log it in `triage/`
-directly. Fill `type` and `priority` when the user states them, and leave
-them empty otherwise.
+When the user asks you to log an issue, of any type, log it directly. Pass
+`--type` and `--priority` when the user states them, and leave them out
+otherwise.
 
-**Subagents don't write issue files.** A subagent reports the issue in its
-result; the main agent mentions or logs it as above.
+- **Scrub secrets** (tokens, passwords, keys) from captured output before
+  saving it. Issues may leave the machine through Turso or GitHub.
+- **Subagents don't write issues.** A subagent reports the issue in its
+  result; the main agent mentions or logs it as above.
+
+### Issue or to-do
+
+Claude Code's own to-do list is not this tracker. Decide by whether the
+item must outlive the session:
+
+- **Issue:** the user says "log", "track", "backlog", "for later", or
+  "issue", or names an issue id. Use the tracker, with `--type task` for
+  planned work.
+- **To-do:** "add a task" or "todo" about the request in progress is a step
+  of that request. Put it on Claude Code's to-do list, not in the tracker.
+- **Unclear:** ask once: "Session to-do, or log it as an issue?"
+- **Leftovers:** when you finish a request with to-do items still open,
+  list them in one line and offer to log them as issues.
 
 ### Triage
 
-Triage runs **on request only**, e.g. "triage issues". For each file in
-`triage/`, propose:
+Triage runs **on request only**, e.g. "triage issues". Run
+`list --status triage`, and for each issue propose:
 
 - **Type** and **priority**, keeping any the user already set.
 - **Duplicates** among the issues that are not closed.
-- **Next step:** accept to `open/`, close with a resolution, or ask a
-  `question` first.
+- **Next step:** accept with `move <id> open`, close with a resolution, or
+  ask a `question` first.
 - **Milestone**, if one fits.
 
-The user approves, edits, or rejects each proposal. Then update the
-frontmatter and move the files.
+The user approves, edits, or rejects each proposal. Then apply it with
+`edit` and `move`.
 
 ### Working
 
-- **Starting work:** move the file from `open/` to `in-progress/` yourself.
-- **Blocked:** move it to `blocked/` and add a Notes line naming what it
-  waits for.
+- **Starting work:** `move <id> in-progress` yourself.
+- **Blocked:** `move <id> blocked --note "<what it waits for>"`.
 - **Done:** propose closing with a resolution, and close once the user
   confirms. A user's own "close 0007" is that confirmation; ask which
   resolution when it is unclear.
-- **Parent with open children:** before closing it, list the open children
-  and ask whether to close, re-parent, or keep them.
+- **Parent with open children:** `close` refuses and lists them. Ask
+  whether to close, re-parent, or keep them; pass `--keep-children` only
+  to keep them open.
 
-### Closing and reopening
+### Sub-issues
 
-- **Close:** set `resolution`, `closed`, and `updated`, then move the file
-  to `closed/`.
-- **Duplicate:** also add a Notes line naming the original issue id.
-- **Reopen:** move the file to `open/`, clear `resolution` and `closed`, and
-  add a Notes line saying why.
+- **`--parent <id>`** links a child; `show` lists a parent's children.
+- **A new child of an accepted parent** starts `open` with the parent's
+  milestone and priority, so it needs a `--type`. Propose one.
+- **Small steps go in `## Steps`** in the body, as checklist items, not as
+  sub-issues.
 
 ### Ask first
 
@@ -295,44 +246,82 @@ These need the user's explicit agreement every time:
 
 - Creating anything on GitHub: issue, label, milestone, Project item.
 - Closing an issue.
-- Deleting an issue file.
-- Changing the gitignore policy away from the default.
+- Deleting an issue (`delete`).
+- Enabling Turso for a project (`remote enable`).
+- Syncing security issues to Turso (`--security-url`).
+- Deleting the v1 folder (`import --v1 --delete-old`).
 
-## Milestones
+## Turso sync
 
-A milestone is a goal or release that groups issues, e.g. `v1.0` or `beta`.
-Issues name it in their `milestone` field. `.claude/issues/MILESTONES.md`
-defines each one:
+Optional, per project, for the user's own machines only. The user sets up
+the databases and tokens; see [`references/setup.md`](references/setup.md).
+Then `remote enable` copies the local rows up (or pulls them on a second
+machine), and every command works against Turso with the local file as a
+mirror.
 
-```markdown
-# Milestones
+- **`remote status`** shows the backend, the project key, when the mirror
+  was last synced, and queued entries.
+- **`remote disable`** sends queued entries, pulls a final copy, and goes
+  back to local.
+- **Tokens** live in the user's config or in environment variables, never
+  in the repo, a `CLAUDE.md`, an issue, or a command line.
+- **Auth errors** (a refused token) are reported, never queued.
 
-## v1.0
-- **Goal:** First public release with login and dashboard.
-- **Due:** 2026-12-01
-- **State:** open
-- **GitHub:** <milestone URL, once created>
-```
+### Offline
 
-- **State** is `open` or `closed`. Close a milestone once all its issues are
-  closed or moved to another milestone.
-- **Progress:** list the issues whose `milestone` matches, grouped by
-  folder.
+- **Reads** come from the mirror, with an `offline; issues as of …` line.
+- **`new` and `note` queue** in an outbox, and new issues get a
+  provisional id such as `P1`. The next online command, or `flush`, sends
+  them and prints `P1 → 0012`.
+- **Every other write exits 2.** Tell the user it waits until Turso is
+  reachable; do not retry in a loop.
+- **Never put a `P` id** in a commit message, a PR, or `--parent`. Use the
+  real id once it is replayed.
+- **Run `flush` before deleting or re-cloning a repo.** The outbox lives in
+  the repo's `.claude/` folder and is lost with it.
 
 ## Security issues
 
-- **Store them in `.claude/issues/security/` only**, as a flat folder. Each
-  file carries a `status:` field (`triage`, `open`, `in-progress`,
-  `blocked`, `closed`) in place of a status folder.
-- **They share the id counter** with all other issues.
+- **Their own database,** with its own ids shown as `S0007`. Create them
+  with `--type security`; the CLI routes `S…` ids for every verb.
 - **They stay private.** Mention them by id only in commit messages, PR
   descriptions, and public issues until fixed.
+- **They take no milestone,** and their parent must be another `S` issue.
 - **On GitHub, they become a private security advisory**, never an issue:
   repo **Security** tab → **Advisories** → **New draft security advisory**.
+- **Client or third-party code:** keep its findings local, even on a Turso
+  project; do not add `--security-url` there.
+- **Never store** real secrets or working exploit payloads in an issue.
+
+## Upgrading from v1
+
+If `<root>/.claude/issues/` (or a declared directory) holds v1 Markdown
+folders such as `triage/` or `closed/`, offer to import them:
+
+1. **`import --v1`** writes every issue with its id (security issues become
+   `S` ids), turns `MILESTONES.md` into milestones, and reports counts per
+   folder. It leaves the old folder in place.
+2. **Show the counts** and ask whether to delete the old folder.
+3. **`import --v1 --delete-old`** re-checks the counts and deletes it.
+
+## Backup
+
+`export --out <file.jsonl>` writes every issue, security findings
+included, to one file that `import --from <file.jsonl>` restores into an
+empty project. Run it only when the user asks, and keep the file out of
+any repo.
 
 ## GitHub
 
 GitHub is the second step, for issues that must be shared or tracked with
-others, and only on the user's request. Before any `gh` command for issues,
-labels, milestones, sub-issues, or Projects, read
-[`references/github.md`](references/github.md).
+others, and only on the user's request:
+
+1. **`promote <id> --dry-run`** prints the title, body, labels, milestone,
+   and Project Status. The CLI never runs `gh`.
+2. **Show it and ask.**
+3. **Run `gh` yourself**, creating any missing labels or milestone after
+   asking.
+4. **`close <id> --resolution moved --github <url>`** records the link.
+
+Before any `gh` command for issues, labels, milestones, sub-issues, or
+Projects, read [`references/github.md`](references/github.md).
