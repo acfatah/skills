@@ -76,7 +76,7 @@ ln -sfn "$PWD/skills/post-merge-cleanup" ~/.claude/skills/post-merge-cleanup
 ### Example prompts
 
 - **Current worktree:** "PR merged, clean up." Run from inside the
-  worktree; Claude warns that the session's directory will disappear.
+  worktree; Claude leaves it with `ExitWorktree` before removing it.
 - **By branch:** "Delete the merged branch `feat/login-form`."
 - **By PR number:** "/post-merge-cleanup 42"
 - **By worktree path:** "Remove the worktree at
@@ -91,8 +91,14 @@ Gotchas:
 - **Symlinks into the worktree stop the run.** A link in `~/.claude` or
   the main checkout that points into the worktree (for example a skill
   linked for testing) must be repointed or removed first.
-- **The session directory can vanish.** Run from inside the worktree, and
-  the session's working directory is gone afterwards.
+- **The session leaves the worktree first.** Run from inside it, and
+  Claude calls `ExitWorktree` with `keep`, then removes it with
+  `git worktree remove`, never with `ExitWorktree remove`, which skips the
+  merged-tip check. A session launched inside the worktree cannot leave
+  it, so its directory is gone afterwards; restart from the main checkout.
+- **Built-in branch names are fine.** A worktree from
+  `EnterWorktree name=<n>` has the branch `worktree-<n>`; Claude resolves
+  it like any other.
 - **A branch checked out in the main checkout** is switched to the default
   branch first, and that checkout must be clean.
 - **Undo restores branches, not ignored files.** The report gives
