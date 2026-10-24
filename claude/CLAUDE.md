@@ -124,7 +124,9 @@ asks whether to run it in a worktree. Without a plan, when the user asks
 for two or more distinct changes in a git repo, load that skill and ask
 the same question, in the same prompt as the auto-commit run-mode
 question. Two rules hold even without it: No worktree is the default,
-and never exit or remove a worktree unless asked.
+and never exit or remove a worktree unless asked. The one exception is
+the `ExitWorktree action=keep` round trip that `plans-and-roadmaps` and
+`session-sync` use to write main-checkout files; it re-enters at once.
 
 A single request that says "use a worktree", with no plan, goes straight
 to the built-in `EnterWorktree name=<topic>`, with the base that

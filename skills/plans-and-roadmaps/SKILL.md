@@ -3,7 +3,7 @@ name: plans-and-roadmaps
 description: "Rules for plan documents and roadmaps: where plan files live, whether a plan runs in a worktree, which session a plan is written in, progress stamps, state directories, phased plans, multi-session roadmaps. Load before writing, executing, stamping, or moving a plan: the plan-mode file, any .md under .claude/plans/, or a PLAN*.md / TODO.md being executed."
 ---
 
-# Plans and Roadmaps v1.10.0
+# Plans and Roadmaps v1.11.0
 
 These rules apply to the plan-mode plan file, any `.md` under a
 `.claude/plans/` directory, and any `PLAN*.md` or `TODO.md` you are executing
@@ -119,43 +119,52 @@ Show the real base, branch and path in each option. The branch is
 the base of the built-in `EnterWorktree name=`: `fresh` (the default)
 branches from `origin/<default-branch>`, `head` from local HEAD. Read it
 from the main checkout; the first file that sets it wins, and none means
-`fresh`:
+`fresh`. Run one command per file, in this order, skipping a missing file:
 
 ```bash
-for f in .claude/settings.local.json .claude/settings.json ~/.claude/settings.json; do
-  v=$(jq -r '.worktree.baseRef // empty' "$f" 2>/dev/null)
-  [ -n "$v" ] && { echo "$v"; break; }
-done
+jq -r '.worktree.baseRef // empty' .claude/settings.local.json
+jq -r '.worktree.baseRef // empty' .claude/settings.json
+jq -r '.worktree.baseRef // empty' ~/.claude/settings.json
 ```
 
 - **`fresh`:** Worktree from origin/<base> comes before Worktree from HEAD.
 - **`head`:** Worktree from HEAD comes first.
 - **Only this key.** This is the one setting the skill reads from settings
   files.
-- **No `jq`:** the loop prints nothing, which reads as `fresh`. Read the
-  three files instead.
+- **One file per command.** `jq` stops at the first missing file, so one
+  call over all three would hide a later file's value.
+- **No `jq`:** read the three files instead.
 
 **Base detection.** Prefer the repo's default branch, without fetching
-(plan mode cannot write refs). First match wins:
+(plan mode cannot write refs). Run each step as its own plain command;
+the first step that finds a base wins:
 
-```bash
-b=$(git symbolic-ref --short refs/remotes/origin/HEAD 2>/dev/null | sed 's|^origin/||')
-if [ -z "$b" ] && gh auth status >/dev/null 2>&1; then
-  b=$(gh repo view --json defaultBranchRef -q .defaultBranchRef.name 2>/dev/null)
-fi
-if [ -n "$b" ] && git rev-parse --verify --quiet "refs/remotes/origin/$b" >/dev/null; then
-  echo "default $b"
-else
-  for b in dev development main master; do
-    git rev-parse --verify --quiet "refs/remotes/origin/$b" >/dev/null && { echo "fallback $b"; break; }
-  done
-fi
-```
+1. **Default branch:** `git symbolic-ref --short refs/remotes/origin/HEAD`
+   prints `origin/<b>`; drop the `origin/`.
+2. **Ask GitHub,** only when step 1 fails:
+   `gh repo view --json defaultBranchRef -q .defaultBranchRef.name`
+   prints `<b>`. Skip it when `gh` is missing or not logged in.
+3. **Check the ref** from step 1 or 2:
+   `git rev-parse --verify --quiet refs/remotes/origin/<b>`. A SHA means
+   the base is `<b>`, a **`default`** base.
+4. **Fallback,** when no step found a ref:
+
+   ```bash
+   git for-each-ref --format='%(refname:short)' refs/remotes/origin/dev refs/remotes/origin/development refs/remotes/origin/main refs/remotes/origin/master
+   ```
+
+   The first line that is exactly `origin/dev`, `origin/development`,
+   `origin/main` or `origin/master` is a **`fallback`** base. Output is
+   sorted by name, which matches this priority order. Skip longer names
+   such as `origin/dev/x`: each pattern also matches the refs below it.
 
 - **`default`** means the base is the default branch; **`fallback`** means
   the default branch is unknown, so the base may not be it.
-- **Missing `origin/HEAD`** falls through to `gh`, then the loop. Outside
-  plan mode, `git remote set-head origin -a` sets it.
+- **Plain commands only.** A worktree-isolated session refuses compound
+  shell forms, such as loops, `if` or `$(git …)`, so never join the steps
+  into one script.
+- **Missing `origin/HEAD`** falls through to `gh`, then the fallback.
+  Outside plan mode, `git remote set-head origin -a` sets it.
 - **Hide the option** when nothing matches or there is no `origin`
   remote, and say so in one line, e.g. "Worktree from origin is hidden:
   no origin/HEAD, and no origin/dev, development, main or master ref."
@@ -185,25 +194,14 @@ uncommitted changes. Untracked files count; ignored files do not.
 
 - **Leave behind** (default): the worktree starts clean.
 - **Copy:** the changes stay in the main checkout and also appear in the
-  worktree:
-
-      git stash push -u
-      git -C <wt> stash apply
-      git stash pop
-
-  Stashes are shared between worktrees, so the last `pop` restores the
-  main checkout.
-- **Move:** the changes leave the main checkout:
-
-      git stash push -u
-      git -C <wt> stash pop
-
+  worktree.
+- **Move:** the changes leave the main checkout.
+- **How:** see Carrying changes below, in Creating and entering.
 - **Carried edits are the user's.** In the worktree, `auto-commit`'s
   dirty-tree check reports them like any other uncommitted change.
-- **Remote base:** the changes were made against HEAD, so `stash apply`
-  or `pop` in a worktree from origin/<base> may conflict. On conflict,
-  stop and report. For Move, nothing is lost: `pop` keeps the stash in
-  the list when it conflicts.
+- **Remote base:** the changes were made against HEAD, so applying them in
+  a worktree from origin/<base> may conflict. On conflict, stop and
+  report. Nothing is lost: `stash apply` keeps the stash in the list.
 
 **Recording.** Write the answer as a line under the title, below the stop
 line and the run-mode line. Write `none` too, so execution does not ask
@@ -224,8 +222,9 @@ line under `head` reads `from <sha>`, like the first example.
 1. Git-ignore `.claude/worktrees/`: unless `git check-ignore -q
    .claude/worktrees/` succeeds, append it to
    `git rev-parse --git-path info/exclude`, as for `.claude/plans/`.
-2. **Built-in line:** call `EnterWorktree name=<topic>`. No fetch and no
-   `git worktree add`; the tool picks the base itself.
+2. **Built-in line:** call `EnterWorktree name=<topic>`, with any carry
+   around it (step 4). No fetch and no `git worktree add`; the tool picks
+   the base itself.
 
    - **Check the base** right after entering: for `from origin/<base>`,
      `git merge-base --is-ancestor origin/<base> HEAD`; for `from <sha>`,
@@ -254,13 +253,29 @@ line under `head` reads `from <sha>`, like the first example.
      existing `origin/<base>` ref as is, or to switch to Worktree from
      HEAD.
 
-   Then carry the changes as recorded, and call `EnterWorktree` with
-   `path=<main>/.claude/worktrees/<topic>`.
+   Then call `EnterWorktree` with `path=<main>/.claude/worktrees/<topic>`,
+   with any carry around it (step 4).
 
-4. **Carry on a built-in line:** run `git stash push -u` before the
-   `EnterWorktree name=` call. After it, the session is in the worktree:
-   run `git stash apply` there, then `git -C <main> stash pop` for Copy;
-   just `git stash pop` there for Move.
+4. **Carrying changes,** for Copy or Move, on either line. The stash list
+   is shared by every worktree and session, so tag the entry and apply it
+   by SHA; never run a bare `git stash pop`. Before `EnterWorktree`, in
+   the main checkout:
+
+       git stash push -u -m "carry-<topic>"
+       git stash list --format='%H %gs'
+
+   Note the SHA on the `carry-<topic>` line. For Copy, also run
+   `git stash apply <sha>` there, which restores the main checkout. After
+   `EnterWorktree`, in the worktree:
+
+       git stash apply <sha>
+
+   Then drop the entry: find the `carry-<topic>` line in
+   `git stash list --format='%gd %gs'`, and run
+   `git stash drop stash@{<n>}`. On a conflict, keep it (see Dirty tree).
+
+   - **Why before entering:** once inside the worktree, the guard refuses
+     `git -C <main>`, so the main checkout gets its changes back first.
 
 A fresh session, such as after a context clear, follows the line: if the
 path exists, enter it with `path=`, for a built-in line too; if not,
@@ -272,21 +287,40 @@ create it first. Carry changes only when creating it.
 
 **Plan files stay in the main checkout.** The link, `completed/` copies and
 roadmap directories go to `<main>/.claude/plans/`, so removing the worktree
-cannot delete them. Find `<main>` from inside the worktree with:
+cannot delete them. Find `<main>` with `git worktree list --porcelain`:
+the path on its first `worktree` line is the main checkout, from any
+worktree and from the main checkout itself.
 
-```bash
-if [ "$(git rev-parse --absolute-git-dir)" != "$(git rev-parse --path-format=absolute --git-common-dir)" ]; then
-  git worktree list --porcelain | sed -n '1s/^worktree //p'
-else
-  git rev-parse --show-toplevel
-fi
-```
+**Main-checkout writes from a worktree.** A session isolated in a worktree
+cannot write to `<main>`: Claude Code's guard refuses Edit and Write on
+its paths, and `git -C <main>`, without a permission prompt. For a stamp,
+a `completed/` move or a roadmap edit:
 
-Writes outside the worktree may ask for permission; that is expected.
+1. **Leave:** `ExitWorktree action=keep`. The session returns to the main
+   checkout and the guard lifts.
+2. **Write** there, with Edit or Write as usual.
+3. **Return:** `EnterWorktree path=<main>/.claude/worktrees/<topic>`. The
+   guard is back, and work in the worktree goes on.
+
+- **Group the writes** that fall together, such as a stamp and its
+  `completed/` move, into one exit.
+- **A round trip, not a leave.** Finishing forbids leaving the worktree
+  unasked; this exit is allowed, because the session returns at once and
+  the worktree stays.
+- **A `name=` worktree** re-entered with `path=` loses its exit prompt and
+  `ExitWorktree action=remove`. Say so in the final report.
+- **Fallback:** if the exit fails, or a write is still refused, skip it
+  and go on. List each skipped write in the final report, with the exact
+  change, for the user to make with `!` or from a main-checkout session.
+- **Re-entry fails:** stop and ask. The session is now in the main
+  checkout, so going on would put the worktree's edits there.
+- **No shell workarounds.** Never write `<main>` paths with `sed -i`,
+  `cat >>` or `cp` to get past the guard.
 
 **Finishing.** Stay in the worktree. The final report names its path and
 branch, and points to the `post-merge-cleanup` skill for after the merge.
-Never call `ExitWorktree` or remove the worktree unless asked.
+Never call `ExitWorktree` or remove the worktree unless asked, apart from
+the round trip in Main-checkout writes.
 
 - **Auto-PR:** a new worktree branch has no upstream, from `git worktree
   add --no-track` and from the built-in alike, so `auto-pr` is offered on

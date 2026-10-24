@@ -202,13 +202,17 @@ Gotchas:
   and `<type>/<topic>`. Only the built-in one, in the session that made
   it, gets Claude Code's exit prompt and hooks.
 - **Plan files stay in the main checkout,** under `.claude/plans/` there,
-  so removing the worktree cannot delete them. Writing them from inside
-  the worktree may ask for permission.
+  so removing the worktree cannot delete them. From inside the worktree,
+  Claude Code refuses those writes outright, so Claude briefly leaves the
+  worktree, writes, and re-enters it. A built-in worktree re-entered this
+  way loses its exit prompt. If the round trip fails, Claude lists the
+  skipped writes in its report for you to make.
 - **Auto-PR on a new worktree branch creates the upstream:** the branch
   has none yet, so the first push at a clean finish creates
   `origin/<branch>`.
-- **Leaving and removing the worktree is yours.** Claude stays in it and
-  never removes it unless asked; after the merge, use
+- **Leaving and removing the worktree is yours.** Claude stays in it,
+  apart from the round trip for plan files, and never removes it unless
+  asked; after the merge, use
   [`post-merge-cleanup`](../post-merge-cleanup).
 
 The full rules are in [`SKILL.md`](SKILL.md).
