@@ -187,6 +187,10 @@ Gotchas:
 - **Exports hold security findings.** Keep export files out of any repo.
 - **GitHub Projects need an extra scope.** Run
   `gh auth refresh -s project` once before the first promotion.
+- **"Add a task" is not always an issue.** About the request in progress,
+  it goes on Claude Code's own to-do list. "Log", "track", "backlog" or "for
+  later" means the tracker; when it is unclear, Claude asks which one. Open
+  to-do items left at the end of a request are offered as issues.
 - **Issue bodies are not hard-wrapped.** GitHub shows single newlines as
   line breaks, so Claude writes each paragraph of an issue body on one
   line.

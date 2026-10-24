@@ -186,6 +186,20 @@ otherwise.
 - **Subagents don't write issues.** A subagent reports the issue in its
   result; the main agent mentions or logs it as above.
 
+### Issue or to-do
+
+Claude Code's own to-do list is not this tracker. Decide by whether the
+item must outlive the session:
+
+- **Issue:** the user says "log", "track", "backlog", "for later", or
+  "issue", or names an issue id. Use the tracker, with `--type task` for
+  planned work.
+- **To-do:** "add a task" or "todo" about the request in progress is a step
+  of that request. Put it on Claude Code's to-do list, not in the tracker.
+- **Unclear:** ask once: "Session to-do, or log it as an issue?"
+- **Leftovers:** when you finish a request with to-do items still open,
+  list them in one line and offer to log them as issues.
+
 ### Triage
 
 Triage runs **on request only**, e.g. "triage issues". Run
