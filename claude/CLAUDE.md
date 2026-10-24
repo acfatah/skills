@@ -98,8 +98,8 @@ repo's own convention or formatter config wins over this section.
 - Re-wrap the surrounding paragraph when an edit changes its length, but only
   in files that are already hard-wrapped.
 - Exception: PR and issue text is not hard-wrapped, including
-  `PR_SUMMARY-*.md` and local issue files in `.claude/issues/`; GitHub
-  renders single newlines as line breaks.
+  `PR_SUMMARY-*.md` and issue bodies passed to the `issue-tracker` CLI;
+  GitHub renders single newlines as line breaks.
 
 ## Pull Request
 
