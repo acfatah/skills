@@ -83,6 +83,10 @@ ln -sfn "$PWD/skills/issue-tracker" ~/.claude/skills/issue-tracker
 The CLI ships prebuilt in `scripts/issues.js`; there is nothing else to
 install.
 
+The skill pre-approves its own CLI calls through `allowed-tools`, so they
+run without a permission prompt in the turn that loads it. Later turns
+prompt again unless you add a permission rule for the CLI.
+
 ## Configuration
 
 A local project needs no configuration. Two setups need a step from you.

@@ -1,6 +1,7 @@
 ---
 name: issue-tracker
 description: Issue tracking in a local SQLite database through a bundled Bun CLI, with optional Turso sync between your own machines and GitHub as a second step. Load when logging or capturing an issue (bug, idea, feedback, task), triaging issues, starting, blocking, closing, or reopening one, managing sub-issues or milestones, recording a security finding, promoting an issue to GitHub Issues or a GitHub Project, importing v1 issues, exporting issues, or syncing issues.
+allowed-tools: Bash(bun ${CLAUDE_SKILL_DIR}/scripts/issues.js *)
 ---
 
 # Issue Tracker v2.0.0
