@@ -136,5 +136,10 @@ Gotchas:
   first, before acting.
 - **Shared branch means taking turns.** Git refuses two worktrees on one
   branch, so parallel work needs sub-branches.
+- **Switching worktrees has limits.** A session can switch only between
+  worktrees under `.claude/worktrees/` of the same repo, and the one it
+  leaves stops being writable until it re-enters it. `ExitWorktree` never
+  removes a fork's worktree; use
+  [`post-merge-cleanup`](../post-merge-cleanup) after the merge.
 
 The full rules are in [`SKILL.md`](SKILL.md).

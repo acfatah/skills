@@ -3,7 +3,7 @@ name: session-sync
 description: "Keep several Claude sessions on one branch or PR in sync, and recap from the repo, not the transcript, after a break: forks on sub-branches, a shared sessions file, and a sync step before acting. Load when forking a session, starting a second session on the same branch or PR, resuming after a break, merging a fork back, or when the user says \"sync\", \"catch up\", \"what changed\", \"outline progress\", or \"merge the fork back\"."
 ---
 
-# Session Sync v1.0.0
+# Session Sync v1.0.1
 
 A session's context is private and goes stale as soon as another session,
 or the user, changes the repo. Do not sync memories, which load only at
@@ -195,6 +195,17 @@ session starts on it:
 
    Call `EnterWorktree` with that path. Git refuses two worktrees on one
    branch, which is why parallel forks need sub-branches.
+
+   - **Git, not `name=`.** The base is the topic branch, which the
+     built-in `EnterWorktree name=` cannot take; it starts from
+     `worktree.baseRef`.
+   - **Keep the path under `.claude/worktrees/`.** From inside another
+     worktree, `EnterWorktree path=` only switches to worktrees under
+     `.claude/worktrees/` of the same repo.
+   - **The worktree you leave stops being writable** for this session.
+     Re-enter it with `EnterWorktree path=` to write there again.
+   - **`ExitWorktree` never removes it,** because it was entered with
+     `path=`. After the merge, `post-merge-cleanup` does.
 4. **Write the sessions file.** Create it from the template if missing,
    with the integration strategy under `## Topic branch` and the parent's
    row. Add this session's row. Add the `> Sessions:` line to the plan.
