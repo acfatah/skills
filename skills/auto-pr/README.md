@@ -116,6 +116,11 @@ Gotchas:
   finish, and undo does not delete it; that needs its own request.
 - **A name already taken on `origin` hides the option** for a branch with
   no upstream.
+- **A branch tracking the default branch** fails the upstream check.
+  Claude offers to unset that upstream in the run-mode question, so the
+  first push creates `origin/<branch>`; it never unsets it on its own.
+  Worktree branches from `git worktree add --no-track` or the built-in
+  `EnterWorktree name=` have no upstream to begin with.
 - **Pushes trigger CI,** even for a draft PR.
 - **A stopped run pushes nothing.** Its commits stay local, as in
   Auto-commit, and the report says why.
