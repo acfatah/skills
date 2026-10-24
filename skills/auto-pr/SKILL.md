@@ -3,7 +3,7 @@ name: auto-pr
 description: "Opt-in Auto-PR run mode: commit each change as Auto-commit does, then push the branch to its upstream and open or update a draft PR after a clean finish. Load when the user picks Auto-PR in the auto-commit run-mode question, when a plan's run-mode line says Auto-PR, or when the user says \"auto-PR\", \"open a PR when done\", or \"push and open a PR\". Depends on the auto-commit skill for the commit loop."
 ---
 
-# Auto-PR v1.2.0
+# Auto-PR v1.3.0
 
 ## What it adds to Auto-commit
 
@@ -15,6 +15,10 @@ the push and the draft PR, once, after a run that finishes cleanly. Without
 available. The push is outward-facing: it can trigger CI, deploys and
 webhooks, even for a draft PR.
 
+There is no push-only mode: every clean finish opens or updates a PR, or
+asks first (step 3 of Finishing a run). To push without a PR, use
+Auto-commit and push by hand.
+
 ## Preconditions
 
 Offer Auto-PR only when all of these pass. Otherwise hide the option and
@@ -25,6 +29,15 @@ say in one line which check failed.
   or `git symbolic-ref --short refs/remotes/origin/HEAD`).
 - **Has an upstream, or can create one.** One of the two paths below
   passes.
+- **The remote is `gh`'s repo.** The upstream's remote (from `@{u}`, or
+  `origin` when there is none) names the same host, owner and repo as
+  `gh repo view --json url -q .url`. Compare `git remote get-url <remote>`
+  with it, allowing for SSH and HTTPS forms and a trailing `.git`. Fork
+  setups, where the branch lives on a fork but `gh` resolves the parent,
+  fail this check; the one-line reason says so.
+- **The base exists.** The base (see Recording the choice) is on `origin`:
+  `git ls-remote --exit-code --heads origin <base>` finds it, and it is
+  not the current branch.
 - **`gh` is signed in.** `gh auth status` succeeds.
 
 **Existing upstream.**
@@ -42,10 +55,7 @@ upstream is not the default branch either. A topic branch tracking
 **No upstream.** `@{u}` does not resolve, and all of these pass. The first
 push at a clean finish then creates the upstream.
 
-- **`origin` exists** and is the repo `gh` resolves to: the URL from
-  `gh repo view --json url -q .url` and `git remote get-url origin` name
-  the same host, owner and repo, allowing for SSH and HTTPS forms and a
-  trailing `.git`.
+- **`origin` exists.** The repo check above compares it with `gh`'s repo.
 - **The name is free on the remote:**
   `git ls-remote --exit-code --heads origin <branch>` finds nothing (exit
   code 2).
@@ -62,28 +72,36 @@ tracking it.
 Finishing a run. If the branch's open PR is ready for review, offer two
 Auto-PR options instead of one, so the finish need not ask:
 
-- `Auto-PR (PR #n is ready: push and replace its body)`
-- `Auto-PR (PR #n is ready: push, keep its body)`
+- `Auto-PR (PR #n is ready: push and replace title and body)`
+- `Auto-PR (PR #n is ready: push, keep title and body)`
 
 Keep any upstream wording in both labels.
 
 ## Recording the choice
 
-In a plan, write the choice under the title, below any stop line, with the
-upstream from `@{u}`:
+In a plan, write the choice under the title, below any stop line. It
+records three things, in this order: the upstream from `@{u}`, the PR
+base, and the summary file.
 
-    > Run mode: Auto-PR (upstream: origin/<branch>). Commit each phase, then push and open or update a draft PR after a clean finish; stop on any gap. See the auto-pr skill.
+    > Run mode: Auto-PR (upstream: origin/<branch>; base: <base>; summary: drafts/PR_SUMMARY-<task>.md). Commit each phase, then push and open or update a draft PR after a clean finish; stop on any gap. See the auto-pr skill.
 
-On the no-upstream path, the line adds a `to create` marker:
+On the no-upstream path, the upstream adds a `to create` marker:
 
-    > Run mode: Auto-PR (upstream: origin/<branch>, to create). Commit each phase, then push and open or update a draft PR after a clean finish; stop on any gap. See the auto-pr skill.
+    > Run mode: Auto-PR (upstream: origin/<branch>, to create; base: <base>; summary: drafts/PR_SUMMARY-<task>.md). Commit each phase, then push and open or update a draft PR after a clean finish; stop on any gap. See the auto-pr skill.
 
-For a ready PR, the line also records the answer, e.g.
-`(upstream: origin/<branch>; ready PR #n: replace body)` or
-`(…; ready PR #n: keep body)`.
+For a ready PR, the line also records the answer, after the summary, e.g.
+`(upstream: origin/<branch>; base: main; summary: drafts/PR_SUMMARY-<task>.md; ready PR #n: replace)`
+or `(…; ready PR #n: keep)`.
 
 - **The upstream is recorded** so a fresh session can check the branch
   before pushing.
+- **`base`** is the repo's default branch, unless the user or the plan
+  names another. Claude never guesses a stacked base. It must pass the
+  base check in Preconditions.
+- **`summary`** names the PR summary file, so a fresh session updates the
+  same one. `<task>` is the plan's topic: the name of its
+  `.claude/plans/<topic>.md` link. A roadmap uses its `<topic>`, as in
+  Roadmaps. Without a plan, Claude picks a snake_case topic.
 - **The ready-PR answer is recorded** so the finish does not ask again.
   It holds only for that PR while it is still ready; if the PR's state
   changed (now a draft, closed, or a different PR), step 3 of Finishing a
@@ -93,9 +111,10 @@ For a ready PR, the line also records the answer, e.g.
   and in the roadmap's Decisions for a roadmap. Later sessions and phases
   then see an ordinary upstream.
 - **Without a plan,** the choice lasts for this session only, as in
-  Auto-commit. On the no-upstream path, state the upstream to be created
-  in chat when the user picks Auto-PR; that statement is the record for
-  the re-check. State a ready-PR answer in chat the same way.
+  Auto-commit. When the user picks Auto-PR, state in chat the upstream
+  (existing, or to create), the base and the summary file, on every path.
+  That statement is the record for the re-check and for step 4. State a
+  ready-PR answer in chat the same way.
 - **Never save it to memory, never infer it.** Choosing Auto-PR is the
   explicit request to push and open the PR; nothing else is.
 
@@ -107,12 +126,14 @@ Everything Auto-commit authorizes, plus, once per clean finish:
   taken from `@{u}`: `git push <remote> HEAD:<branch>`.
 - **Create the recorded upstream once,** on the no-upstream path only, at
   the first clean finish: `git push -u origin HEAD:<branch>`.
-- **Create a draft PR** with `gh pr create --draft`, or **update the open
-  PR's body** for the branch with `gh pr edit --body-file`. Edit only an
-  open PR from the same repo, as step 3 of Finishing a run finds it.
-- **Push to a ready PR, and keep or replace its body,** only with the
-  user's answer: at the run-mode question or at the finish.
-- **Write or update `drafts/PR_SUMMARY-<task>.md`,** per the PR rules in
+- **Create a draft PR** against the recorded base with
+  `gh pr create --draft --base <base>`, or **update the open PR's title
+  and body** for the branch with `gh pr edit --title --body-file`. Edit
+  only an open PR from the same repo, as step 3 of Finishing a run finds
+  it.
+- **Push to a ready PR, and keep or replace its title and body,** only
+  with the user's answer: at the run-mode question or at the finish.
+- **Write or update the recorded summary file,** per the PR rules in
   `CLAUDE.md`.
 
 ## What it never authorizes
@@ -127,7 +148,7 @@ Everything Auto-commit authorizes, plus, once per clean finish:
   is not the tracked upstream, or creating one on a remote other than
   `origin`.
 - **PR state changes:** marking ready, merging, closing (except the undo
-  below), requesting reviewers, or adding labels.
+  below), requesting reviewers, adding labels, or changing the base.
 - **Deleting the remote branch.**
 - **A second PR** for a branch that already has an open one.
 
@@ -139,8 +160,9 @@ A rejected push is an unsafe gap: stop and report it.
    passed, and no hard or unsafe gap is open. A run that stops pushes
    nothing; its commits stay local, as in Auto-commit.
 2. **Re-check the upstream.** Run the preconditions again. If `@{u}`
-   differs from the upstream in the run-mode line, that is a hard gap:
-   stop before pushing. For a `to create` line:
+   differs from the recorded upstream, from the run-mode line, or the chat
+   statement without a plan, that is a hard gap: stop before pushing. For
+   a `to create` record:
    - **Remote branch still absent and `@{u}` unset:** proceed; step 5
      creates it with `-u`.
    - **`@{u}` now set to exactly `origin/<branch>`** (the user pushed it):
@@ -149,57 +171,64 @@ A rejected push is an unsafe gap: stop and report it.
    - **Remote branch exists but `@{u}` is unset, or `@{u}` points anywhere
      else:** hard gap; stop before pushing.
 3. **Find the PR,** before writing anything:
-   `gh pr list --head <branch> --state open --json number,url,isDraft,body,isCrossRepository`.
+   `gh pr list --head <branch> --state open --json number,url,isDraft,title,body,baseRefName,isCrossRepository`.
    Drop rows with `isCrossRepository` true: those are fork PRs whose
    branch has the same name.
    - **None:** continue; step 6 creates the PR.
-   - **One draft, body unchanged:** continue; step 6 updates it.
-   - **One draft, body edited:** ask the question below, in its draft
+   - **One draft, PR unchanged:** continue; step 6 updates it.
+   - **One draft, PR edited:** ask the question below, in its draft
      variant.
    - **One ready for review:** use the run-mode line's answer if it
      recorded this PR as ready (see Recording the choice); otherwise ask.
    - **Several, or a `gh` error:** unsafe gap; stop with nothing pushed.
-4. **Write the PR body.** Make sure `drafts/` is ignored first (see
-   `CLAUDE.md`), then write or update `drafts/PR_SUMMARY-<task>.md`: a
-   title and a description covering every commit of the branch, ending
-   with the PR attribution line. On **Push, keep the body**, still write
-   the file, but do not send it in step 6.
+
+   **Base mismatch:** if the open PR's `baseRefName` differs from the
+   recorded base, never change it; go on, and note it in the report.
+4. **Write the PR summary.** Make sure `drafts/` is ignored first (see
+   `CLAUDE.md`), then write or update the recorded summary file; never
+   pick a new name. It holds an H1 title and a description covering every
+   commit of the branch, ending with the PR attribution line. On **Push,
+   keep title and body**, still write the file, but do not send it in
+   step 6.
 5. **Push** `HEAD` to the upstream, unless the answer was **Don't push**.
    On a `to create` line, run `git push -u origin HEAD:<branch>`, then
    drop the marker.
 6. **Open or update:**
    - **No PR:**
-     `gh pr create --draft --title "<title>" --body-file drafts/PR_SUMMARY-<task>.md`.
-   - **Body to replace:**
-     `gh pr edit <n> --body-file drafts/PR_SUMMARY-<task>.md`.
-   - **Push, keep the body:** leave the PR as it is.
+     `gh pr create --draft --base <base> --title "<title>" --body-file drafts/PR_SUMMARY-<task>.md`.
+   - **Title and body to replace:**
+     `gh pr edit <n> --title "<title>" --body-file drafts/PR_SUMMARY-<task>.md`.
+   - **Push, keep title and body:** leave the PR as it is.
 
    A failure here is an unsafe gap, since the push already happened:
    stop and report **Pushed, no PR** or **Pushed, PR not updated**, with
    the `gh` error. Never retry `gh pr create` without `--draft`.
 
-**Body unchanged** means the PR's body equals the content
-`drafts/PR_SUMMARY-<task>.md` had before step 4 rewrote it, after
-normalizing CRLF to LF and stripping trailing whitespace. A missing file
-counts as edited: there is nothing to compare against.
+**PR unchanged** means the summary file, as it was before step 4
+rewrote it, matches the PR on both counts: its H1 text equals the PR's
+title, and its content equals the PR's body. Compare after normalizing
+CRLF to LF and stripping trailing whitespace. A missing file counts as
+edited: there is nothing to compare against.
 
 **The question.** Ask it before the push, because the push alone notifies
 a ready PR's reviewers:
 
 - **Ready PR:** "PR #n is ready for review. Pushing will notify its
   reviewers. What should I do?"
-- **Draft PR, body edited:** "PR #n's body was edited on GitHub since the
-  last summary. What should I do?"
+- **Draft PR, edited:** "PR #n's title or body was edited on GitHub
+  since the last summary. What should I do?"
 
 Options, in this order:
 
-- **Push and replace the body:** push, then `gh pr edit --body-file`.
-- **Push, keep the body:** push, and leave the PR's body as it is.
+- **Push and replace title and body:** push, then
+  `gh pr edit --title --body-file`.
+- **Push, keep title and body:** push, and leave the PR's title and body
+  as they are.
 - **Don't push** (default, also when the question is dismissed): push
   nothing; the commits stay local.
 
 At most one question at the finish, and only for a ready PR or an edited
-body. The draft PR is the safety valve only while the PR is a draft:
+title or body. The draft PR is the safety valve only while the PR is a draft:
 nothing is merged or sent for review until the user does it.
 
 ## Stop or finish report
@@ -207,8 +236,10 @@ nothing is merged or sent for review until the user does it.
 Report everything Auto-commit reports, plus:
 
 - **PR:** its URL, whether it was opened, updated, or pushed with its
-  body kept, and `created origin/<branch>` when this push created the
-  upstream.
+  title and body kept, and `created origin/<branch>` when this push
+  created the upstream.
+- **Base mismatch,** when the open PR's base differs from the recorded
+  base: both names. The base was left as it is.
 - **Nothing pushed (user chose),** when the answer was **Don't push**.
 - **Pushed, no PR** or **Pushed, PR not updated,** when step 6 failed
   after the push, with the `gh` error.
@@ -224,7 +255,7 @@ Report everything Auto-commit reports, plus:
 - **One PR per roadmap.** The roadmap keeps one topic branch for all
   phases. The first phase that finishes cleanly pushes and opens the
   draft PR. Later phases push and update `PR_SUMMARY-<roadmap>.md` and
-  the PR body.
+  the PR's title and body.
 - **Exception:** a roadmap that says its phases merge on their own may use
   one branch and one PR per phase.
 - **Each session still stops.** Finishing phase N under Auto-PR: commit,
