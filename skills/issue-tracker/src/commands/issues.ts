@@ -153,6 +153,12 @@ export interface ListFilters {
   milestone?: string;
   label?: string;
   parent?: number;
+  query?: string;
+}
+
+// LIKE treats % and _ as wildcards; escape them so the text matches literally.
+function likePattern(text: string): string {
+  return `%${text.replace(/[\\%_]/g, (c) => `\\${c}`)}%`;
 }
 
 export async function listIssues(store: Store, f: ListFilters): Promise<Issue[]> {
@@ -177,6 +183,11 @@ export async function listIssues(store: Store, f: ListFilters): Promise<Issue[]>
   if (f.label) {
     where.push("id IN (SELECT issue_id FROM labels WHERE label = ?)");
     args.push(f.label);
+  }
+  if (f.query) {
+    where.push("(title LIKE ? ESCAPE '\\' OR body LIKE ? ESCAPE '\\')");
+    const pattern = likePattern(f.query);
+    args.push(pattern, pattern);
   }
   const sql = `SELECT ${COLUMNS} FROM issues${where.length ? ` WHERE ${where.join(" AND ")}` : ""} ORDER BY id`;
   return withLabels(store, await store.query<IssueRow>(sql, args));

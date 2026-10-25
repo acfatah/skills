@@ -40,6 +40,17 @@ describe("issue verbs through the bundle", () => {
     expect(JSON.parse(ok($(["list", "--parent", "1", "--json"]))).map((i: { id: string }) => i.id)).toEqual(["0003"]);
     expect(JSON.parse(ok($(["list", "--milestone", "v1.0", "--type", "task", "--json"])))).toHaveLength(1);
 
+    // --query searches title and body in any case, with LIKE wildcards taken literally.
+    ok($(["new", "--title", "Session timeout", "--body-file", "-"], { stdin: "Happens after login, 100% of the time on mobile.\n" }));
+    const ids = (args: string[]) => JSON.parse(ok($(["list", ...args, "--json"]))).map((i: { id: string }) => i.id);
+    expect(ids(["--query", "LOGIN"])).toEqual(["0001", "0004"]);
+    expect(ids(["--query", "mobile"])).toEqual(["0004"]);
+    expect(ids(["--query", "login", "--status", "open"])).toEqual(["0001"]);
+    expect(ids(["--query", "login", "--label", "auth"])).toEqual(["0001"]);
+    expect(ids(["--query", "100%"])).toEqual(["0004"]);
+    expect(ids(["--query", "o%t"])).toEqual([]);
+    expect(ids(["--query", "1_0"])).toEqual([]);
+
     const shown = ok($(["show", "1"]));
     expect(shown).toContain("0001 Login fails on empty password");
     expect(shown).toContain("labels: auth, ui");
@@ -109,6 +120,8 @@ describe("issue verbs through the bundle", () => {
     expect(ok($(["new", "--title", "Sub finding", "--parent", "S1", "--type", "security"]))).toContain("S0002");
     expect(ok($(["list"]))).not.toContain("Token");
     expect(ok($(["list", "--security"]))).toContain("S0001");
+    expect(ok($(["list", "--security", "--query", "token"]))).toContain("S0001");
+    expect(ok($(["list", "--security", "--query", "regular"]))).toBe("No matching issues.\n");
     expect(JSON.parse(ok($(["show", "S0001", "--json"]))).children[0].id).toBe("S0002");
     expect($(["new", "--title", "x", "--type", "security", "--milestone", "v1"]).code).toBe(1);
     expect($(["edit", "1", "--set", "parent=S1"]).code).toBe(1);

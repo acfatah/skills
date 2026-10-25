@@ -570,6 +570,9 @@ async function createIssue(store, db, input, opts) {
   const row = results[results.length - 1][0];
   return { id: row.id, status: row.status };
 }
+function likePattern(text) {
+  return `%${text.replace(/[\\%_]/g, (c) => `\\${c}`)}%`;
+}
 async function listIssues(store, f) {
   const where = [];
   const args = [];
@@ -592,6 +595,11 @@ async function listIssues(store, f) {
   if (f.label) {
     where.push("id IN (SELECT issue_id FROM labels WHERE label = ?)");
     args.push(f.label);
+  }
+  if (f.query) {
+    where.push("(title LIKE ? ESCAPE '\\' OR body LIKE ? ESCAPE '\\')");
+    const pattern = likePattern(f.query);
+    args.push(pattern, pattern);
   }
   const sql = `SELECT ${COLUMNS} FROM issues${where.length ? ` WHERE ${where.join(" AND ")}` : ""} ORDER BY id`;
   return withLabels(store, await store.query(sql, args));
@@ -2561,7 +2569,7 @@ function queuedIssues(db, outbox) {
   }));
 }
 function matches(i, f) {
-  return (!f.type || i.type === f.type) && (!f.milestone || i.milestone === f.milestone) && (!f.label || i.labels.includes(f.label)) && (f.parent === undefined || i.parent === f.parent);
+  return (!f.type || i.type === f.type) && (!f.milestone || i.milestone === f.milestone) && (!f.label || i.labels.includes(f.label)) && (f.parent === undefined || i.parent === f.parent) && (!f.query || [i.title, i.body].some((t) => t.toLowerCase().includes(f.query.toLowerCase())));
 }
 function queuedNotesOn(outbox, id) {
   return outbox.read().filter((e) => e.kind === "note" && ("id" in e.target) && e.target.id === id).map((e) => ({ date: e.date, text: e.text }));
@@ -3211,7 +3219,7 @@ function promotionText(p) {
 }
 
 // src/cli.ts
-var VERSION = "2.0.0";
+var VERSION = "2.1.0";
 var str2 = (v, k) => v[k];
 var json = { json: { type: "boolean" } };
 async function readBody(v) {
@@ -3277,7 +3285,7 @@ var VERBS = {
   list: {
     usage: [
       "list [--status <s,s>|all] [--type <type>] [--milestone <name>] [--label <label>]",
-      "    [--parent <id>] [--security] [--json]"
+      "    [--parent <id>] [--query <text>] [--security] [--json]"
     ],
     options: {
       status: { type: "string" },
@@ -3285,6 +3293,7 @@ var VERBS = {
       milestone: { type: "string" },
       label: { type: "string" },
       parent: { type: "string" },
+      query: { type: "string" },
       security: { type: "boolean" },
       ...json
     },
@@ -3298,7 +3307,8 @@ var VERBS = {
         type: str2(v, "type"),
         milestone: str2(v, "milestone"),
         label: str2(v, "label"),
-        parent: parentText ? parseLocalRef(db, parentText) : undefined
+        parent: parentText ? parseLocalRef(db, parentText) : undefined,
+        query: str2(v, "query")
       };
       const b = ctx.backend();
       const issues = await b.run(db, (s) => listIssues(s, filters));

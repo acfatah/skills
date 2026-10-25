@@ -3,7 +3,7 @@ name: session-sync
 description: "Keep several Claude sessions on one branch or PR in sync, and recap from the repo, not the transcript, after a break: forks on sub-branches, a shared sessions file, and a sync step before acting. Load when forking a session, starting a second session on the same branch or PR, resuming after a break, merging a fork back, or when the user says \"sync\", \"catch up\", \"what changed\", \"outline progress\", or \"merge the fork back\"."
 ---
 
-# Session Sync v1.1.0
+# Session Sync v1.1.1
 
 A session's context is private and goes stale as soon as another session,
 or the user, changes the repo. Do not sync memories, which load only at
@@ -92,6 +92,9 @@ there, without a permission prompt. Make a round trip instead:
   checkout, so going on would put the fork's edits there.
 - **No shell workarounds,** such as `sed -i`, `cat >>` or `mv` on `<main>`
   paths.
+- **In a background fork,** the round trip lands back in the guarded
+  checkout. Hand the write to the parent instead, as the
+  `plans-and-roadmaps` skill's Background forks section describes.
 
 - **Git-ignore it.** Unless `git check-ignore -q .claude/sessions/`
   succeeds, append `.claude/sessions/` to

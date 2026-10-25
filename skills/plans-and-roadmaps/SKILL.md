@@ -3,7 +3,7 @@ name: plans-and-roadmaps
 description: "Rules for plan documents and roadmaps: where plan files live, whether a plan runs in a worktree, which session a plan is written in, progress stamps, state directories, phased plans, multi-session roadmaps. Load before writing, executing, stamping, or moving a plan: the plan-mode file, any .md under .claude/plans/, or a PLAN*.md / TODO.md being executed."
 ---
 
-# Plans and Roadmaps v1.11.1
+# Plans and Roadmaps v1.12.0
 
 These rules apply to the plan-mode plan file, any `.md` under a
 `.claude/plans/` directory, and any `PLAN*.md` or `TODO.md` you are executing
@@ -106,7 +106,8 @@ worktree or in the current checkout.
 **The question.** Ask in the same AskUserQuestion call as the `auto-commit`
 run-mode question, never as a second prompt. Offer:
 
-- **No worktree** (default): run in the current checkout. Always first.
+- **No worktree** (default): run in the current checkout. Always first,
+  except in a background fork, which leaves it out (see Background forks).
 - **Worktree from HEAD:** a new branch at `.claude/worktrees/<topic>`,
   based on the current local HEAD.
 - **Worktree from origin/<base>:** the same path, based on the detected
@@ -317,6 +318,8 @@ a `completed/` move or a roadmap edit:
   checkout, so going on would put the worktree's edits there.
 - **No shell workarounds.** Never write `<main>` paths with `sed -i`,
   `cat >>` or `cp` to get past the guard.
+- **In a background fork,** skip the round trip and hand the writes to
+  the parent instead (see Background forks).
 
 **Finishing.** Stay in the worktree. The final report names its path and
 branch, and points to the `post-merge-cleanup` skill for after the merge.
@@ -331,12 +334,56 @@ the round trip in Main-checkout writes.
   `ExitWorktree` or the exit prompt. After the merge, `post-merge-cleanup`
   removes it, built-in or not.
 
+## Background forks
+
+A `/fork` session runs as a background (`bg`) process. Under the
+`worktree.bgIsolation` setting (default `"worktree"`), Claude Code's guard
+refuses its Edit and Write in the main checkout, and `git -C <main>`. The
+round trip in Main-checkout writes does not help:
+`ExitWorktree action=keep` only lands the fork back in the guarded
+checkout.
+
+**Detect a fork** by either sign:
+
+- **A `<fork-source>` task notification** in the conversation. It names
+  the parent session.
+- **The session registry says `bg`.** Run `echo $CLAUDE_PID`, then
+  `jq -r .kind ~/.claude/sessions/<pid>.json` with the printed PID, as
+  two plain commands. `bg` means a fork.
+
+**Worktree question in a fork:**
+
+- **Leave out No worktree,** and say why in one line: the guard blocks
+  every edit in the main checkout. Offer only the worktree options.
+- **A plan with `> Worktree: none`** stops before its first edit. Offer
+  to enter a worktree now, which records a new `> Worktree:` line, or to
+  run the plan from `/branch` or a foreground session.
+
+**Main-checkout writes:** the plan link, state moves, `completed/`
+copies, roadmap stamps and outcomes, and the phase-link freeze.
+
+- **Skip the round trip.** Never call `ExitWorktree` for them.
+- **Hand them to the parent** with `SendMessage` when `ListAgents` shows
+  it. Name each path and the exact change; the parent is a foreground
+  session, so it can write them.
+- **No parent listed:** list each write, with the exact change, in the
+  final report, for a foreground session to make.
+- **Plan-mode file edits go ahead.** `~/.claude/plans/<slug>.md` is
+  outside the checkout, so stamps and commit messages still go there. If
+  the guard refuses one, report it as unverified and hand it off like the
+  others.
+- **No shell workarounds,** as in Main-checkout writes.
+
+**Parallel sessions:** a fork always loads `session-sync`, even when no
+sessions file exists yet (see Parallel sessions).
+
 ## Parallel sessions
 
 These rules assume one session per plan. Before executing a plan or
-roadmap phase that carries a `> Sessions:` line under its title, or whose
-branch has another active session, load the `session-sync` skill and
-run its sync step first. It owns the sessions file, forks and merging
+roadmap phase that carries a `> Sessions:` line under its title, whose
+branch has another active session, or when the session is a background
+fork (see Background forks), load the `session-sync` skill and run its
+sync step first. It owns the sessions file, forks and merging
 back; this skill still owns the plan.
 
 ## Plan where the tools load

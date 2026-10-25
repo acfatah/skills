@@ -28,7 +28,7 @@ import { ADVISORY, promote, promotionText } from "./promote.ts";
 import { OPEN_STATUSES, type Status, checkStatus, splitList, today } from "./model.ts";
 import { STATUSES } from "./schema.ts";
 
-export const VERSION = "2.0.0";
+export const VERSION = "2.1.0";
 
 type Options = NonNullable<ParseArgsConfig["options"]>;
 type Values = Record<string, string | boolean | string[] | undefined>;
@@ -123,7 +123,7 @@ export const VERBS: Record<string, Verb> = {
   list: {
     usage: [
       "list [--status <s,s>|all] [--type <type>] [--milestone <name>] [--label <label>]",
-      "    [--parent <id>] [--security] [--json]",
+      "    [--parent <id>] [--query <text>] [--security] [--json]",
     ],
     options: {
       status: { type: "string" },
@@ -131,6 +131,7 @@ export const VERBS: Record<string, Verb> = {
       milestone: { type: "string" },
       label: { type: "string" },
       parent: { type: "string" },
+      query: { type: "string" },
       security: { type: "boolean" },
       ...json,
     },
@@ -147,6 +148,7 @@ export const VERBS: Record<string, Verb> = {
         milestone: str(v, "milestone"),
         label: str(v, "label"),
         parent: parentText ? parseLocalRef(db, parentText) : undefined,
+        query: str(v, "query"),
       };
       const b = ctx.backend();
       const issues = await b.run(db, (s) => listIssues(s, filters));
