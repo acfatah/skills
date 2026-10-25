@@ -140,8 +140,8 @@ it runs the `git -C` checks directly and skips this early `ExitWorktree`.
   inside `<wt>`, every command runs as `git -C <main> …`. A session that
   entered `<wt>` with `EnterWorktree` leaves it first; one launched
   inside `<wt>` cannot, so it stays, and its directory is gone afterwards
-  (see Execute). Say which in the summary. In a
-  background fork the guard refuses `git -C <main>`; see Background fork.
+  (see Execute). Say which in the summary. In a background fork the guard
+  refuses `git -C <main>`; see Background fork.
 - **Branch checked out in the main checkout.** When `<b>` is checked out in
   `<main>` rather than in its own worktree, there is no worktree to remove.
   Instead, the summary adds a first step that switches `<main>` to the
