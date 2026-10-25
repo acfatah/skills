@@ -7,7 +7,7 @@ against live shields.io and qlty endpoints.
 
 | Placeholder | Value |
 |---|---|
-| `<o>`, `<r>` | GitHub owner and repo, from the `origin` remote |
+| `<o>`, `<r>` | GitHub owner and repo, from the `origin` remote or the GitHub mirror the user names |
 | `<branch>` | Default branch |
 | `<pkg>` | Package name, URL-encoded: `@scope/name` → `%40scope%2Fname` |
 | `<pkg-raw>` | Package name as written: `@scope/name` |
@@ -57,10 +57,12 @@ https://img.shields.io/badge/<Label>-%23<hex>.svg?style=flat-square&logo=<slug>&
 | release | `Latest release` | `https://img.shields.io/github/v/release/<o>/<r>?style=flat-square` | `https://github.com/<o>/<r>/releases/latest` | a GitHub release exists | `gh release list -L 1` is not empty |
 | tag | `Latest tag` | `https://img.shields.io/github/v/tag/<o>/<r>?style=flat-square` | `https://github.com/<o>/<r>/tags` | tags but no releases | `git ls-remote --tags origin` is not empty |
 
-- **No GitHub remote:** offer `license-static` instead of `license`:
+- **No GitHub owner/repo** (no GitHub `origin` and no mirror named): offer
+  `license-static` instead of `license`:
   `https://img.shields.io/badge/license-<spdx>-blue.svg?style=flat-square`,
   with `<spdx>` read from the license file (e.g. `MIT`) and the same
-  `./<license-file>` link. Drop every other row in this table.
+  `./<license-file>` link. Drop every other row in this table, and every
+  `<o>/<r>` row in Quality and CI.
 - Every `github/*` badge needs a **public** repo. For a private repo shields
   answers `repo not found`; tell the user before they pick these.
 - Link stars to the repo page: `/stargazers` answers 404 to logged-out

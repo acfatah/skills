@@ -3,7 +3,7 @@ name: readme-badges
 description: Add, audit, or repair the badge block in a README (shields.io, qlty, CI status). Load when the user asks to add badges or shields to a README, to check, fix, or tidy existing badges, or reports a broken badge.
 ---
 
-# README Badges v1.1.0
+# README Badges v1.1.1
 
 Add a badge block to a README, or audit and repair an existing one. The user
 picks every badge; you detect, propose, verify, and preview. Templates and
@@ -26,9 +26,12 @@ Find the README (`README.md` at the repo root, else ask), then collect:
 
 - **owner/repo** from `git remote get-url origin`. Handles both
   `git@github.com:<o>/<r>.git` and `https://github.com/<o>/<r>(.git)`. If
-  there is no `origin`, or it is not GitHub, ask the user for owner/repo
-  and offer only static, local-link, and package registry badges (npm,
-  npm-downloads, bundle-size, jsr); see the catalog.
+  there is no `origin`, or it is not GitHub, ask for a GitHub owner/repo
+  and say why: the repo may have a GitHub mirror.
+  - **Given one:** use it as `<o>/<r>` and offer the GitHub badges too.
+  - **Declined or none:** skip every row that uses `<o>/<r>`; offer only
+    static, local-link, and package registry badges (npm, npm-downloads,
+    bundle-size, jsr). See the catalog.
 - **Visibility and default branch:** `gh repo view <o>/<r> --json
   defaultBranchRef,visibility`. Without `gh`, use
   `git symbolic-ref --short refs/remotes/origin/HEAD` and strip `origin/`.
