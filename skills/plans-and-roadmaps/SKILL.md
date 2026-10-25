@@ -279,7 +279,8 @@ line under `head` reads `from <sha>`, like the first example.
      exits 0, so there any stderr or nonzero exit is a failure.
    - **Report** the copied files, and any skipped, in the final report.
      The skipped files are the paths in the `File exists` lines; the
-     copied files are the rest of this display list:
+     copied files are the rest of this display list. BSD tar names no
+     skips, so there report each file as copied or already present:
 
          git ls-files --others --ignored --exclude-from=.worktreeinclude | git check-ignore --stdin
 
