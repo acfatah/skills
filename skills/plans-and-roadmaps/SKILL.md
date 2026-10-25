@@ -386,6 +386,10 @@ fork (see Background forks), load the `session-sync` skill and run its
 sync step first. It owns the sessions file, forks and merging
 back; this skill still owns the plan.
 
+**`/branch` is sequential:** it pauses the original session instead of
+running beside it. Back in the original, after `/resume`, re-read the
+plan as Progress marking says; it needs no `session-sync` flow.
+
 ## Plan where the tools load
 
 Some tools load only in a session started in a given directory, and only
@@ -455,6 +459,9 @@ completion stamp to that step's heading:
   heading format.
 - Never back-date a step you did not just finish. If a step was already done
   before this session, leave it alone.
+- **Re-read the plan file** before starting or stamping a step, and trust
+  its stamps over the conversation. A `/branch` or another session may
+  have advanced it; skip a step it already stamps.
 
 ## Plan states
 
