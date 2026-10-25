@@ -3,7 +3,7 @@ name: post-merge-cleanup
 description: "Clean up after a merged PR: remove its worktree, then its local branch, then its remote branch, after safety checks and one confirmation. Load when the user says \"PR merged\", \"clean up the branch\", \"remove the worktree\", \"delete the merged branch\", or /post-merge-cleanup. \"cleanup\" and \"housekeeping\" load it only next to PR, branch, merged, or worktree context, never alone. Not for code cleanup."
 ---
 
-# Post-merge Cleanup v1.2.1
+# Post-merge Cleanup v1.2.2
 
 After a PR merges, the same three things are left behind: its worktree, its
 local branch, and its remote branch. This skill removes them, in that order,
@@ -156,8 +156,9 @@ Ask with AskUserQuestion, one question, options **Clean up** and
 - **Local branch:** `<b>` and its tip SHA, or "already gone";
 - **Remote branch:** `origin/<b>`, or "already gone";
 - **Ignored files** that will be deleted with the worktree, or "none";
-- **Warnings:** that the session leaves `<wt>` first, or the switch of
-  `<main>` to the default branch.
+- **Warnings:** that the session leaves `<wt>` first, or that it has left
+  `<wt>` when a safety check already left it, or the switch of `<main>` to
+  the default branch.
 
 With sub-branches, show one row per branch with these fields; a
 sub-branch shows how it is integrated into `<t>` (ancestor or squash)
@@ -166,6 +167,10 @@ instead of a PR.
 One "Clean up" runs every step below, for every branch in the run. The
 approval covers this run only: never remember it, and ask again on the
 next run, even for the same branch.
+
+**On Cancel**, remove nothing and stop. If a safety check already left
+`<wt>`, tell the user that nothing was removed and that they can return
+with `EnterWorktree path=<wt>`.
 
 ## Execute
 
