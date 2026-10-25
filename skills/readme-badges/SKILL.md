@@ -3,7 +3,7 @@ name: readme-badges
 description: Add, audit, or repair the badge block in a README (shields.io, qlty, CI status). Load when the user asks to add badges or shields to a README, to check, fix, or tidy existing badges, or reports a broken badge.
 ---
 
-# README Badges v1.0.0
+# README Badges v1.1.0
 
 Add a badge block to a README, or audit and repair an existing one. The user
 picks every badge; you detect, propose, verify, and preview. Templates and
@@ -27,7 +27,8 @@ Find the README (`README.md` at the repo root, else ask), then collect:
 - **owner/repo** from `git remote get-url origin`. Handles both
   `git@github.com:<o>/<r>.git` and `https://github.com/<o>/<r>(.git)`. If
   there is no `origin`, or it is not GitHub, ask the user for owner/repo
-  and offer only static and local-link badges (see the catalog).
+  and offer only static, local-link, and package registry badges (npm,
+  npm-downloads, bundle-size, jsr); see the catalog.
 - **Visibility and default branch:** `gh repo view <o>/<r> --json
   defaultBranchRef,visibility`. Without `gh`, use
   `git symbolic-ref --short refs/remotes/origin/HEAD` and strip `origin/`.
@@ -48,7 +49,8 @@ Look between the H1 and the first H2 for either form:
 
 Parse each badge into id (matched against the catalog by `src`), alt, src,
 and href. A badge matching no catalog row is **custom**: verify and keep it,
-and leave its URL alone.
+and leave its URL alone. One exception: the Style repair rule applies to a
+custom `img.shields.io` badge too, and changes only its `style=` parameter.
 
 ### 3. Choose the mode
 
@@ -113,7 +115,9 @@ Done when every badge passes or has a user decision.
 Apply these in add + repair; in audit, report each as an issue.
 
 - **Style:** every `img.shields.io` src carries `style=flat-square`;
-  replace any other `style=` value. Third-party images stay as served.
+  replace any other `style=` value. This covers custom shields.io badges
+  too: change only the `style=` parameter and leave the rest of the URL
+  alone. Third-party images stay as served.
 - **Markup:** `alt` before `src`; two-space indent; `></a>` on its own line,
   four spaces in, right after `src`; no blank lines inside the block.
 - **Facts:** fix a wrong owner, repo, branch, workflow file, or package

@@ -25,7 +25,8 @@ audits and repairs an existing one, in one consistent HTML format.
   fails the check, and you decide keep, drop, or fix.
 - **Not a badge designer.** New badges are filled from the catalog's
   templates, in `flat-square`. A custom badge it finds is verified and
-  kept, its URL left alone.
+  kept, its URL left alone, except that a shields.io one gets
+  `style=flat-square`.
 - **Not a silent editor.** It writes only after you approve the preview;
   audit writes nothing, and removing a badge always needs your yes.
 
@@ -34,7 +35,7 @@ audits and repairs an existing one, in one consistent HTML format.
 - **A private repo, for GitHub badges** → they render `repo not found`
   until the repo is public; Claude warns you before you pick them.
 - **A repo not hosted on GitHub** → Claude asks for owner/repo and offers
-  only static and local-link badges.
+  only static, local-link, and package registry badges (npm, JSR).
 - **Badges outside a README,** such as a docs site or package page → out
   of scope; the skill edits the badge block between a README's H1 and its
   first H2.
