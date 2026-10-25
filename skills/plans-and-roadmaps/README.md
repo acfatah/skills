@@ -187,13 +187,11 @@ Gotchas:
   the docs don't say whether an edit resets the clock. Shelving a plan?
   Say "pause it" so it is copied into `paused/`, or raise
   `cleanupPeriodDays`.
-
 - **A handoff brief lives in `.claude/handoffs/`,** not `.claude/plans/`,
   so a fresh session never mistakes it for an approved plan.
 - **Approving a handoff brief in plan mode only copies it** to
   `.claude/handoffs/` and gives the launch command. Planning happens in
   the new session.
-
 - **Each worktree option has its own base.** Worktree from HEAD uses
   local HEAD. Worktree from origin uses the default branch when it can
   find it (`origin/HEAD`, then `gh`); `git remote set-head origin -a`
