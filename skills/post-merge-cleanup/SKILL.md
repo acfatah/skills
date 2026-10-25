@@ -3,7 +3,7 @@ name: post-merge-cleanup
 description: "Clean up after a merged PR: remove its worktree, then its local branch, then its remote branch, after safety checks and one confirmation. Load when the user says \"PR merged\", \"clean up the branch\", \"remove the worktree\", \"delete the merged branch\", or /post-merge-cleanup. \"cleanup\" and \"housekeeping\" load it only next to PR, branch, merged, or worktree context, never alone. Not for code cleanup."
 ---
 
-# Post-merge Cleanup v1.2.2
+# Post-merge Cleanup v1.2.3
 
 After a PR merges, the same three things are left behind: its worktree, its
 local branch, and its remote branch. This skill removes them, in that order,
@@ -83,11 +83,13 @@ Sub-branches skip **PR merged** and **Nothing unpushed**, and take
 **Integrated into the topic branch** instead. The worktree checks run for
 the worktree of every branch in the run.
 
-While the session is inside a worktree, the guard may refuse `git -C`.
-Run a check on the session's own worktree as plain `git …`, without
-`-C`. A check that needs `git -C` on another path, such as another
-worktree in the run or `<main>`, runs only after `ExitWorktree` with
-`action: "keep"` (see Execute); from then on, `git -C` is fine.
+While the session is inside a worktree it entered with `EnterWorktree`,
+the guard may refuse `git -C`. Run a check on the session's own worktree
+as plain `git …`, without `-C`. A check that needs `git -C` on another
+path, such as another worktree in the run or `<main>`, runs only after
+`ExitWorktree` with `action: "keep"` (see Execute); from then on,
+`git -C` is fine. A session launched inside `<wt>` has no worktree guard:
+it runs the `git -C` checks directly and skips this early `ExitWorktree`.
 
 - **PR merged.**
 
