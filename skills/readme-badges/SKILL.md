@@ -3,7 +3,7 @@ name: readme-badges
 description: Add, audit, or repair the badge block in a README (shields.io, qlty, CI status). Load when the user asks to add badges or shields to a README, to check, fix, or tidy existing badges, or reports a broken badge.
 ---
 
-# README Badges v1.1.2
+# README Badges v1.1.3
 
 Add a badge block to a README, or audit and repair an existing one. The user
 picks every badge; you detect, propose, verify, and preview. Templates and
@@ -35,17 +35,26 @@ Find the README (`README.md` at the repo root, else ask), then collect:
 - **Visibility and default branch:** `gh repo view <o>/<r> --json
   defaultBranchRef,visibility`. Without `gh`, run
   `git ls-remote --symref https://github.com/<o>/<r> HEAD` and take
-  `<branch>` from its `ref: refs/heads/<branch>` line.
+  `<branch>` from its `ref: refs/heads/<branch>` line. That gives no
+  visibility: say it is unknown, and ask whether the repo is public before
+  offering any `github/*` badge.
 - **Manifests:** `package.json` (`name`, `private`, dependencies,
   `packageManager`, `engines`), `jsr.json`, `deno.json`.
 - **Signals:** the license file and its SPDX id, lockfiles, `tsconfig.json`,
   framework configs, every file in `.github/workflows/` with its `name:`,
   `.qlty/`, `codecov.yml`.
+  - **Mirror:** these come from the local checkout and may not match what
+    the mirror runs. The step 5 image check confirms it: shields answers
+    `repo or workflow not found`, and qlty answers 404.
 
 Once `<o>/<r>` is known, every check names it: `gh … <o>/<r>` or
 `-R <o>/<r>`, and `git ls-remote` against `https://github.com/<o>/<r>`.
 Never read `origin` or let `gh` infer the repo; with a mirror, `origin` is
 not GitHub.
+
+Without `gh`, ask the user in place of each check that needs it: visibility
+above, and the catalog's `issues` and `release` exists checks. The step 5
+image check still verifies each badge picked.
 
 Done when each catalog row's detect column is answered yes or no.
 
