@@ -3,7 +3,7 @@ name: plans-and-roadmaps
 description: "Rules for plan documents and roadmaps: where plan files live, whether a plan runs in a worktree, which session a plan is written in, progress stamps, state directories, phased plans, multi-session roadmaps. Load before writing, executing, stamping, or moving a plan: the plan-mode file, any .md under .claude/plans/, or a PLAN*.md / TODO.md being executed. Also load to resume a paused or shelved plan, or to list plans by state."
 ---
 
-# Plans and Roadmaps v1.14.0
+# Plans and Roadmaps v1.14.1
 
 These rules apply to the plan-mode plan file, any `.md` under a
 `.claude/plans/` directory, and any `PLAN*.md` or `TODO.md` you are executing
@@ -258,23 +258,28 @@ line under `head` reads `from <sha>`, like the first example.
 
    **Copy `.worktreeinclude` files,** only if `<main>/.worktreeinclude`
    exists. Claude Code copies them into worktrees it creates, not into one
-   made with `git worktree add`. In the main checkout, list the untracked
-   files it matches:
+   made with `git worktree add`. From the main checkout, copy every
+   untracked file that `.worktreeinclude` matches and git ignores, in one
+   command:
 
-       git ls-files --others --ignored --exclude-from=.worktreeinclude
+       git ls-files -z --others --ignored --exclude-from=.worktreeinclude | git check-ignore -z --stdin | tar --null -T - -cf - | tar -xkf - -C <main>/.claude/worktrees/<topic>
 
-   For each listed path, as plain commands, create its parent directory in
-   the worktree and copy the file to the same relative path:
-
-       mkdir -p <main>/.claude/worktrees/<topic>/<dir>
-       cp -n <path> <main>/.claude/worktrees/<topic>/<path>
-
-   - **Never overwrite:** skip a path that already exists in the worktree;
-     `cp -n` also refuses to replace it.
+   - **Same set as Claude Code:** `git check-ignore --stdin` drops a
+     matched file that git does not ignore.
+   - **One command, not one per file:** `tar` keeps the directories, so a
+     pattern such as `node_modules/` costs no extra commands. This
+     pipeline is the one exception to Plain commands only.
+   - **Never overwrite:** `-k` skips a file that already exists in the
+     worktree. GNU tar then prints `File exists` and exits 2; that is a
+     skip, not a failure.
    - **Report** the copied files, and any skipped, in the final report.
-   - **In a background fork,** the guard may refuse these writes, since
-     the worktree sits under `<main>`. Skip any refused copy and hand it
-     to the parent, as for Main-checkout writes in Background forks.
+     The same list, for display:
+
+         git ls-files --others --ignored --exclude-from=.worktreeinclude | git check-ignore --stdin
+
+   - **Refused:** a worktree-isolated session or a background fork may
+     refuse this compound command. Skip the copy and give the command in
+     the final report, for the user to run with `!`.
 
    Then call `EnterWorktree` with `path=<main>/.claude/worktrees/<topic>`,
    with any carry around it (step 4).
