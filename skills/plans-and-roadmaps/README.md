@@ -93,13 +93,13 @@ ln -sfn "$PWD/skills/plans-and-roadmaps" ~/.claude/skills/plans-and-roadmaps
   ```markdown
   ## Plan documents
 
-  Before writing, executing, stamping, or moving any plan (plan-mode
-  file, `.claude/plans/*.md`, `PLAN*.md`, `TODO.md`), load the
-  `plans-and-roadmaps` skill. Two rules hold even without it: keep the
-  plan-mode file in `~/.claude/plans/`, and commit plans only when
-  asked. If the work needs a tool this session can't load, such as an
-  MCP server from another directory's `.mcp.json`, hand off before
-  planning (see the skill).
+  Before writing, executing, stamping, moving, resuming, or listing
+  any plan (plan-mode file, `.claude/plans/*.md`, `PLAN*.md`,
+  `TODO.md`), load the `plans-and-roadmaps` skill. Two rules hold even
+  without it: keep the plan-mode file in `~/.claude/plans/`, and commit
+  plans only when asked. If the work needs a tool this session can't
+  load, such as an MCP server from another directory's `.mcp.json`,
+  hand off before planning (see the skill).
 
   ## Worktrees
 
@@ -188,13 +188,11 @@ Gotchas:
   the docs don't say whether an edit resets the clock. Shelving a plan?
   Say "pause it" so it is copied into `paused/`, or raise
   `cleanupPeriodDays`.
-
 - **A handoff brief lives in `.claude/handoffs/`,** not `.claude/plans/`,
   so a fresh session never mistakes it for an approved plan.
 - **Approving a handoff brief in plan mode only copies it** to
   `.claude/handoffs/` and gives the launch command. Planning happens in
   the new session.
-
 - **Each worktree option has its own base.** Worktree from HEAD uses
   local HEAD. Worktree from origin uses the default branch when it can
   find it (`origin/HEAD`, then `gh`); `git remote set-head origin -a`
@@ -205,6 +203,9 @@ Gotchas:
   the branch `worktree-<topic>`. The other option uses `git worktree add`
   and `<type>/<topic>`. Only the built-in one, in the session that made
   it, gets Claude Code's exit prompt and hooks.
+- **Claude Code skips `.worktreeinclude` for `git worktree add`.** On that
+  route Claude copies the matched untracked files itself, from the main
+  checkout, never overwrites one, and lists them in its report.
 - **Plan files stay in the main checkout,** under `.claude/plans/` there,
   so removing the worktree cannot delete them. From inside the worktree,
   Claude Code refuses those writes outright, so Claude briefly leaves the
