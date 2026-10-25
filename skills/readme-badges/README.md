@@ -25,7 +25,8 @@ audits and repairs an existing one, in one consistent HTML format.
   fails the check, and you decide keep, drop, or fix.
 - **Not a badge designer.** New badges are filled from the catalog's
   templates, in `flat-square`. A custom badge it finds is verified and
-  kept, its URL left alone.
+  kept, its URL left alone, except that a shields.io one gets
+  `style=flat-square`.
 - **Not a silent editor.** It writes only after you approve the preview;
   audit writes nothing, and removing a badge always needs your yes.
 
