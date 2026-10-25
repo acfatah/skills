@@ -140,8 +140,7 @@ Bump rules (semver-ish):
   `SCREENSHOTS` env var)
 
 Release flow: edit the H1 version in the same commit as the change,
-`git push`, then consumers refresh with `bunx skills update -g` (or
-`bunx skills update -g`).
+`git push`, then consumers refresh with `bunx skills update -g`.
 
 ## License
 
