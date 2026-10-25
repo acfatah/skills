@@ -34,8 +34,9 @@ audits and repairs an existing one, in one consistent HTML format.
 
 - **A private repo, for GitHub badges** → they render `repo not found`
   until the repo is public; Claude warns you before you pick them.
-- **A repo not hosted on GitHub** → Claude asks for owner/repo and offers
-  only static, local-link, and package registry badges (npm, JSR).
+- **A repo not hosted on GitHub** → Claude asks for a GitHub mirror's
+  owner/repo. Given one, it offers GitHub badges too; without one, only
+  static, local-link, and package registry badges (npm, JSR).
 - **Badges outside a README,** such as a docs site or package page → out
   of scope; the skill edits the badge block between a README's H1 and its
   first H2.
