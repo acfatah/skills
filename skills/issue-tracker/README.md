@@ -115,10 +115,12 @@ A local project needs no configuration. Two setups need a step from you.
 - **By description match.** Claude loads it when a request uses its verbs:
   log, capture, triage, list, show, search, start, block, close, reopen,
   promote, sub-issue, milestone, security finding, import v1 issues, export
-  issues, sync issues.
+  issues, sync issues. Its description also names noticing an unrelated
+  issue mid-task.
 - **By name, always.** `/issue-tracker …` or "use the issue-tracker skill".
-- **For side issues, add a `CLAUDE.md` pointer.** Without one, Claude only
-  mentions unrelated issues while the skill is already loaded:
+- **For side issues, add a `CLAUDE.md` pointer.** A side issue rarely looks
+  like a reason to load the skill, so without one Claude may not mention
+  unrelated issues unless the skill is already loaded:
 
   ```markdown
   ## Issues

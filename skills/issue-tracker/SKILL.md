@@ -1,10 +1,10 @@
 ---
 name: issue-tracker
-description: Issue tracking in a local SQLite database through a bundled Bun CLI, with optional Turso sync between your own machines and GitHub as a second step. Load when logging or capturing an issue (bug, idea, feedback, task), triaging issues, listing, showing, or searching issues, starting, blocking, closing, or reopening one, managing sub-issues or milestones, recording a security finding, promoting an issue to GitHub Issues or a GitHub Project, importing v1 issues, exporting issues, or syncing issues.
+description: Issue tracking in a local SQLite database through a bundled Bun CLI, with optional Turso sync between your own machines and GitHub as a second step. Load when logging or capturing an issue (bug, idea, feedback, task), noticing an unrelated issue mid-task, triaging issues, listing, showing, or searching issues, starting, blocking, closing, or reopening one, managing sub-issues or milestones, recording a security finding, promoting an issue to GitHub Issues or a GitHub Project, importing v1 issues, exporting issues, or syncing issues.
 allowed-tools: Bash(bun ${CLAUDE_SKILL_DIR}/scripts/issues.js *)
 ---
 
-# Issue Tracker v2.1.0
+# Issue Tracker v2.1.1
 
 Track issues while you work: every issue starts in a local database, and
 moves to GitHub only when it must be shared. Capture fast, triage later, and
@@ -187,6 +187,10 @@ When you notice an issue **unrelated to the current task**:
    right now: exact path and line, error text, how you found it. A later
    session won't have that context.
 3. **Return to the current task.** Fix the side issue only when asked.
+
+Noticing a side issue is easy to miss as a reason to load this skill. A
+`CLAUDE.md` pointer makes it reliable, e.g. an `## Issues` section that says
+to mention unrelated issues and load this skill to log them.
 
 When the user asks you to log an issue, of any type, log it directly. Pass
 `--type` and `--priority` when the user states them, and leave them out
