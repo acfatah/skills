@@ -3,7 +3,7 @@ name: post-merge-cleanup
 description: "Clean up after a merged PR: remove its worktree, then its local branch, then its remote branch, after safety checks and one confirmation. Load when the user says \"PR merged\", \"clean up the branch\", \"remove the worktree\", \"delete the merged branch\", or /post-merge-cleanup. \"cleanup\" and \"housekeeping\" load it only next to PR, branch, merged, or worktree context, never alone. Not for code cleanup."
 ---
 
-# Post-merge Cleanup v1.2.0
+# Post-merge Cleanup v1.2.1
 
 After a PR merges, the same three things are left behind: its worktree, its
 local branch, and its remote branch. This skill removes them, in that order,
@@ -83,6 +83,12 @@ Sub-branches skip **PR merged** and **Nothing unpushed**, and take
 **Integrated into the topic branch** instead. The worktree checks run for
 the worktree of every branch in the run.
 
+While the session is inside a worktree, the guard may refuse `git -C`.
+Run a check on the session's own worktree as plain `git …`, without
+`-C`. A check that needs `git -C` on another path, such as another
+worktree in the run or `<main>`, runs only after `ExitWorktree` with
+`action: "keep"` (see Execute); from then on, `git -C` is fine.
+
 - **PR merged.**
 
       gh pr list --head <b> --state merged --json number,url,mergedAt,headRefOid
@@ -111,11 +117,11 @@ the worktree of every branch in the run.
      git 2.38 or later; a conflict, or an older git, fails the check.
 
   If neither passes, stop and show `git log --oneline <t>..<sub>`.
-- **Worktree clean.** `git -C <wt> status --porcelain` must be empty. Then
-  list the ignored files with
-  `git -C <wt> status --porcelain --ignored`, such as `drafts/`, `.env` or
-  `.claude/plans/`. `git worktree remove` deletes them without a word, so
-  they go in the summary.
+- **Worktree clean.** `git status --porcelain` must be empty. Then list
+  the ignored files with `git status --porcelain --ignored`, such as
+  `drafts/`, `.env` or `.claude/plans/`. `git worktree remove` deletes
+  them without a word, so they go in the summary. Run both plain when the
+  session is inside `<wt>`, and as `git -C <wt> …` otherwise.
 - **Never the default branch, never the main worktree.** Stop if `<b>` is
   the default branch, or if `<wt>` is `<main>`.
 - **Incoming symlinks.** Find symlinks that resolve into `<wt>`:
@@ -137,6 +143,8 @@ the worktree of every branch in the run.
   Instead, the summary adds a first step that switches `<main>` to the
   default branch, or to `<t>` for a sub-branch.
   `git -C <main> status --porcelain` must be empty for that; if not, stop.
+  When the session is inside a worktree, leave it first, as above. The
+  check does not apply when `<b>` has a worktree of its own; skip it.
 
 ## Summary and one confirmation
 
@@ -162,9 +170,10 @@ next run, even for the same branch.
 ## Execute
 
 **Leave the worktree first.** Only when the session is inside `<wt>`,
-call `ExitWorktree` with `action: "keep"` before any step. It returns the
-session to its launch directory, for worktrees entered with `name=` and
-`path=` alike, so the session does not sit in a deleted directory.
+call `ExitWorktree` with `action: "keep"` before any step, unless a
+safety check already left it. It returns the session to its launch
+directory, for worktrees entered with `name=` and `path=` alike, so the
+session does not sit in a deleted directory.
 
 - **Never `action: "remove"`.** It deletes the branch without the
   merged-tip check above.
