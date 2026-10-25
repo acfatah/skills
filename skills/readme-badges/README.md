@@ -69,7 +69,8 @@ ln -sfn "$PWD/skills/readme-badges" ~/.claude/skills/readme-badges
   `[present]` and `[detected]` marks; where a new block goes; keep, drop,
   or fix for each failing badge; and approval of the preview before
   writing. It also asks for the README path or owner/repo when it cannot
-  find them.
+  find them, and, without `gh`, whether the repo is public, has issues
+  enabled, or has a release.
 
 ### Example prompts
 

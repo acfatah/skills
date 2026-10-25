@@ -67,6 +67,8 @@ https://img.shields.io/badge/<Label>-%23<hex>.svg?style=flat-square&logo=<slug>&
   `origin` is not GitHub.
 - Every `github/*` badge needs a **public** repo. For a private repo shields
   answers `repo not found`; tell the user before they pick these.
+- **Without `gh`**, visibility and the `issues` and `release` checks are
+  unknown: ask the user, as SKILL.md step 1 says.
 - Link stars to the repo page: `/stargazers` answers 404 to logged-out
   visitors.
 
