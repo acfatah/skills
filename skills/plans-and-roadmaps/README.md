@@ -85,6 +85,8 @@ ln -sfn "$PWD/skills/plans-and-roadmaps" ~/.claude/skills/plans-and-roadmaps
 
 - **As a side effect of planning.** Claude loads it before writing,
   executing, stamping, or moving a plan; you rarely name it.
+- **On resume or list requests.** "Resume the paused plan" or "list my
+  plans" loads it too.
 - **Reliably, with a `CLAUDE.md` pointer.** Its two rules hold even when
   the skill does not load:
 
@@ -136,7 +138,9 @@ ln -sfn "$PWD/skills/plans-and-roadmaps" ~/.claude/skills/plans-and-roadmaps
 - **Shelve:** "Pause this plan: waiting on the API key." / "Drop the
   cache plan, it's obsolete." It moves to `paused/` or `archived/` only
   when you ask; a linked plan becomes a real copy.
-- **Resume:** "Resume the paused cache plan."
+- **Resume or list:** "Resume the paused cache plan." / "List my plans."
+  Claude groups them by state: active at the top level, then
+  `completed/`, `paused/`, `superseded/`, `archived/`.
 - **Finish:** "/plans-and-roadmaps move the finished plan to completed."
   Claude moves it only when every step is stamped.
 

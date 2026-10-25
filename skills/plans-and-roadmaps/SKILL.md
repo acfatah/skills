@@ -1,9 +1,9 @@
 ---
 name: plans-and-roadmaps
-description: "Rules for plan documents and roadmaps: where plan files live, whether a plan runs in a worktree, which session a plan is written in, progress stamps, state directories, phased plans, multi-session roadmaps. Load before writing, executing, stamping, or moving a plan: the plan-mode file, any .md under .claude/plans/, or a PLAN*.md / TODO.md being executed."
+description: "Rules for plan documents and roadmaps: where plan files live, whether a plan runs in a worktree, which session a plan is written in, progress stamps, state directories, phased plans, multi-session roadmaps. Load before writing, executing, stamping, or moving a plan: the plan-mode file, any .md under .claude/plans/, or a PLAN*.md / TODO.md being executed. Also load to resume a paused or shelved plan, or to list plans by state."
 ---
 
-# Plans and Roadmaps v1.12.0
+# Plans and Roadmaps v1.13.0
 
 These rules apply to the plan-mode plan file, any `.md` under a
 `.claude/plans/` directory, and any `PLAN*.md` or `TODO.md` you are executing
@@ -517,6 +517,9 @@ itself (see Plan file location):
   instead, first move the old copy to `superseded/` with a state line
   naming the new plan, then link the new plan-mode file as Plan file
   location describes.
+- **List plans** by state when asked: the top-level plans as active,
+  then each state directory (`completed/`, `paused/`, `superseded/`,
+  `archived/`), one group per state.
 - **Name collision:** if the destination already holds that name (common for
   a bare `PLAN.md`), append today's date: `PLAN-2026-09-30.md`.
 - `TODO.md` never moves, whatever its state.
