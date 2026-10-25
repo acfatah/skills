@@ -2,21 +2,28 @@
 
 An [agent skill](https://skills.sh) that cleans up after a merged PR. It
 removes the PR's worktree, then its local branch, then its remote branch,
-for one branch per run. It checks first that nothing can be lost, shows one
-summary, and asks once.
+for one branch per run, together with that branch's fork sub-branches. It
+checks first that nothing can be lost, shows one summary, and asks once.
 
 ## What it is
 
 - **Resolves one branch** from a branch name, a PR number, a worktree path,
   or nothing (the current worktree's branch).
+- **Includes fork sub-branches.** A topic branch brings its
+  `<topic-branch>--<role>` sub-branches from `session-sync`, and their
+  worktrees, into the same run. A sub-branch named on its own is cleaned
+  up alone, even while the topic is still open.
 - **Checks before asking:** the PR is merged, the local tip equals the
   merged PR head, the worktree is clean, it is not the default branch or
   the main worktree, and no symlinks point into the worktree. Any failure
-  stops the run.
+  stops the run. A sub-branch has no PR, so it must instead be integrated
+  into its topic branch: an ancestor of it, or adding nothing when merged
+  (a squash).
 - **Works after squash and rebase merges.** It compares the tip with the
   merged PR head instead of relying on `git branch -d`.
 - **Shows one summary** (PR, worktree, local and remote branch, ignored
-  files that will be deleted, warnings) and asks once.
+  files that will be deleted, warnings), with one row per branch, and asks
+  once. Sub-branches are removed before the topic branch.
 - **Runs in order:** `git worktree remove`, `git branch -D`,
   `git push origin --delete`, `git fetch --prune origin`. Parts that are
   already gone are reported and skipped.
@@ -25,7 +32,7 @@ summary, and asks once.
 ## What it is not
 
 - **Not a sweep.** It never cleans up all merged branches; one run, one
-  branch.
+  branch and its own `<b>--*` sub-branches.
 - **Not a force tool.** It never uses `--force`, and never `rm -rf`s a
   worktree that `git worktree remove` refuses.
 - **Not a standing approval.** Your "Clean up" covers one run; the next run
@@ -36,7 +43,8 @@ summary, and asks once.
 ## When not to use
 
 - **The PR is not merged yet,** or there is no PR → not covered; the skill
-  stops at its first check.
+  stops at its first check. Fork sub-branches are the exception: they
+  need no PR.
 - **The branch has commits after the merge** → not covered; the skill
   stops and shows both SHAs.
 - **You want every merged branch gone at once** → not covered; run it once
@@ -78,6 +86,8 @@ ln -sfn "$PWD/skills/post-merge-cleanup" ~/.claude/skills/post-merge-cleanup
 - **Current worktree:** "PR merged, clean up." Run from inside the
   worktree; Claude leaves it with `ExitWorktree` before removing it.
 - **By branch:** "Delete the merged branch `feat/login-form`."
+- **Fork sub-branch:** "Clean up `feat/login--tests`, it's merged into
+  `feat/login`."
 - **By PR number:** "/post-merge-cleanup 42"
 - **By worktree path:** "Remove the worktree at
   `~/code/app-login-form`, the PR is merged."
@@ -101,6 +111,12 @@ Gotchas:
   it like any other.
 - **A branch checked out in the main checkout** is switched to the default
   branch first, and that checkout must be clean.
+- **A `/fork` session can't run it.** The isolation guard refuses
+  `git -C <main>`, so Claude stops before the checks and gives you a
+  one-line request to run from a foreground session in the main checkout.
+- **Squash-merged sub-branches need git 2.38+.** The check uses
+  `git merge-tree --write-tree`; on an older git, or on a conflict, it
+  fails and the run stops.
 - **Undo restores branches, not ignored files.** The report gives
   `git branch <b> <sha>` and `git push origin <sha>:refs/heads/<b>`, but
   deleted ignored files do not come back.
