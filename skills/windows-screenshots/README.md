@@ -114,8 +114,8 @@ First use, with `SCREENSHOTS` unset:
 2. **Locate.** Claude checks the OneDrive and Pictures Screenshots folders,
    OneDrive first. With one match it uses it; otherwise it shows what it
    found and asks which.
-3. **Read.** It filters today's captures by filename and reads the one you
-   mean as an image.
+3. **Read.** It filters today's captures by filename and reads the newest
+   as an image. It names the file and says how many others you took today.
 4. **Persist.** It tells you how to keep the folder, with the `~/.profile` or
    `setx` command shown under Configuration.
 
