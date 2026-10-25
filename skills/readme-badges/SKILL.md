@@ -27,7 +27,8 @@ Find the README (`README.md` at the repo root, else ask), then collect:
 - **owner/repo** from `git remote get-url origin`. Handles both
   `git@github.com:<o>/<r>.git` and `https://github.com/<o>/<r>(.git)`. If
   there is no `origin`, or it is not GitHub, ask the user for owner/repo
-  and offer only static and local-link badges (see the catalog).
+  and offer only static, local-link, and package registry badges (npm,
+  npm-downloads, bundle-size, jsr); see the catalog.
 - **Visibility and default branch:** `gh repo view <o>/<r> --json
   defaultBranchRef,visibility`. Without `gh`, use
   `git symbolic-ref --short refs/remotes/origin/HEAD` and strip `origin/`.
