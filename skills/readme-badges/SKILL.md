@@ -42,9 +42,10 @@ Find the README (`README.md` at the repo root, else ask), then collect:
   framework configs, every file in `.github/workflows/` with its `name:`,
   `.qlty/`, `codecov.yml`.
 
-Every check names the GitHub repo: `gh … <o>/<r>` or `-R <o>/<r>`, and
-`git ls-remote` against `https://github.com/<o>/<r>`. Never read `origin` or
-let `gh` infer the repo; with a mirror, `origin` is not GitHub.
+Once `<o>/<r>` is known, every check names it: `gh … <o>/<r>` or
+`-R <o>/<r>`, and `git ls-remote` against `https://github.com/<o>/<r>`.
+Never read `origin` or let `gh` infer the repo; with a mirror, `origin` is
+not GitHub.
 
 Done when each catalog row's detect column is answered yes or no.
 
