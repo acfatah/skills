@@ -3,7 +3,7 @@ name: plans-and-roadmaps
 description: "Rules for plan documents and roadmaps: where plan files live, whether a plan runs in a worktree, which session a plan is written in, progress stamps, state directories, phased plans, multi-session roadmaps. Load before writing, executing, stamping, or moving a plan: the plan-mode file, any .md under .claude/plans/, or a PLAN*.md / TODO.md being executed. Also load to resume a paused or shelved plan, or to list plans by state."
 ---
 
-# Plans and Roadmaps v1.14.1
+# Plans and Roadmaps v1.14.2
 
 These rules apply to the plan-mode plan file, any `.md` under a
 `.claude/plans/` directory, and any `PLAN*.md` or `TODO.md` you are executing
@@ -269,11 +269,18 @@ line under `head` reads `from <sha>`, like the first example.
    - **One command, not one per file:** `tar` keeps the directories, so a
      pattern such as `node_modules/` costs no extra commands. This
      pipeline is the one exception to Plain commands only.
-   - **Never overwrite:** `-k` skips a file that already exists in the
-     worktree. GNU tar then prints `File exists` and exits 2; that is a
-     skip, not a failure.
+   - **Never overwrite:** `-k` skips a file that already exists in the worktree.
+   - **Skip or failure:** GNU tar exits 2 both for a skip and for a real
+     failure, such as a full disk, so read its stderr instead. Each
+     `tar: <path>: Cannot open: File exists` line is a skip, and
+     `tar: Exiting with failure status due to previous errors` follows
+     any of them. Any other line, or an exit code other than 0 or 2, is a
+     failure: stop and report tar's message. BSD tar skips silently and
+     exits 0, so there any stderr or nonzero exit is a failure.
    - **Report** the copied files, and any skipped, in the final report.
-     The same list, for display:
+     The skipped files are the paths in the `File exists` lines; the
+     copied files are the rest of this display list. BSD tar names no
+     skips, so there report each file as copied or already present:
 
          git ls-files --others --ignored --exclude-from=.worktreeinclude | git check-ignore --stdin
 
