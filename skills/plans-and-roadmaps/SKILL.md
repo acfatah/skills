@@ -3,7 +3,7 @@ name: plans-and-roadmaps
 description: "Rules for plan documents and roadmaps: where plan files live, whether a plan runs in a worktree, which session a plan is written in, progress stamps, state directories, phased plans, multi-session roadmaps. Load before writing, executing, stamping, or moving a plan: the plan-mode file, any .md under .claude/plans/, or a PLAN*.md / TODO.md being executed. Also load to resume a paused or shelved plan, or to list plans by state."
 ---
 
-# Plans and Roadmaps v1.13.0
+# Plans and Roadmaps v1.14.0
 
 These rules apply to the plan-mode plan file, any `.md` under a
 `.claude/plans/` directory, and any `PLAN*.md` or `TODO.md` you are executing
@@ -226,7 +226,8 @@ line under `head` reads `from <sha>`, like the first example.
    `git rev-parse --git-path info/exclude`, as for `.claude/plans/`.
 2. **Built-in line:** call `EnterWorktree name=<topic>`, with any carry
    around it (step 4). No fetch and no `git worktree add`; the tool picks
-   the base itself.
+   the base itself. No `.worktreeinclude` copy either; Claude Code makes
+   it for worktrees it creates.
 
    - **Check the base** right after entering: for `from origin/<base>`,
      `git merge-base --is-ancestor origin/<base> HEAD`; for `from <sha>`,
@@ -255,6 +256,26 @@ line under `head` reads `from <sha>`, like the first example.
      existing `origin/<base>` ref as is, or to switch to Worktree from
      HEAD.
 
+   **Copy `.worktreeinclude` files,** only if `<main>/.worktreeinclude`
+   exists. Claude Code copies them into worktrees it creates, not into one
+   made with `git worktree add`. In the main checkout, list the untracked
+   files it matches:
+
+       git ls-files --others --ignored --exclude-from=.worktreeinclude
+
+   For each listed path, as plain commands, create its parent directory in
+   the worktree and copy the file to the same relative path:
+
+       mkdir -p <main>/.claude/worktrees/<topic>/<dir>
+       cp -n <path> <main>/.claude/worktrees/<topic>/<path>
+
+   - **Never overwrite:** skip a path that already exists in the worktree;
+     `cp -n` also refuses to replace it.
+   - **Report** the copied files, and any skipped, in the final report.
+   - **In a background fork,** the guard may refuse these writes, since
+     the worktree sits under `<main>`. Skip any refused copy and hand it
+     to the parent, as for Main-checkout writes in Background forks.
+
    Then call `EnterWorktree` with `path=<main>/.claude/worktrees/<topic>`,
    with any carry around it (step 4).
 
@@ -281,7 +302,8 @@ line under `head` reads `from <sha>`, like the first example.
 
 A fresh session, such as after a context clear, follows the line: if the
 path exists, enter it with `path=`, for a built-in line too; if not,
-create it first. Carry changes only when creating it.
+create it first. Carry changes and copy `.worktreeinclude` files only
+when creating it.
 
 - **Only this session's `name=` worktree** gets the exit prompt and
   `ExitWorktree action=remove`. Re-entered with `path=`, a built-in
