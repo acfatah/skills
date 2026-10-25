@@ -54,18 +54,40 @@ The skills CLI does not install workflows. Each workflow is a single
 file that you download into `~/.claude/workflows/`; its README has the
 command.
 
-## Tooling Choices
+## Requirements
 
-These skills are opinionated, and so is the tooling around them:
+These skills are opinionated, and so is the tooling around them.
 
+- **Agent: [Claude Code](https://claude.com/claude-code).** The skills
+  are written with Claude and for Claude. Install commands target it with
+  `-a claude-code`, and some skills reference Claude Code paths such as
+  `~/.claude/`.
+- **Model: Claude Opus 5.5.** The skills are written and tested against
+  it. Other providers and models may behave differently, or not work at
+  all.
 - **Package runner: [Bun](https://bun.sh).** Every command here uses
   `bunx`, not `npx`; install Bun first. `npx` should work as a drop-in,
   but it is not what I use or test with.
-- **Agent: [Claude Code](https://claude.com/claude-code).** Install
-  commands target it with `-a claude-code`, and some skills reference
-  Claude Code paths such as `~/.claude/`.
-- **Model: Claude Opus 5.5.** The skills are written and tested against
-  it. Other agents and models may work, but are not tested.
+
+Other software, by skill:
+
+| Software | Needed by | Notes |
+|---|---|---|
+| [git](https://git-scm.com) | auto-commit, auto-pr, plans-and-roadmaps, post-merge-cleanup, session-sync, readme-badges, webapp-security-audit | |
+| [Bun](https://bun.sh) | issue-tracker | Runs its bundled CLI; the skill stops without it |
+| [GitHub CLI (`gh`)](https://cli.github.com), logged in | auto-pr, post-merge-cleanup, issue-tracker (promotion) | Check with `gh auth status`. readme-badges and plans-and-roadmaps use it when present |
+| GitHub account | auto-pr, post-merge-cleanup, issue-tracker (promotion) | For PRs, remote branches and GitHub Issues |
+| [`jq`](https://jqlang.org) | status line | plans-and-roadmaps falls back to reading files without it |
+| curl | readme-badges | Checks each badge image and link |
+| [Turso CLI](https://docs.turso.tech/cli) and account | issue-tracker | Optional, only for sync between your machines |
+| Windows or WSL | windows-screenshots | Plus the `SCREENSHOTS` variable; see its README |
+
+- **Gotcha:** promoting issues to a GitHub Project needs an extra scope:
+  run `gh auth refresh -s project` once.
+- **Gotcha:** the status line script needs bash and `tac`, which macOS
+  lacks.
+- **Gotcha:** some settings and commands need a recent Claude Code:
+  `timeFormat` needs v2.1.257, and `/doctor prompt-audit` v2.1.283.
 
 ## Install
 
@@ -245,6 +267,44 @@ existing top-level object; do not paste a second `{}` block.
   (the default) or `head`, the base of Claude Code's built-in
   `EnterWorktree name=`. `plans-and-roadmaps` reads it to order its
   worktree options and to decide when to use the built-in tool.
+
+## Troubleshooting
+
+Claude Code has built-in checks for skills. Run them after installing,
+after a Claude Code or model update, or when a skill misbehaves.
+
+### Check your setup
+
+- **`/doctor`:** checks the install, settings, extensions and
+  `CLAUDE.md`, and proposes fixes.
+- **`/doctor prompt-audit`:** checks `CLAUDE.md`, skills and other
+  config for outdated or conflicting instructions. Needs v2.1.283.
+- **`/skill-doctor`:** shows each skill's context cost and usage, and
+  lists skills that were never invoked. Needs v2.1.252 and feature-flag
+  fetching.
+
+### A skill doesn't load
+
+- **`/skills`:** lists installed skills; press `t` to sort by tokens.
+- **`/context`:** shows what is in the context window, skills included.
+- **`claude plugin validate <dir>`:** reports frontmatter errors that
+  stop a skill from matching its description.
+- **`claude --debug`** or **`/debug`:** writes a debug log to
+  `~/.claude/debug/`.
+- **Name it:** `/<skill-name>` always loads a skill, which tells a
+  description mismatch apart from a broken skill.
+
+### Behavior drift
+
+A skill can behave differently after a model or Claude Code update, with
+no change to its files. Re-run `/doctor prompt-audit` after each update,
+and try the skill's example prompts from its README.
+
+- **Gotcha:** `claude plugin validate ~/.claude/skills` skips symlinked
+  skills without reading them. Validate the repo's `skills/` folder, or
+  each real path, instead.
+- **Gotcha:** `/claude-api prompt-audit` is a different command; it
+  reviews prompts in your code, not your skills.
 
 ## License
 
