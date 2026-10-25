@@ -1,9 +1,9 @@
 ---
 name: plans-and-roadmaps
-description: "Rules for plan documents and roadmaps: where plan files live, whether a plan runs in a worktree, which session a plan is written in, progress stamps, state directories, phased plans, multi-session roadmaps. Load before writing, executing, stamping, or moving a plan: the plan-mode file, any .md under .claude/plans/, or a PLAN*.md / TODO.md being executed."
+description: "Rules for plan documents and roadmaps: where plan files live, whether a plan runs in a worktree, which session a plan is written in, progress stamps, state directories, phased plans, multi-session roadmaps. Load before writing, executing, stamping, or moving a plan: the plan-mode file, any .md under .claude/plans/, or a PLAN*.md / TODO.md being executed. Also load to resume a paused or shelved plan, or to list plans by state."
 ---
 
-# Plans and Roadmaps v1.12.0
+# Plans and Roadmaps v1.13.0
 
 These rules apply to the plan-mode plan file, any `.md` under a
 `.claude/plans/` directory, and any `PLAN*.md` or `TODO.md` you are executing
@@ -386,6 +386,10 @@ fork (see Background forks), load the `session-sync` skill and run its
 sync step first. It owns the sessions file, forks and merging
 back; this skill still owns the plan.
 
+**`/branch` is sequential:** it pauses the original session instead of
+running beside it. Back in the original, after `/resume`, re-read the
+plan as Progress marking says; it needs no `session-sync` flow.
+
 ## Plan where the tools load
 
 Some tools load only in a session started in a given directory, and only
@@ -455,6 +459,9 @@ completion stamp to that step's heading:
   heading format.
 - Never back-date a step you did not just finish. If a step was already done
   before this session, leave it alone.
+- **Re-read the plan file** before starting or stamping a step, and trust
+  its stamps over the conversation. A `/branch` or another session may
+  have advanced it; skip a step it already stamps.
 
 ## Plan states
 
@@ -517,6 +524,9 @@ itself (see Plan file location):
   instead, first move the old copy to `superseded/` with a state line
   naming the new plan, then link the new plan-mode file as Plan file
   location describes.
+- **List plans** by state when asked: the top-level plans as active,
+  then each state directory (`completed/`, `paused/`, `superseded/`,
+  `archived/`), one group per state.
 - **Name collision:** if the destination already holds that name (common for
   a bare `PLAN.md`), append today's date: `PLAN-2026-09-30.md`.
 - `TODO.md` never moves, whatever its state.

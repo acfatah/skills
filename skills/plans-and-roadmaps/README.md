@@ -85,6 +85,8 @@ ln -sfn "$PWD/skills/plans-and-roadmaps" ~/.claude/skills/plans-and-roadmaps
 
 - **As a side effect of planning.** Claude loads it before writing,
   executing, stamping, or moving a plan; you rarely name it.
+- **On resume or list requests.** "Resume the paused plan" or "list my
+  plans" loads it too.
 - **Reliably, with a `CLAUDE.md` pointer.** Its two rules hold even when
   the skill does not load:
 
@@ -136,7 +138,9 @@ ln -sfn "$PWD/skills/plans-and-roadmaps" ~/.claude/skills/plans-and-roadmaps
 - **Shelve:** "Pause this plan: waiting on the API key." / "Drop the
   cache plan, it's obsolete." It moves to `paused/` or `archived/` only
   when you ask; a linked plan becomes a real copy.
-- **Resume:** "Resume the paused cache plan."
+- **Resume or list:** "Resume the paused cache plan." / "List my plans."
+  Claude groups them by state: active at the top level, then
+  `completed/`, `paused/`, `superseded/`, `archived/`.
 - **Finish:** "/plans-and-roadmaps move the finished plan to completed."
   Claude moves it only when every step is stamped.
 
@@ -207,6 +211,9 @@ Gotchas:
   worktree, writes, and re-enters it. A built-in worktree re-entered this
   way loses its exit prompt. If the round trip fails, Claude lists the
   skipped writes in its report for you to make.
+- **After `/branch`, the original session is only paused.** Resume it
+  and Claude re-reads the plan before its next step, so steps the branch
+  stamped are not redone or stamped again.
 - **A `/fork` session can't write the main checkout at all.** The round
   trip only lands it back under the guard, so a fork gets no "No
   worktree" option, and hands plan links, stamps and moves to its parent
