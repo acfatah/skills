@@ -207,6 +207,10 @@ Gotchas:
   worktree, writes, and re-enters it. A built-in worktree re-entered this
   way loses its exit prompt. If the round trip fails, Claude lists the
   skipped writes in its report for you to make.
+- **A `/fork` session can't write the main checkout at all.** The round
+  trip only lands it back under the guard, so a fork gets no "No
+  worktree" option, and hands plan links, stamps and moves to its parent
+  through `SendMessage`, or lists them in its report.
 - **Auto-PR on a new worktree branch creates the upstream:** the branch
   has none yet, so the first push at a clean finish creates
   `origin/<branch>`.
