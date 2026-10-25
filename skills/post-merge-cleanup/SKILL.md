@@ -3,7 +3,7 @@ name: post-merge-cleanup
 description: "Clean up after a merged PR: remove its worktree, then its local branch, then its remote branch, after safety checks and one confirmation. Load when the user says \"PR merged\", \"clean up the branch\", \"remove the worktree\", \"delete the merged branch\", or /post-merge-cleanup. \"cleanup\" and \"housekeeping\" load it only next to PR, branch, merged, or worktree context, never alone. Not for code cleanup."
 ---
 
-# Post-merge Cleanup v1.2.3
+# Post-merge Cleanup v1.2.4
 
 After a PR merges, the same three things are left behind: its worktree, its
 local branch, and its remote branch. This skill removes them, in that order,
@@ -137,8 +137,10 @@ it runs the `git -C` checks directly and skips this early `ExitWorktree`.
   user repoints or removes them, then runs the skill again. Removing the
   worktree would leave them dangling.
 - **Session inside the worktree.** If the session's working directory is
-  inside `<wt>`, the session leaves it first (see Execute), and every
-  command runs as `git -C <main> …`. Say so in the summary. In a
+  inside `<wt>`, every command runs as `git -C <main> …`. A session that
+  entered `<wt>` with `EnterWorktree` leaves it first; one launched
+  inside `<wt>` cannot, so it stays, and its directory is gone afterwards
+  (see Execute). Say which in the summary. In a
   background fork the guard refuses `git -C <main>`; see Background fork.
 - **Branch checked out in the main checkout.** When `<b>` is checked out in
   `<main>` rather than in its own worktree, there is no worktree to remove.
@@ -159,8 +161,9 @@ Ask with AskUserQuestion, one question, options **Clean up** and
 - **Remote branch:** `origin/<b>`, or "already gone";
 - **Ignored files** that will be deleted with the worktree, or "none";
 - **Warnings:** that the session leaves `<wt>` first, or that it has left
-  `<wt>` when a safety check already left it, or the switch of `<main>` to
-  the default branch.
+  `<wt>` when a safety check already left it, or, for a session launched
+  inside `<wt>`, that it stays and must restart from `<main>`; or the
+  switch of `<main>` to the default branch.
 
 With sub-branches, show one row per branch with these fields; a
 sub-branch shows how it is integrated into `<t>` (ancestor or squash)
