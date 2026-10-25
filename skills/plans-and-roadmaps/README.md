@@ -204,8 +204,11 @@ Gotchas:
   and `<type>/<topic>`. Only the built-in one, in the session that made
   it, gets Claude Code's exit prompt and hooks.
 - **Claude Code skips `.worktreeinclude` for `git worktree add`.** On that
-  route Claude copies the matched untracked files itself, from the main
-  checkout, never overwrites one, and lists them in its report.
+  route Claude copies them itself from the main checkout, in one command:
+  untracked files that `.worktreeinclude` matches and git ignores, as
+  Claude Code does. It never overwrites a file and lists the copies in its
+  report. If the session refuses the command, the report gives it for you
+  to run with `!`.
 - **Plan files stay in the main checkout,** under `.claude/plans/` there,
   so removing the worktree cannot delete them. From inside the worktree,
   Claude Code refuses those writes outright, so Claude briefly leaves the
