@@ -3,11 +3,12 @@ name: plans-and-roadmaps
 description: "Rules for plan documents and roadmaps: where plan files live, whether a plan runs in a worktree, which session a plan is written in, progress stamps, state directories, phased plans, multi-session roadmaps. Load before writing, executing, stamping, or moving a plan: the plan-mode file, any .md under .claude/plans/, or a PLAN*.md / TODO.md being executed."
 ---
 
-# Plans and Roadmaps v1.11.0
+# Plans and Roadmaps v1.11.1
 
 These rules apply to the plan-mode plan file, any `.md` under a
 `.claude/plans/` directory, and any `PLAN*.md` or `TODO.md` you are executing
-against. Do not commit them unless asked.
+against. Do not commit them unless asked. Bugs and ideas found while planning
+or executing a plan go to the `issue-tracker` skill, not into the plan.
 
 ## Plan file location
 
