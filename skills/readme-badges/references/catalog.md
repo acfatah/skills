@@ -53,9 +53,9 @@ https://img.shields.io/badge/<Label>-%23<hex>.svg?style=flat-square&logo=<slug>&
 | license | `License` | `https://img.shields.io/github/license/<o>/<r>?style=flat-square` | `./<license-file>` | `LICENSE*` file | the file exists; message is not `not specified` |
 | last-commit | `Last commit` | `https://img.shields.io/github/last-commit/<o>/<r>?display_timestamp=committer&style=flat-square` | `https://github.com/<o>/<r>/commits/<branch>` | any GitHub repo | repo is public |
 | stars | `GitHub stars` | `https://img.shields.io/github/stars/<o>/<r>?style=flat-square` | `https://github.com/<o>/<r>` | any GitHub repo | repo is public |
-| issues | `Open issues` | `https://img.shields.io/github/issues/<o>/<r>?style=flat-square` | `https://github.com/<o>/<r>/issues` | issues enabled | `gh repo view --json hasIssuesEnabled` |
-| release | `Latest release` | `https://img.shields.io/github/v/release/<o>/<r>?style=flat-square` | `https://github.com/<o>/<r>/releases/latest` | a GitHub release exists | `gh release list -L 1` is not empty |
-| tag | `Latest tag` | `https://img.shields.io/github/v/tag/<o>/<r>?style=flat-square` | `https://github.com/<o>/<r>/tags` | tags but no releases | `git ls-remote --tags origin` is not empty |
+| issues | `Open issues` | `https://img.shields.io/github/issues/<o>/<r>?style=flat-square` | `https://github.com/<o>/<r>/issues` | issues enabled | `gh repo view <o>/<r> --json hasIssuesEnabled` |
+| release | `Latest release` | `https://img.shields.io/github/v/release/<o>/<r>?style=flat-square` | `https://github.com/<o>/<r>/releases/latest` | a GitHub release exists | `gh release list -R <o>/<r> -L 1` is not empty |
+| tag | `Latest tag` | `https://img.shields.io/github/v/tag/<o>/<r>?style=flat-square` | `https://github.com/<o>/<r>/tags` | tags but no releases | `git ls-remote --tags https://github.com/<o>/<r>` is not empty |
 
 - **No GitHub owner/repo** (no GitHub `origin` and no mirror named): offer
   `license-static` instead of `license`:
@@ -63,6 +63,8 @@ https://img.shields.io/badge/<Label>-%23<hex>.svg?style=flat-square&logo=<slug>&
   with `<spdx>` read from the license file (e.g. `MIT`) and the same
   `./<license-file>` link. Drop every other row in this table, and every
   `<o>/<r>` row in Quality and CI.
+- **Name the repo** in every check, as above, never `origin`: with a mirror,
+  `origin` is not GitHub.
 - Every `github/*` badge needs a **public** repo. For a private repo shields
   answers `repo not found`; tell the user before they pick these.
 - Link stars to the repo page: `/stargazers` answers 404 to logged-out
