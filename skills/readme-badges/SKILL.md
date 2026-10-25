@@ -3,7 +3,7 @@ name: readme-badges
 description: Add, audit, or repair the badge block in a README (shields.io, qlty, CI status). Load when the user asks to add badges or shields to a README, to check, fix, or tidy existing badges, or reports a broken badge.
 ---
 
-# README Badges v1.1.1
+# README Badges v1.1.2
 
 Add a badge block to a README, or audit and repair an existing one. The user
 picks every badge; you detect, propose, verify, and preview. Templates and
@@ -33,13 +33,19 @@ Find the README (`README.md` at the repo root, else ask), then collect:
     static, local-link, and package registry badges (npm, npm-downloads,
     bundle-size, jsr). See the catalog.
 - **Visibility and default branch:** `gh repo view <o>/<r> --json
-  defaultBranchRef,visibility`. Without `gh`, use
-  `git symbolic-ref --short refs/remotes/origin/HEAD` and strip `origin/`.
+  defaultBranchRef,visibility`. Without `gh`, run
+  `git ls-remote --symref https://github.com/<o>/<r> HEAD` and take
+  `<branch>` from its `ref: refs/heads/<branch>` line.
 - **Manifests:** `package.json` (`name`, `private`, dependencies,
   `packageManager`, `engines`), `jsr.json`, `deno.json`.
 - **Signals:** the license file and its SPDX id, lockfiles, `tsconfig.json`,
   framework configs, every file in `.github/workflows/` with its `name:`,
   `.qlty/`, `codecov.yml`.
+
+Once `<o>/<r>` is known, every check names it: `gh … <o>/<r>` or
+`-R <o>/<r>`, and `git ls-remote` against `https://github.com/<o>/<r>`.
+Never read `origin` or let `gh` infer the repo; with a mirror, `origin` is
+not GitHub.
 
 Done when each catalog row's detect column is answered yes or no.
 
