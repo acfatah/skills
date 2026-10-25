@@ -99,7 +99,8 @@ export function matches(i: Issue, f: ListFilters): boolean {
     (!f.type || i.type === f.type) &&
     (!f.milestone || i.milestone === f.milestone) &&
     (!f.label || i.labels.includes(f.label)) &&
-    (f.parent === undefined || i.parent === f.parent)
+    (f.parent === undefined || i.parent === f.parent) &&
+    (!f.query || [i.title, i.body].some((t) => t.toLowerCase().includes(f.query!.toLowerCase())))
   );
 }
 

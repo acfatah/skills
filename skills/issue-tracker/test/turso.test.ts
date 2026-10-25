@@ -202,6 +202,9 @@ describe("Turso projects through the bundle", () => {
     const list = await ok(p.$("list"));
     expect(list.stdout).toContain("0001");
     expect(list.stdout).toMatch(/P1\s+queued/);
+    const found = await ok(p.$("list", "--query", "OFFLINE"));
+    expect(found.stdout).toMatch(/P1\s+queued/);
+    expect(found.stdout).not.toContain("0001");
     expect(list.stderr).toMatch(/offline; issues as of \d{4}-\d{2}-\d{2} \d{2}:\d{2}/);
     const shown = await ok(p.$("show", "P1"));
     expect(shown.stdout).toContain("- 2026-10-20: more detail");

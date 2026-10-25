@@ -21,6 +21,8 @@ SQLite database that Claude reads and writes only through a bundled Bun CLI.
   then returns to the task at hand.
 - **Supports** types, priorities, labels, milestones, sub-issues, and
   dated notes.
+- **Searches** issue titles and bodies, in any case, with
+  `list --query <text>`, alone or with the other filters.
 - **Keeps security findings** in a separate database, with `S` ids such as
   `S0007`, that never becomes a public issue.
 - **Syncs your own machines through Turso**, optionally, with an offline
@@ -111,9 +113,9 @@ A local project needs no configuration. Two setups need a step from you.
 ### How it loads
 
 - **By description match.** Claude loads it when a request uses its verbs:
-  log, capture, triage, start, block, close, reopen, promote, sub-issue,
-  milestone, security finding, import v1 issues, export issues, sync
-  issues.
+  log, capture, triage, list, show, search, start, block, close, reopen,
+  promote, sub-issue, milestone, security finding, import v1 issues, export
+  issues, sync issues.
 - **By name, always.** `/issue-tracker …` or "use the issue-tracker skill".
 - **For side issues, add a `CLAUDE.md` pointer.** Without one, Claude only
   mentions unrelated issues while the skill is already loaded:
@@ -138,6 +140,7 @@ A local project needs no configuration. Two setups need a step from you.
   "/issue-tracker log a feature idea: dark mode, low priority."
 - **Triage:** "Triage issues." Claude proposes type, priority, duplicates
   and next step for each; you approve each one.
+- **Find:** "Find issues about login." / "Show issue 0007."
 - **Work:** "Start issue 0007." / "0007 is blocked on the API key." /
   "Close 0007, it's done."
 - **Plan:** "Split 0007 into sub-issues for validation and the error
