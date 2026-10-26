@@ -30,7 +30,7 @@ problem‑solving.
 | [auto-pr](skills/auto-pr) | Opt-in Auto-PR mode on top of auto-commit: after a clean finish, push the branch to its upstream, creating `origin/<branch>` on the first push, and open or update a draft PR against the recorded base. Asks before pushing to a PR that is ready for review or overwriting an edited PR title or body. |
 | [issue-tracker](skills/issue-tracker) | Track issues in local SQLite through a bundled Bun CLI, with triage, milestones, sub-issues, optional Turso sync between your machines, and promotion to GitHub Issues and Projects. |
 | [plans-and-roadmaps](skills/plans-and-roadmaps) | Rules for plan documents: file location, whether a plan runs in a worktree, which session plans, progress stamps, state directories, phased plans, and multi-session roadmaps. |
-| [post-merge-cleanup](skills/post-merge-cleanup) | After a PR merges, remove its worktree, local branch and remote branch, and its fork sub-branches, after safety checks and one confirmation. |
+| [post-merge-cleanup](skills/post-merge-cleanup) | After a PR merges, remove its worktree, local branch and remote branch, and its fork sub-branches, after safety checks and one confirmation (or none with `--yes`). |
 | [readme-badges](skills/readme-badges) | Add, audit, or repair a README's badge block: shields.io and qlty badges in one HTML format, each verified before writing. |
 | [session-sync](skills/session-sync) | Keep several Claude sessions on one branch or PR in sync: forks on sub-branches, a shared sessions file, a sync step before acting, and a repo-checked recap after a break. |
 | [windows-screenshots](skills/windows-screenshots) | Locate, list, and read Windows screenshots (Win+PrtScn, Snipping Tool) from WSL or native Windows shells. |

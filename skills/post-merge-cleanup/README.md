@@ -3,7 +3,8 @@
 An [agent skill](https://skills.sh) that cleans up after a merged PR. It
 removes the PR's worktree, then its local branch, then its remote branch,
 for one branch per run, together with that branch's fork sub-branches. It
-checks first that nothing can be lost, shows one summary, and asks once.
+checks first that nothing can be lost, shows one summary, and asks once,
+or not at all with `--yes`.
 
 ## What it is
 
@@ -24,6 +25,9 @@ checks first that nothing can be lost, shows one summary, and asks once.
 - **Shows one summary** (PR, worktree, local and remote branch, ignored
   files that will be deleted, warnings), with one row per branch, and asks
   once. Sub-branches are removed before the topic branch.
+- **Skips the prompt with `--yes`** (or `-y`) in your own invocation. The
+  checks still run first and still stop the run; the summary is printed
+  instead of asked.
 - **Runs in order:** `git worktree remove`, `git branch -D`,
   `git push origin --delete`, `git fetch --prune origin`. Parts that are
   already gone are reported and skipped.
@@ -35,8 +39,9 @@ checks first that nothing can be lost, shows one summary, and asks once.
   branch and its own `<b>--*` sub-branches.
 - **Not a force tool.** It never uses `--force`, and never `rm -rf`s a
   worktree that `git worktree remove` refuses.
-- **Not a standing approval.** Your "Clean up" covers one run; the next run
-  asks again, even for the same branch.
+- **Not a standing approval.** Your "Clean up", or your `--yes`, covers
+  one run; the next run asks again, even for the same branch, unless it
+  also has `--yes`.
 - **Not for code cleanup.** Tidying code, files or imports is a different
   request.
 
@@ -79,7 +84,8 @@ ln -sfn "$PWD/skills/post-merge-cleanup" ~/.claude/skills/post-merge-cleanup
 - **By name, always.** `/post-merge-cleanup …` or "use the
   post-merge-cleanup skill".
 - **What Claude asks back:** one summary with **Clean up** or **Cancel**.
-  For a detached worktree, it asks which branch is meant.
+  With `--yes`, nothing: it prints the summary and cleans up. For a
+  detached worktree, it asks which branch is meant.
 
 ### Example prompts
 
@@ -89,6 +95,7 @@ ln -sfn "$PWD/skills/post-merge-cleanup" ~/.claude/skills/post-merge-cleanup
 - **Fork sub-branch:** "Clean up `feat/login--tests`, it's merged into
   `feat/login`."
 - **By PR number:** "/post-merge-cleanup 42"
+- **Without a prompt:** `/post-merge-cleanup 42 --yes`
 - **By worktree path:** "Remove the worktree at
   `~/code/app-login-form`, the PR is merged."
 - **Housekeeping:** "Housekeeping for the merged `fix/typo` branch."
@@ -98,6 +105,11 @@ Gotchas:
 - **Ignored files are deleted.** `git worktree remove` deletes ignored
   files such as `drafts/`, `.env` or `.claude/plans/` without a word. The
   summary lists them before you confirm.
+- **`--yes` deletes ignored files without asking.** They appear in the
+  printed summary and the report, but nothing waits for you to read them.
+- **Only your own `--yes` counts.** Auto-commit, Auto-PR, "unattended",
+  "go ahead" and bypass-permissions mode never imply it, and Claude never
+  adds it.
 - **Symlinks into the worktree stop the run.** A link in `~/.claude` or
   the main checkout that points into the worktree (for example a skill
   linked for testing) must be repointed or removed first.
