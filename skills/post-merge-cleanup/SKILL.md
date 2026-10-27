@@ -3,7 +3,7 @@ name: post-merge-cleanup
 description: "Clean up after a merged PR: remove its worktree, then its local branch, then its remote branch, after safety checks and one confirmation, or none with `--yes`. Load when the user says \"PR merged\", \"clean up the branch\", \"remove the worktree\", \"delete the merged branch\", or /post-merge-cleanup. \"cleanup\" and \"housekeeping\" load it only next to PR, branch, merged, or worktree context, never alone. Not for code cleanup."
 ---
 
-# Post-merge Cleanup v1.3.0
+# Post-merge Cleanup v1.4.0
 
 After a PR merges, the same three things are left behind: its worktree, its
 local branch, and its remote branch. This skill removes them, in that order,
@@ -152,6 +152,36 @@ it runs the `git -C` checks directly and skips this early `ExitWorktree`.
   When the session is inside a worktree, leave it first, as above. The
   check does not apply when `<b>` has a worktree of its own; skip it.
 
+### Worktree databases
+
+A dev server in a worktree may have created a database of its own, such as
+a per-worktree MySQL or Postgres database for a Laravel API. It lives
+outside `<wt>`, so it is left behind. This check only warns: it never stops
+the run, and it never connects to, creates or drops a database.
+
+Run it with the safety checks, before anything is removed: the ignored
+`.env` that names the database goes with the worktree.
+
+- **Files:** only the env files among the ignored files listed above,
+  `.env` and `.env.*`, at any depth in `<wt>`. Skip the check when there
+  are none.
+- **Keys only:** read each file with
+
+      grep -sE '^(DB_(CONNECTION|HOST|PORT|DATABASE)|[A-Z_]*DATABASE_URL)=' <file> | sed -E 's#://[^@/]*@#://#'
+
+  and the same for the file at the same path in `<main>`. Never read or
+  print the whole file, a password, or a URL's credentials.
+- **Compare** connection, host, port and database name together, from the
+  `DB_*` keys or from each `DATABASE_URL`. A different host or port with
+  the same name is still another database. A file missing in `<main>`
+  counts as different.
+- **SQLite:** a database file inside `<wt>`, or a relative path, goes with
+  the worktree; it is no warning.
+- **Warn** for each database that differs, by connection, host and name,
+  with the file and key it came from, such as "`mysql` database
+  `app_feature_x` on `127.0.0.1` (`DB_DATABASE` in `.env`) is not dropped."
+  The user drops it with their own tools.
+
 ## Summary and one confirmation
 
 Ask with AskUserQuestion, unless the run has `--yes` (see below): one
@@ -162,6 +192,8 @@ question, options **Clean up** and **Cancel**. The question shows:
 - **Local branch:** `<b>` and its tip SHA, or "already gone";
 - **Remote branch:** `origin/<b>`, or "already gone";
 - **Ignored files** that will be deleted with the worktree, or "none";
+- **Databases** the worktree uses of its own, which stay behind (see
+  Worktree databases), or "none";
 - **Warnings:** that the session leaves `<wt>` first, or that it has left
   `<wt>` when a safety check already left it, or, for a session launched
   inside `<wt>`, that it stays and must restart from `<main>`; or the
@@ -244,10 +276,14 @@ how to undo each part, with the real SHA:
 With `--yes`, also list the ignored files that were deleted with the
 worktree, since no prompt showed them first.
 
+List the databases from Worktree databases again as left in place; the
+undo steps do not touch them.
+
 ## Never
 
 - **`--force`** on any command, including `git worktree remove`.
 - **`rm -rf`** the worktree directory when `git worktree remove` refuses.
+- **Connect to or drop a database,** or print an env file's secrets.
 - **Touch other branches** than the target and its own `<b>--*`
   sub-branches, or sweep all merged branches in one run.
 - **Run any step before the confirmation,** unless the user typed
