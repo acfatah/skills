@@ -209,6 +209,16 @@ Gotchas:
   Claude Code does. It never overwrites a file and lists the copies in its
   report. If the session refuses the command, the report gives it for you
   to run with `!`.
+- **Claude links `symlinkDirectories` itself on the git route.** Claude
+  Code symlinks `worktree.symlinkDirectories` only into worktrees it
+  creates. On the `git worktree add` route, Claude reads the list from
+  your settings files and runs `ln -s` for each directory from the main
+  checkout. It skips a directory that is missing there or already exists
+  in the worktree, never overwrites, and lists links and skips in its
+  report.
+- **`sparsePaths` is ignored on the git route.** `worktree.sparsePaths`
+  applies only to the built-in `EnterWorktree name=`; a
+  `git worktree add` worktree checks out the full tree.
 - **Plan files stay in the main checkout,** under `.claude/plans/` there,
   so removing the worktree cannot delete them. From inside the worktree,
   Claude Code refuses those writes outright, so Claude briefly leaves the
