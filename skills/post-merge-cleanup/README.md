@@ -22,9 +22,15 @@ or not at all with `--yes`.
   (a squash).
 - **Works after squash and rebase merges.** It compares the tip with the
   merged PR head instead of relying on `git branch -d`.
+- **Warns about worktree databases.** Before removing anything, it
+  compares the database keys in the worktree's ignored env files with the
+  main checkout's. A database the worktree uses of its own, such as a
+  per-worktree MySQL database for a Laravel API, is named in the summary
+  and the report as left behind. It never connects to or drops it.
 - **Shows one summary** (PR, worktree, local and remote branch, ignored
-  files that will be deleted, warnings), with one row per branch, and asks
-  once. Sub-branches are removed before the topic branch.
+  files that will be deleted, databases left behind, warnings), with one
+  row per branch, and asks once. Sub-branches are removed before the topic
+  branch.
 - **Skips the prompt with `--yes`** (or `-y`) in your own invocation. The
   checks still run first and still stop the run; the summary is printed
   instead of asked.
@@ -42,6 +48,8 @@ or not at all with `--yes`.
 - **Not a standing approval.** Your "Clean up", or your `--yes`, covers
   one run; the next run asks again, even for the same branch, unless it
   also has `--yes`.
+- **Not a database tool.** It names a worktree's own database but never
+  drops it; you do that with your own tools.
 - **Not for code cleanup.** Tidying code, files or imports is a different
   request.
 
@@ -105,6 +113,11 @@ Gotchas:
 - **Ignored files are deleted.** `git worktree remove` deletes ignored
   files such as `drafts/`, `.env` or `.claude/plans/` without a word. The
   summary lists them before you confirm.
+- **Databases stay behind.** A database the worktree created outside its
+  folder survives the cleanup. The summary names it only when the
+  worktree's `.env` (or `.env.*`) sets different `DB_*` or
+  `DATABASE_URL` values from the main checkout's; other setups are not
+  detected. Only database names are shown, never passwords.
 - **`--yes` deletes ignored files without asking.** They appear in the
   printed summary and the report, but nothing waits for you to read them.
 - **Only your own `--yes` counts.** Auto-commit, Auto-PR, "unattended",
