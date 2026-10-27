@@ -267,6 +267,10 @@ existing top-level object; do not paste a second `{}` block.
   (the default) or `head`, the base of Claude Code's built-in
   `EnterWorktree name=`. `plans-and-roadmaps` reads it to order its
   worktree options and to decide when to use the built-in tool.
+- **`worktree.symlinkDirectories`** (optional, not in the block above):
+  directories Claude Code symlinks into the worktrees it creates.
+  `plans-and-roadmaps` reads it on its `git worktree add` route and makes
+  the same links itself.
 
 ## Troubleshooting
 

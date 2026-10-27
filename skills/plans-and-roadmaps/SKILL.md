@@ -3,7 +3,7 @@ name: plans-and-roadmaps
 description: "Rules for plan documents and roadmaps: where plan files live, whether a plan runs in a worktree, which session a plan is written in, progress stamps, state directories, phased plans, multi-session roadmaps. Load before writing, executing, stamping, or moving a plan: the plan-mode file, any .md under .claude/plans/, or a PLAN*.md / TODO.md being executed. Also load to resume a paused or shelved plan, or to list plans by state."
 ---
 
-# Plans and Roadmaps v1.14.2
+# Plans and Roadmaps v1.15.0
 
 These rules apply to the plan-mode plan file, any `.md` under a
 `.claude/plans/` directory, and any `PLAN*.md` or `TODO.md` you are executing
@@ -131,8 +131,9 @@ jq -r '.worktree.baseRef // empty' ~/.claude/settings.json
 
 - **`fresh`:** Worktree from origin/<base> comes before Worktree from HEAD.
 - **`head`:** Worktree from HEAD comes first.
-- **Only this key.** This is the one setting the skill reads from settings
-  files.
+- **Two keys only.** The skill reads `worktree.baseRef` here, and
+  `worktree.symlinkDirectories` on the git line (see Link
+  `symlinkDirectories`). No other setting.
 - **One file per command.** `jq` stops at the first missing file, so one
   call over all three would hide a later file's value.
 - **No `jq`:** read the three files instead.
@@ -189,6 +190,10 @@ or the user requires `<type>/<topic>` branch names, for example in
   keep-or-remove prompt, `ExitWorktree action=remove`, and the
   `WorktreeCreate`/`WorktreeRemove` hooks. One entered with `path=` gets
   none of these.
+- **`worktree.sparsePaths` is built-in only.** Claude Code applies it
+  only to worktrees it creates, so the git line checks out the full tree.
+  The skill does not mirror it: that would turn on
+  `extensions.worktreeConfig` in the shared `.git/config`.
 
 **Dirty tree.** Only when `git status --short` is not empty and the user
 may pick a worktree, add a question to the same call: what happens to the
@@ -226,8 +231,8 @@ line under `head` reads `from <sha>`, like the first example.
    `git rev-parse --git-path info/exclude`, as for `.claude/plans/`.
 2. **Built-in line:** call `EnterWorktree name=<topic>`, with any carry
    around it (step 4). No fetch and no `git worktree add`; the tool picks
-   the base itself. No `.worktreeinclude` copy either; Claude Code makes
-   it for worktrees it creates.
+   the base itself. No `.worktreeinclude` copy and no symlink step
+   either; Claude Code makes both for worktrees it creates.
 
    - **Check the base** right after entering: for `from origin/<base>`,
      `git merge-base --is-ancestor origin/<base> HEAD`; for `from <sha>`,
@@ -288,6 +293,32 @@ line under `head` reads `from <sha>`, like the first example.
      refuse this compound command. Skip the copy and give the command in
      the final report, for the user to run with `!`.
 
+   **Link `symlinkDirectories`,** after the copy. Claude Code symlinks
+   these directories only into worktrees it creates. From the main
+   checkout, read the list from each settings file, one plain command
+   each, in the same order as `worktree.baseRef`, skipping a missing file:
+
+       jq -r '.worktree.symlinkDirectories // [] | .[]' .claude/settings.local.json
+       jq -r '.worktree.symlinkDirectories // [] | .[]' .claude/settings.json
+       jq -r '.worktree.symlinkDirectories // [] | .[]' ~/.claude/settings.json
+
+   - **Union of the lists.** Assumed: the lists merge across files, as
+     the docs say for `sparsePaths`. No output from any file means no
+     links.
+   - **Per directory,** as plain commands with absolute paths: skip it
+     when `test -e <main>/<dir>` fails, or when `<wt>/<dir>` already
+     exists (`test -e` or `test -L` succeeds), such as a tracked
+     directory or a rerun. Otherwise:
+
+         ln -s <main>/<dir> <main>/.claude/worktrees/<topic>/<dir>
+
+   - **Absolute target,** as Claude Code makes them. Never add `-f`: it
+     would replace what is already there.
+   - **Report** the linked and the skipped directories in the final
+     report, like the copy.
+   - **Refused:** if the session refuses `ln`, give the commands in the
+     final report, for the user to run with `!`.
+
    Then call `EnterWorktree` with `path=<main>/.claude/worktrees/<topic>`,
    with any carry around it (step 4).
 
@@ -314,8 +345,8 @@ line under `head` reads `from <sha>`, like the first example.
 
 A fresh session, such as after a context clear, follows the line: if the
 path exists, enter it with `path=`, for a built-in line too; if not,
-create it first. Carry changes and copy `.worktreeinclude` files only
-when creating it.
+create it first. Carry changes, copy `.worktreeinclude` files and link
+`symlinkDirectories` only when creating it.
 
 - **Only this session's `name=` worktree** gets the exit prompt and
   `ExitWorktree action=remove`. Re-entered with `path=`, a built-in
