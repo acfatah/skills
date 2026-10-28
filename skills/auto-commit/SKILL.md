@@ -3,7 +3,7 @@ name: auto-commit
 description: "Opt-in Auto-commit mode: ask once, then commit each finished logical change with its suggested message and continue, stopping on gaps or failures. Load before approving or executing a plan, before a phased plan or roadmap phase, when the user asks for two or more distinct changes, or when the user says \"auto-commit\", \"unattended\", \"run it all\", \"commit as you go\", or \"don't stop between phases\"."
 ---
 
-# Auto-commit v1.3.0
+# Auto-commit v1.4.0
 
 By default Claude never commits unless asked: it finishes a logical change,
 suggests a commit message, and waits. That is **Pause** mode. **Auto-commit**
@@ -95,6 +95,18 @@ exception is push and draft PRs under Auto-PR; see the `auto-pr` skill.
 - **Compare `git status --short` with the baseline** recorded when the run
   started (see Starting a run). Changes outside the files this task
   touched are a hard gap: they may be the user's own edits.
+- **Check the message.** Confirm it follows the `commit-messages` skill,
+  or the repo's explicit convention, and fix it if not. Point to that
+  skill; never copy its format here.
+- **Run the repo's commitlint** when the repo has a commitlint config
+  (`commitlint.config.*`, `.commitlintrc*`, or a `commitlint` key in
+  `package.json`) and `node_modules/.bin/commitlint` exists: pipe the
+  message to it. Its config wins over the `commit-messages` skill.
+  - **Local binary only.** Never run a bare `npx commitlint`: it can
+    download and run code.
+  - **On failure,** rewrite the message from its errors and rerun once. A
+    second failure is a hard gap: stop and ask.
+- **Pause mode runs neither** check; it only suggests the message.
 
 ## Gaps
 
