@@ -30,6 +30,7 @@ problem‑solving.
 | [auto-pr](skills/auto-pr) | Opt-in Auto-PR mode on top of auto-commit: after a clean finish, push the branch to its upstream, creating `origin/<branch>` on the first push, and open or update a draft PR against the recorded base. Asks before pushing to a PR that is ready for review or overwriting an edited PR title or body. |
 | [commit-messages](skills/commit-messages) | Conventional Commits 1.0.0 for suggested and committed messages: Angular types, optional scope, lowercase description, breaking changes, GitHub-only issue footers and the attribution trailer. PR titles stay free-form unless the repo squash-merges; an explicit repo convention wins. |
 | [issue-tracker](skills/issue-tracker) | Track issues in local SQLite through a bundled Bun CLI, with triage, milestones, sub-issues, optional Turso sync between your machines, and promotion to GitHub Issues and Projects. |
+| [lint-skills](skills/lint-skills) | Lint a skills repo with a bundled Bun script: skill names match their folders, cross-skill references and links point at skills that exist, and READMEs, versions and root README rows follow the repo rules. With `--home`, also checks the links in `~/.claude/skills`. |
 | [plans-and-roadmaps](skills/plans-and-roadmaps) | Rules for plan documents: file location, whether a plan runs in a worktree, which session plans, progress stamps, state directories, phased plans, and multi-session roadmaps. |
 | [post-merge-cleanup](skills/post-merge-cleanup) | After a PR merges, remove its worktree, local branch and remote branch, and its fork sub-branches, after safety checks and one confirmation (or none with `--yes`), and name any database the worktree leaves behind. |
 | [pr-summary](skills/pr-summary) | Write or update a PR suggestion in `drafts/PR_SUMMARY-<task>.md`: a title, a description of every commit on the branch, and the attribution line, in an untracked file. Never pushes or runs `gh`; auto-pr uses it for the PR body. |
@@ -76,7 +77,7 @@ Other software, by skill:
 | Software | Needed by | Notes |
 |---|---|---|
 | [git](https://git-scm.com) | auto-commit, auto-pr, plans-and-roadmaps, post-merge-cleanup, pr-summary, session-sync, readme-badges, webapp-security-audit | |
-| [Bun](https://bun.sh) | issue-tracker | Runs its bundled CLI; the skill stops without it |
+| [Bun](https://bun.sh) | issue-tracker, lint-skills | Runs each one's bundled script; the skill stops without it |
 | [GitHub CLI (`gh`)](https://cli.github.com), logged in | auto-pr, post-merge-cleanup, issue-tracker (promotion) | Check with `gh auth status`. readme-badges and plans-and-roadmaps use it when present |
 | GitHub account | auto-pr, post-merge-cleanup, issue-tracker (promotion) | For PRs, remote branches and GitHub Issues |
 | [`jq`](https://jqlang.org) | status line | plans-and-roadmaps falls back to reading files without it |
