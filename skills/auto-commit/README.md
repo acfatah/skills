@@ -19,6 +19,10 @@ that removes those round trips.
   it lists them and asks: commit them first, stash them, or continue.
 - **In Auto-commit, commits** each finished change with its suggested
   message, staging only the files that change touched, on a topic branch.
+- **Checks each message before committing.** It must follow the
+  [`commit-messages`](../commit-messages) skill or your repo's explicit
+  convention, and Claude fixes it if not. When the repo configures
+  commitlint and has it installed locally, Claude runs that too.
 - **Never pushes by itself,** amends, forces, rebases, or skips hooks.
   Pushing and draft PRs come only with Auto-PR, via `auto-pr`.
 - **Sorts gaps** into soft (default chosen and recorded), hard (task parked,
@@ -136,6 +140,10 @@ Gotchas:
 - **A task that touches a file you had already edited stops the run.** If
   you continue with a dirty tree, Claude cannot commit that file without
   your edit, so it stops before that commit.
+- **commitlint runs only from `node_modules/.bin`.** Claude never runs a
+  bare `npx commitlint`, which can download and run code. On a failure it
+  rewrites the message and reruns once; a second failure stops the run.
+  Pause mode runs no message check.
 - **The choice does not stick.** It is never saved to memory; every new
   plan or session starts in Pause.
 - **Roadmaps still stop per phase.** Auto-commit commits the phase and writes

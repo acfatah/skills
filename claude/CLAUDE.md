@@ -144,14 +144,10 @@ commit or continue working. On later turns, re-post it only when the
 earlier suggestion is out of date. Skip it when nothing committable
 changed: files outside any repo, or only ignored files such as `drafts/`.
 
-- Put the rationale in the commit message, not in long multiline inline
-  comments above the changed code.
-- Subject line imperative, ≤ 72 chars; body wrapped at 72, explaining what
-  changed and why.
-- Put the suggestion in a fenced block, so it can be copied verbatim.
-- When executing a plan, also write the final message into that plan (see
-  the `plans-and-roadmaps` skill). For the plan-mode file, edit
-  `~/.claude/plans/<slug>.md`, not the symlink.
-- End every suggested message with the commit attribution trailer the
-  harness specifies (e.g. `Co-Authored-By: Claude …`), including messages
-  written into plans, unless the user or the repo says otherwise.
+Before writing or suggesting a commit message, load the
+`commit-messages` skill. One rule holds even without it: an explicit
+repo convention wins.
+
+When executing a plan, also write the final message into that plan (see
+the `plans-and-roadmaps` skill). For the plan-mode file, edit
+`~/.claude/plans/<slug>.md`, not the symlink.

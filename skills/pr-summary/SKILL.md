@@ -3,7 +3,7 @@ name: pr-summary
 description: Write or update a PR summary draft, `drafts/PR_SUMMARY-<task>.md`: a PR title, a full description, and the attribution line. Load when the user asks to suggest a PR, write a PR summary or description, or when `auto-pr` writes its summary file. Not for pushing, or for opening or editing a PR on GitHub.
 ---
 
-# PR Summary v1.0.0
+# PR Summary v1.1.0
 
 Write a PR suggestion to a draft file the user reads and pastes, or that
 `auto-pr` sends as the PR body. This skill only writes the file; it never
@@ -40,7 +40,9 @@ talks to GitHub.
 
 ## Format
 
-- **H1 is the PR title:** imperative, under about 72 characters.
+- **H1 is the PR title:** imperative, under about 72 characters. Follow
+  the `commit-messages` skill: free-form unless the user or the repo says
+  it squash-merges, and then a Conventional Commits subject.
 - **Description** covers every commit of the branch, not just the last
   one:
   - what changed, and why;
