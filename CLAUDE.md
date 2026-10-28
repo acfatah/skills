@@ -10,6 +10,8 @@ Rules for this repo only. My global instructions are in
 - **Version:** `vX.Y.Z` in the `SKILL.md` H1. Bump it in the same
   commit as the change; there is no CHANGELOG.
 - **Root README:** add or update its row in the Skills table.
+- **Lint:** run `bun skills/lint-skills/scripts/lint.ts` before
+  suggesting the commit, and fix its errors.
 
 ## New or changed workflow
 
