@@ -3,7 +3,7 @@ name: plans-and-roadmaps
 description: "Rules for plan documents and roadmaps: where plan files live, whether a plan runs in a worktree, which session a plan is written in, progress stamps, state directories, phased plans, multi-session roadmaps. Load before writing, executing, stamping, or moving a plan: the plan-mode file, any .md under .claude/plans/, or a PLAN*.md / TODO.md being executed. Also load to resume a paused or shelved plan, or to list plans by state."
 ---
 
-# Plans and Roadmaps v1.15.0
+# Plans and Roadmaps v1.16.0
 
 These rules apply to the plan-mode plan file, any `.md` under a
 `.claude/plans/` directory, and any `PLAN*.md` or `TODO.md` you are executing
@@ -646,7 +646,8 @@ first:
 
 Every plan ends with a suggested commit message, either as a final
 `## Commit message` section or inside the last step. Use a fenced block so it
-can be copied verbatim.
+can be copied verbatim. Write every message, phase messages included, in the
+format of the `commit-messages` skill.
 
 - Draft it when writing the plan, from the intended changes.
 - After execution, revise it to match what actually changed (check
@@ -717,7 +718,8 @@ Handle these cases:
   one. Do not stop at that phase's boundary.
 - **Squash merge.** Only when the user asks, or the repository squash-merges
   its PRs, add a final `## Squash commit message` built from the phase
-  messages. Otherwise leave it out.
+  messages, in the format of the `commit-messages` skill. Otherwise leave it
+  out.
 - **Plan changes mid-way.** Never renumber phases or steps, because stamps
   and conversation refer to the numbers. Insert a new phase as `Phase 2a`.
   Keep a dropped phase and strike it through:

@@ -20,6 +20,9 @@ or `auto-pr` sends it as the draft PR's body. It never talks to GitHub.
   was verified, and follow-ups.
 - **Writes for GitHub:** an imperative H1 title under about 72 characters,
   no hard wrapping, and the PR attribution line at the end.
+- **Titles follow [`commit-messages`](../commit-messages):** free-form,
+  unless you or the repo say it squash-merges; then a Conventional Commits
+  subject.
 - **Follows your repo's PR template** or rules when there is one.
 
 ## What it is not
