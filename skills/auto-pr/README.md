@@ -53,10 +53,13 @@ plain PR request, not a run; Auto-PR applies only to a run Claude commits.
 
 ## Install
 
-Install `auto-commit` too; Auto-PR builds on its commit loop.
+Install `auto-commit` and `pr-summary` too: Auto-PR builds on the
+`auto-commit` commit loop, and loads `pr-summary` to write the summary
+file.
 
 ```bash
 bunx skills add acfatah/skills -s auto-commit -a claude-code -g -y
+bunx skills add acfatah/skills -s pr-summary -a claude-code -g -y
 bunx skills add acfatah/skills -s auto-pr -a claude-code -g -y
 ```
 
@@ -111,9 +114,10 @@ It also needs the [GitHub CLI](https://cli.github.com), signed in with
    `> Run mode: Auto-PR (upstream: origin/<branch>, to create; base: main; summary: drafts/PR_SUMMARY-<task>.md) …`
    under its title.
 4. **Let it run.** Claude commits Phase 1 and Phase 2. At the clean
-   finish it re-checks the upstream, writes the recorded summary file,
-   pushes with `-u` to create `origin/<branch>`, drops `, to create` from
-   the run-mode line, and opens a draft PR against `main`.
+   finish it re-checks the upstream, writes the recorded summary file
+   with `pr-summary`, pushes with `-u` to create `origin/<branch>`, drops
+   `, to create` from the run-mode line, and opens a draft PR against
+   `main`.
 5. **Read the report.** It lists the commits, the PR URL, whether the PR
    was opened or updated, and that it created `origin/<branch>`.
 
