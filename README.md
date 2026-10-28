@@ -31,6 +31,7 @@ problem‑solving.
 | [issue-tracker](skills/issue-tracker) | Track issues in local SQLite through a bundled Bun CLI, with triage, milestones, sub-issues, optional Turso sync between your machines, and promotion to GitHub Issues and Projects. |
 | [plans-and-roadmaps](skills/plans-and-roadmaps) | Rules for plan documents: file location, whether a plan runs in a worktree, which session plans, progress stamps, state directories, phased plans, and multi-session roadmaps. |
 | [post-merge-cleanup](skills/post-merge-cleanup) | After a PR merges, remove its worktree, local branch and remote branch, and its fork sub-branches, after safety checks and one confirmation (or none with `--yes`), and name any database the worktree leaves behind. |
+| [pr-summary](skills/pr-summary) | Write or update a PR suggestion in `drafts/PR_SUMMARY-<task>.md`: a title, a description of every commit on the branch, and the attribution line, in an untracked file. Never pushes or runs `gh`; auto-pr uses it for the PR body. |
 | [readme-badges](skills/readme-badges) | Add, audit, or repair a README's badge block: shields.io and qlty badges in one HTML format, each verified before writing. |
 | [session-sync](skills/session-sync) | Keep several Claude sessions on one branch or PR in sync: forks on sub-branches, a shared sessions file, a sync step before acting, and a repo-checked recap after a break. |
 | [windows-screenshots](skills/windows-screenshots) | Locate, list, and read Windows screenshots (Win+PrtScn, Snipping Tool) from WSL or native Windows shells. |
@@ -73,7 +74,7 @@ Other software, by skill:
 
 | Software | Needed by | Notes |
 |---|---|---|
-| [git](https://git-scm.com) | auto-commit, auto-pr, plans-and-roadmaps, post-merge-cleanup, session-sync, readme-badges, webapp-security-audit | |
+| [git](https://git-scm.com) | auto-commit, auto-pr, plans-and-roadmaps, post-merge-cleanup, pr-summary, session-sync, readme-badges, webapp-security-audit | |
 | [Bun](https://bun.sh) | issue-tracker | Runs its bundled CLI; the skill stops without it |
 | [GitHub CLI (`gh`)](https://cli.github.com), logged in | auto-pr, post-merge-cleanup, issue-tracker (promotion) | Check with `gh auth status`. readme-badges and plans-and-roadmaps use it when present |
 | GitHub account | auto-pr, post-merge-cleanup, issue-tracker (promotion) | For PRs, remote branches and GitHub Issues |
@@ -164,9 +165,9 @@ the `VERSION` constant in its `.js` file, the one file users install.
 [`claude/CLAUDE.md`](claude/CLAUDE.md) holds my global instructions for
 Claude Code: response style, line width, PR and commit conventions, a
 worktree prompt and one-off worktree rule, and pointers to the
-`plans-and-roadmaps`, `auto-commit`, `auto-pr`, `issue-tracker` and
-`session-sync` skills. Claude Code loads it from `~/.claude/CLAUDE.md`, so
-link it there:
+`plans-and-roadmaps`, `auto-commit`, `auto-pr`, `pr-summary`,
+`issue-tracker` and `session-sync` skills. Claude Code loads it from
+`~/.claude/CLAUDE.md`, so link it there:
 
 ```bash
 ln -sfn "$PWD/claude/CLAUDE.md" ~/.claude/CLAUDE.md

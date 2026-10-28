@@ -103,11 +103,9 @@ repo's own convention or formatter config wins over this section.
 
 ## Pull Request
 
-When asked to suggest a PR, write the suggestion to
-`drafts/PR_SUMMARY-<task>.md`. It should include a PR title and a
-comprehensive PR description, ending with the PR attribution line the
-harness specifies, unless the user or the repo says otherwise. The file
-should be untracked.
+When asked to suggest a PR, load the `pr-summary` skill. Two rules
+hold even without it: write the suggestion to
+`drafts/PR_SUMMARY-<task>.md`, and keep that file untracked.
 
 ## Auto-commit mode
 

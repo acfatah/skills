@@ -3,7 +3,7 @@ name: auto-pr
 description: "Opt-in Auto-PR run mode: commit each change as Auto-commit does, then push the branch to its upstream and open or update a draft PR after a clean finish. Load when the user picks Auto-PR in the auto-commit run-mode question, when a plan's run-mode line says Auto-PR, or when the user says \"auto-PR\", \"open a PR when done\", or \"push and open a PR\". Depends on the auto-commit skill for the commit loop."
 ---
 
-# Auto-PR v1.3.0
+# Auto-PR v1.4.0
 
 ## What it adds to Auto-commit
 
@@ -133,8 +133,8 @@ Everything Auto-commit authorizes, plus, once per clean finish:
   it.
 - **Push to a ready PR, and keep or replace its title and body,** only
   with the user's answer: at the run-mode question or at the finish.
-- **Write or update the recorded summary file,** per the PR rules in
-  `CLAUDE.md`.
+- **Write or update the recorded summary file,** per the `pr-summary`
+  skill.
 
 ## What it never authorizes
 
@@ -184,12 +184,11 @@ A rejected push is an unsafe gap: stop and report it.
 
    **Base mismatch:** if the open PR's `baseRefName` differs from the
    recorded base, never change it; go on, and note it in the report.
-4. **Write the PR summary.** Make sure `drafts/` is ignored first (see
-   `CLAUDE.md`), then write or update the recorded summary file; never
-   pick a new name. It holds an H1 title and a description covering every
-   commit of the branch, ending with the PR attribution line. On **Push,
-   keep title and body**, still write the file, but do not send it in
-   step 6.
+4. **Write the PR summary.** Load the `pr-summary` skill and write or
+   update the recorded summary file with it; never pick a new name. It
+   holds an H1 title and a description covering every commit of the
+   branch, ending with the PR attribution line. On **Push, keep title and
+   body**, still write the file, but do not send it in step 6.
 5. **Push** `HEAD` to the upstream, unless the answer was **Don't push**.
    On a `to create` line, run `git push -u origin HEAD:<branch>`, then
    drop the marker.
