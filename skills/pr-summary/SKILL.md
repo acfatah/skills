@@ -1,9 +1,9 @@
 ---
 name: pr-summary
-description: Write or update a PR summary draft, `drafts/PR_SUMMARY-<task>.md`: a PR title, a full description, and the attribution line. Load when the user asks to suggest a PR, write a PR summary or description, or when `auto-pr` writes its summary file. Not for pushing, or for opening or editing a PR on GitHub.
+description: Write or update a PR summary draft, `drafts/PR_SUMMARY-<task>.md`: a PR title, a comprehensive description for reviewers, and the attribution line. Load when the user asks to suggest a PR, write a PR summary or description, or when `auto-pr` writes its summary file. Not for pushing, or for opening or editing a PR on GitHub.
 ---
 
-# PR Summary v1.1.0
+# PR Summary v1.2.0
 
 Write a PR suggestion to a draft file the user reads and pastes, or that
 `auto-pr` sends as the PR body. This skill only writes the file; it never
@@ -38,6 +38,15 @@ talks to GitHub.
 - **Read the commits,** not only their subjects, when a subject does not
   say why the change was made.
 
+## Reader
+
+- **A reviewer with no session context,** not the user. They see only the
+  PR, so the summary must stand on its own.
+- **The chat response style does not apply:** no brevity rules, no 1–3
+  sentence paragraphs, no cutting recaps.
+- **Complete over brief.** Keep the context and recaps a reviewer needs;
+  full paragraphs are fine. Headings stay for navigation.
+
 ## Format
 
 - **H1 is the PR title:** imperative, under about 72 characters. Follow
@@ -45,10 +54,17 @@ talks to GitHub.
   it squash-merges, and then a Conventional Commits subject.
 - **Description** covers every commit of the branch, not just the last
   one:
-  - what changed, and why;
+  - context and motivation;
+  - behavior before and after, quoting replaced rules or APIs when
+    short;
+  - what changed, per area;
   - notable decisions, and options weighed and dropped;
+  - risks and rollout notes;
+  - review focus: what to check closely;
   - how it was verified;
   - follow-ups left for later.
+
+  Give each its own heading where it has content; drop empty ones.
 - **Issue ids** as plain references, such as `Refs: 0058`. Name a security
   issue by its id only; never describe it.
 - **Ends with the PR attribution line** the harness gives, unless the user

@@ -24,8 +24,11 @@ What these terms mean:
 - **Tip**: an optional improvement; nothing breaks without it.
 - **Tradeoff**: what each option gains and what it costs.
 
-This governs chat replies. Documents (PR descriptions, plans, docs) keep
+This governs chat replies. Documents the user reads (plans, docs) keep
 the same scannable shape but are as complete as their purpose needs.
+PR descriptions are written for reviewers, not for the user:
+comprehensive, not brief, and this style does not apply; see the
+`pr-summary` skill.
 
 Keep chat output lines under about 80 characters: break long prose
 lines, and indent continuation lines to match. Never break code blocks,
@@ -104,7 +107,7 @@ repo's own convention or formatter config wins over this section.
 ## Pull Request
 
 When asked to suggest a PR, load the `pr-summary` skill. Two rules
-hold even without it: write the suggestion to
+hold even without it: write a comprehensive suggestion to
 `drafts/PR_SUMMARY-<task>.md`, and keep that file untracked.
 
 ## Auto-commit mode

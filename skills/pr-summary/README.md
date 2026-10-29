@@ -1,9 +1,10 @@
 # pr-summary
 
 An [agent skill](https://skills.sh) that writes a PR suggestion to
-`drafts/PR_SUMMARY-<task>.md`: a PR title, a full description of every
-commit on the branch, and the attribution line. You read it and paste it,
-or `auto-pr` sends it as the draft PR's body. It never talks to GitHub.
+`drafts/PR_SUMMARY-<task>.md`: a PR title, a comprehensive description of
+every commit on the branch, written for reviewers, and the attribution line.
+You read it and paste it, or `auto-pr` sends it as the draft PR's body. It
+never talks to GitHub.
 
 ## What it is
 
@@ -16,8 +17,12 @@ or `auto-pr` sends it as the draft PR's body. It never talks to GitHub.
 - **Reads the branch:** `git log` and `git diff --stat` against the base
   (the default branch unless you name one), plus any linked plan or issue
   ids.
-- **Covers every commit:** what changed and why, notable decisions, how it
-  was verified, and follow-ups.
+- **Writes for reviewers** with no session context, not for you. Your
+  chat response style does not apply; it is complete over brief.
+- **Covers every commit:** context and motivation, behavior before and
+  after, what changed per area, notable decisions, risks and rollout
+  notes, review focus, how it was verified, and follow-ups. Each gets its
+  own heading where it has content.
 - **Writes for GitHub:** an imperative H1 title under about 72 characters,
   no hard wrapping, and the PR attribution line at the end.
 - **Titles follow [`commit-messages`](../commit-messages):** free-form,
@@ -79,6 +84,8 @@ ln -sfn "$PWD/skills/pr-summary" ~/.claude/skills/pr-summary
 
 Gotchas:
 
+- **Chat style does not apply.** The summary is for reviewers, so it is
+  comprehensive, not brief.
 - **Uncommitted changes are left out** unless you say otherwise; Claude
   says so in one line.
 - **A repo PR template wins.** Its sections replace the default ones.
