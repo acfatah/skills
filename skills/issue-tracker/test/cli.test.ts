@@ -157,6 +157,10 @@ describe("issue verbs through the bundle", () => {
     const dir = tempDir();
     expect(run(["--dir", dir, "list"], tempDir(), { env }).code).toBe(0);
     ok($(["new", "--title", "x"]));
+    const dashed = $(["new", "--title", "--dry-run for X"]);
+    expect(dashed.code).toBe(1);
+    expect(dashed.stderr).toContain('--title="--dry-run for X"');
+    ok($(["new", "--title=--dry-run for X"]));
     const rules = readFileSync(join(repo, ".git", "info", "exclude"), "utf8").split("\n");
     expect(rules.filter((l) => l === ".claude/issues*")).toHaveLength(1);
   });
