@@ -1,9 +1,9 @@
 ---
 name: auto-pr
-description: "Opt-in Auto-PR run mode: commit each change as Auto-commit does, then push the branch to its upstream and open or update a draft PR after a clean finish. Load when the user picks Auto-PR in the auto-commit run-mode question, when a plan's run-mode line says Auto-PR, or when the user says \"auto-PR\", \"open a PR when done\", or \"push and open a PR\". Depends on the auto-commit skill for the commit loop."
+description: "Opt-in Auto-PR run mode: commit each change as Auto-commit does, then push the branch to its upstream and open or update a draft PR after a clean finish. Also covers a one-off request to push and open a PR for finished work. Load when the user picks Auto-PR in the auto-commit run-mode question, when a plan's run-mode line says Auto-PR, or when the user says \"auto-PR\", \"open a PR when done\", \"open a PR\", \"create a PR\", or \"push and open a PR\". Depends on the auto-commit skill for the commit loop."
 ---
 
-# Auto-PR v1.4.0
+# Auto-PR v1.5.0
 
 ## What it adds to Auto-commit
 
@@ -18,6 +18,9 @@ webhooks, even for a draft PR.
 There is no push-only mode: every clean finish opens or updates a PR, or
 asks first (step 3 of Finishing a run). To push without a PR, use
 Auto-commit and push by hand.
+
+A one-off "open a PR" request outside a run follows Opening a PR on
+request instead; it does not need `auto-commit`.
 
 ## Preconditions
 
@@ -229,6 +232,33 @@ Options, in this order:
 At most one question at the finish, and only for a ready PR or an edited
 title or body. The draft PR is the safety valve only while the PR is a draft:
 nothing is merged or sent for review until the user does it.
+
+## Opening a PR on request
+
+- **Trigger:** an explicit user request to open, or push and open, a PR
+  for the current branch, outside an Auto-PR run. The request authorizes
+  this one push and PR only. It does not start Auto-PR or Auto-commit, and
+  is never saved or inferred.
+- **Preconditions:** run the Preconditions section. On a failure, say
+  which check failed and stop, with nothing pushed. For an upstream on the
+  default branch, ask before `git branch --unset-upstream`, as there.
+- **Uncommitted changes:** if `git status --short` shows any, say so in
+  one line. Never commit them; a commit needs its own request. Ask whether
+  to go on with the committed work only.
+- **Base:** the default branch, unless the user names another.
+- **Summary file:** reuse an existing `drafts/PR_SUMMARY-<task>.md` for
+  this branch's work, else pick a snake_case topic, as Recording the
+  choice says.
+- **Steps:** follow Finishing a run, steps 3 to 6, with the request in
+  place of the recorded run-mode line: find the PR, write the summary with
+  `pr-summary`, push (`-u` on the no-upstream path), then create or edit.
+  The ready-PR and edited-draft question applies unchanged.
+- **Draft or ready:** `--draft`, unless the request explicitly asks for a
+  ready PR ("open a ready PR", "not a draft"). Never run `gh pr ready` on
+  an existing PR.
+- **Never:** everything in What it never authorizes still applies: no
+  force, no skipped hooks, no second PR, no other branches.
+- **Report:** the PR lines of Stop or finish report.
 
 ## Stop or finish report
 

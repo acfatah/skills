@@ -110,6 +110,8 @@ When asked to suggest a PR, load the `pr-summary` skill. Two rules
 hold even without it: write a comprehensive suggestion to
 `drafts/PR_SUMMARY-<task>.md`, and keep that file untracked.
 
+When asked to open a PR, load the `auto-pr` skill.
+
 ## Auto-commit mode
 
 Before approving or executing a plan, or when the user asks for several
