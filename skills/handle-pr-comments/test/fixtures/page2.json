@@ -1,0 +1,55 @@
+{
+  "data": {
+    "viewer": { "login": "me" },
+    "repository": {
+      "pullRequest": {
+        "reviewThreads": {
+          "pageInfo": { "hasNextPage": false, "endCursor": "T2" },
+          "nodes": [
+            {
+              "id": "PRRT_bot", "isResolved": false, "isOutdated": false,
+              "path": "src/b.ts", "line": 5, "originalLine": 5,
+              "comments": {
+                "pageInfo": { "hasNextPage": false },
+                "nodes": [
+                  { "databaseId": 301, "author": { "login": "copilot-pull-request-reviewer", "__typename": "Bot" }, "body": "Consider a const.", "diffHunk": "@@ -1 +1 @@", "createdAt": "2026-10-28T10:00:00Z", "url": "https://github.com/acme/widgets/pull/7#discussion_r301" }
+                ]
+              }
+            },
+            {
+              "id": "PRRT_outdated", "isResolved": false, "isOutdated": true,
+              "path": "src/c.ts", "line": null, "originalLine": 9,
+              "comments": {
+                "pageInfo": { "hasNextPage": false },
+                "nodes": [
+                  { "databaseId": 401, "author": { "login": "coderabbitai[bot]", "__typename": "User" }, "body": "Old nit.", "diffHunk": "@@", "createdAt": "2026-10-28T10:00:00Z", "url": "https://github.com/acme/widgets/pull/7#discussion_r401" }
+                ]
+              }
+            },
+            {
+              "id": "PRRT_self", "isResolved": false, "isOutdated": false,
+              "path": "src/d.ts", "line": 1, "originalLine": 1,
+              "comments": {
+                "pageInfo": { "hasNextPage": false },
+                "nodes": [
+                  { "databaseId": 501, "author": { "login": "me", "__typename": "User" }, "body": "Bug: off by one.", "diffHunk": "@@", "createdAt": "2026-10-28T10:00:00Z", "url": "https://github.com/acme/widgets/pull/7#discussion_r501" }
+                ]
+              }
+            },
+            {
+              "id": "PRRT_answered", "isResolved": false, "isOutdated": false,
+              "path": "src/e.ts", "line": 2, "originalLine": 2,
+              "comments": {
+                "pageInfo": { "hasNextPage": false },
+                "nodes": [
+                  { "databaseId": 601, "author": { "login": "bob", "__typename": "User" }, "body": "Why?", "diffHunk": "@@", "createdAt": "2026-10-28T10:00:00Z", "url": "https://github.com/acme/widgets/pull/7#discussion_r601" },
+                  { "databaseId": 602, "author": { "login": "me", "__typename": "User" }, "body": "Because of X.", "diffHunk": "@@", "createdAt": "2026-10-28T11:00:00Z", "url": "https://github.com/acme/widgets/pull/7#discussion_r602" }
+                ]
+              }
+            }
+          ]
+        }
+      }
+    }
+  }
+}
