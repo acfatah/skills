@@ -1,24 +1,26 @@
 ---
 name: post-merge-cleanup
-description: "Clean up after a merged PR: remove its worktree, then its local branch, then its remote branch, after safety checks and one confirmation, or none with `--yes`. Load when the user says \"PR merged\", \"clean up the branch\", \"remove the worktree\", \"delete the merged branch\", or /post-merge-cleanup. \"cleanup\" and \"housekeeping\" load it only next to PR, branch, merged, or worktree context, never alone. Not for code cleanup."
+description: "Clean up after a merged PR: remove its worktree, then its local branch, then its remote branch, after safety checks and one confirmation, or none with `--yes`; `--dry-run` previews and removes nothing. Load when the user says \"PR merged\", \"clean up the branch\", \"remove the worktree\", \"delete the merged branch\", or /post-merge-cleanup. \"cleanup\" and \"housekeeping\" load it only next to PR, branch, merged, or worktree context, never alone. Not for code cleanup."
 ---
 
-# Post-merge Cleanup v1.4.0
+# Post-merge Cleanup v1.5.0
 
 After a PR merges, the same three things are left behind: its worktree, its
 local branch, and its remote branch. This skill removes them, in that order,
 for **one branch per run**, together with that branch's fork sub-branches.
 It checks first that nothing can be lost, shows one summary, asks once (or
-not at all with `--yes`), then runs every step.
+not at all with `--yes`), then runs every step. With `--dry-run` it stops
+after the summary.
 
 It never sweeps all merged branches. One run, one branch and its own
 sub-branches.
 
 ## Resolve the target
 
-The input may also carry `--yes` or `-y`, anywhere in the arguments. Note
-it and strip it before resolving the target (see Skip the confirmation:
-`--yes`). The rest of the input is one of:
+The input may also carry `--yes` or `-y`, and `--dry-run`, anywhere in the
+arguments. Note each and strip it before resolving the target (see Skip
+the confirmation: `--yes`, and Preview only: `--dry-run`). The rest of the
+input is one of:
 
 - **a branch name;**
 - **a PR number:** take its `headRefName` from
@@ -79,7 +81,8 @@ one-line request to run from a foreground session in `<main>`, such as
 ## Safety checks
 
 Run every check before asking anything. Any failure stops the run; report
-which check failed and why. Do not offer a way around it.
+which check failed and why. Do not offer a way around it. A `--dry-run`
+runs on past a failure instead; see Preview only: `--dry-run`.
 
 Sub-branches skip **PR merged** and **Nothing unpushed**, and take
 **Integrated into the topic branch** instead. The worktree checks run for
@@ -184,8 +187,9 @@ Run it with the safety checks, before anything is removed: the ignored
 
 ## Summary and one confirmation
 
-Ask with AskUserQuestion, unless the run has `--yes` (see below): one
-question, options **Clean up** and **Cancel**. The question shows:
+Ask with AskUserQuestion, unless the run has `--yes` or `--dry-run` (see
+below): one question, options **Clean up** and **Cancel**. The question
+shows:
 
 - **PR:** number, link, and when it merged;
 - **Worktree:** the path, or "none";
@@ -221,14 +225,42 @@ with `EnterWorktree path=<wt>`.
 - **Checks unchanged:** every safety check runs; any failure still stops
   the run.
 - **Instead of asking:** print the same summary, headed "Cleaning up
-  without a prompt (`--yes`):", then run Execute.
+  without a prompt (`--yes`):", then run Execute. With `--dry-run` as
+  well, the dry run wins.
 - **Ignored files** are deleted without a prompt. The summary and the
   report list them as deleted and not restorable.
 - **Warnings** are printed in the summary, not asked.
 - **This run only:** never remember it. The next run asks again unless it
   also has `--yes`.
 
+## Preview only: `--dry-run`
+
+- **Who sets it:** only the user, by typing `--dry-run` in their own
+  `/post-merge-cleanup` invocation. Claude never adds it, as with `--yes`.
+  There is no short form.
+- **Runs** Resolve the target, the Background fork check, every Safety
+  check and Worktree databases, as a real run does.
+- **Stops early** only where a real run stops before the safety checks:
+  a detached worktree, nothing to clean up, or a background fork.
+- **All failures:** unlike a real run, a failed check does not stop the
+  preview. Run the rest, list every failure and why, then the summary. A
+  check that needs a value a failed check did not get, such as the PR's
+  `headRefOid`, is listed as not run.
+- **Leaving the worktree:** when a check needs `ExitWorktree` with
+  `action: "keep"` (see Safety checks), leave, run the check, then return
+  with `EnterWorktree path=<wt>`. Say so in the output, and that a
+  worktree entered with `name=` loses its exit prompt.
+- **Prints** the summary from Summary and one confirmation, headed
+  "Dry run: nothing will be removed", with the Execute steps that would
+  run, in order. Then stop: no AskUserQuestion, no Execute, no Report.
+- **With `--yes`:** the dry run wins. Remove nothing, and say that `--yes`
+  was ignored.
+- **Ends** with the command to run for real, such as
+  `/post-merge-cleanup <b>`.
+
 ## Execute
+
+A `--dry-run` never reaches this section.
 
 **Leave the worktree first.** Only when the session is inside `<wt>`,
 call `ExitWorktree` with `action: "keep"` before any step, unless a
@@ -288,4 +320,5 @@ undo steps do not touch them.
   sub-branches, or sweep all merged branches in one run.
 - **Run any step before the confirmation,** unless the user typed
   `--yes`; never skip a failed check.
+- **Run any step during `--dry-run`,** even with `--yes`.
 - **Remember the confirmation, or `--yes`,** for a later run.
