@@ -1,0 +1,43 @@
+{
+  "data": {
+    "viewer": { "login": "me" },
+    "repository": {
+      "pullRequest": {
+        "reviewThreads": {
+          "pageInfo": { "hasNextPage": true, "endCursor": "T1" },
+          "nodes": [
+            {
+              "id": "PRRT_human", "isResolved": false, "isOutdated": false,
+              "path": "src/login.ts", "line": 12, "originalLine": 12,
+              "comments": {
+                "pageInfo": { "hasNextPage": false },
+                "nodes": [
+                  { "databaseId": 101, "author": { "login": "alice", "__typename": "User" }, "body": "Empty password is not rejected.", "diffHunk": "@@ -10,3 +10,4 @@\n+if (pw) login(pw)", "createdAt": "2026-10-28T10:00:00Z", "url": "https://github.com/acme/widgets/pull/7#discussion_r101" },
+                  { "databaseId": 102, "author": { "login": "me", "__typename": "User" }, "body": "Which input?", "diffHunk": "@@ -10,3 +10,4 @@\n+if (pw) login(pw)", "createdAt": "2026-10-28T11:00:00Z", "url": "https://github.com/acme/widgets/pull/7#discussion_r102" },
+                  { "databaseId": 103, "author": { "login": "alice", "__typename": "User" }, "body": "An empty string.", "diffHunk": "@@ -10,3 +10,4 @@\n+if (pw) login(pw)", "createdAt": "2026-10-28T12:00:00Z", "url": "https://github.com/acme/widgets/pull/7#discussion_r103" }
+                ]
+              }
+            },
+            {
+              "id": "PRRT_resolved", "isResolved": true, "isOutdated": false,
+              "path": "src/a.ts", "line": 3, "originalLine": 3,
+              "comments": {
+                "pageInfo": { "hasNextPage": false },
+                "nodes": [
+                  { "databaseId": 201, "author": { "login": "alice", "__typename": "User" }, "body": "Typo.", "diffHunk": "@@", "createdAt": "2026-10-28T10:00:00Z", "url": "https://github.com/acme/widgets/pull/7#discussion_r201" }
+                ]
+              }
+            }
+          ]
+        },
+        "reviews": {
+          "pageInfo": { "hasNextPage": false, "endCursor": "R1" },
+          "nodes": [
+            { "id": "PRR_1", "state": "CHANGES_REQUESTED", "body": "Please add tests.", "url": "https://github.com/acme/widgets/pull/7#pullrequestreview-1", "submittedAt": "2026-10-28T10:05:00Z", "author": { "login": "alice", "__typename": "User" } },
+            { "id": "PRR_2", "state": "COMMENTED", "body": "  ", "url": "https://github.com/acme/widgets/pull/7#pullrequestreview-2", "submittedAt": "2026-10-28T10:06:00Z", "author": { "login": "alice", "__typename": "User" } }
+          ]
+        }
+      }
+    }
+  }
+}

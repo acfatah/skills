@@ -29,6 +29,7 @@ problem‑solving.
 | [auto-commit](skills/auto-commit) | Opt-in Auto-commit mode: commit each finished change or phase with its message and continue, stopping on gaps. Pushes only in Auto-PR mode, via auto-pr. |
 | [auto-pr](skills/auto-pr) | Opt-in Auto-PR mode on top of auto-commit: after a clean finish, push the branch to its upstream, creating `origin/<branch>` on the first push, and open or update a draft PR against the recorded base. Asks before pushing to a PR that is ready for review or overwriting an edited PR title or body. Also handles a one-off "open a PR" request: one push and a draft PR, or a ready one when asked. |
 | [commit-messages](skills/commit-messages) | Conventional Commits 1.0.0 for suggested and committed messages: Angular types, optional scope, lowercase description, breaking changes, GitHub-only issue footers and the attribution trailer. PR titles stay free-form unless the repo squash-merges; an explicit repo convention wins. |
+| [handle-pr-comments](skills/handle-pr-comments) | Handle a GitHub PR's review comments, via `gh`: fetch review threads and summaries with a bundled Bun script, verify each claim against the code, triage them in one approved table, fix by theme on the PR's head branch, reply in one approved batch, and resolve fixed threads. Not for doing a review. |
 | [issue-tracker](skills/issue-tracker) | Track issues in local SQLite through a bundled Bun CLI, with triage, milestones, sub-issues, optional Turso sync between your machines, and promotion to GitHub Issues and Projects. |
 | [lint-skills](skills/lint-skills) | Lint a skills repo with a bundled Bun script: skill names match their folders, cross-skill references and links point at skills that exist, and READMEs, versions and root README rows follow the repo rules. With `--home`, also checks the links in `~/.claude/skills`. |
 | [plans-and-roadmaps](skills/plans-and-roadmaps) | Rules for plan documents: file location, whether a plan runs in a worktree, which session plans, progress stamps, state directories, phased plans, and multi-session roadmaps. |
@@ -76,10 +77,10 @@ Other software, by skill:
 
 | Software | Needed by | Notes |
 |---|---|---|
-| [git](https://git-scm.com) | auto-commit, auto-pr, plans-and-roadmaps, post-merge-cleanup, pr-summary, session-sync, readme-badges, webapp-security-audit | |
-| [Bun](https://bun.sh) | issue-tracker, lint-skills | Runs each one's bundled script; the skill stops without it |
-| [GitHub CLI (`gh`)](https://cli.github.com), logged in | auto-pr, post-merge-cleanup, issue-tracker (promotion) | Check with `gh auth status`. readme-badges and plans-and-roadmaps use it when present |
-| GitHub account | auto-pr, post-merge-cleanup, issue-tracker (promotion) | For PRs, remote branches and GitHub Issues |
+| [git](https://git-scm.com) | auto-commit, auto-pr, handle-pr-comments, plans-and-roadmaps, post-merge-cleanup, pr-summary, session-sync, readme-badges, webapp-security-audit | |
+| [Bun](https://bun.sh) | handle-pr-comments, issue-tracker, lint-skills | Runs each one's bundled script; the skill stops without it |
+| [GitHub CLI (`gh`)](https://cli.github.com), logged in | auto-pr, handle-pr-comments, post-merge-cleanup, issue-tracker (promotion) | Check with `gh auth status`. readme-badges and plans-and-roadmaps use it when present |
+| GitHub account | auto-pr, handle-pr-comments, post-merge-cleanup, issue-tracker (promotion) | For PRs, remote branches and GitHub Issues |
 | [`jq`](https://jqlang.org) | status line | plans-and-roadmaps falls back to reading files without it |
 | curl | readme-badges | Checks each badge image and link |
 | [Turso CLI](https://docs.turso.tech/cli) and account | issue-tracker | Optional, only for sync between your machines |
