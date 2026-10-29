@@ -3219,7 +3219,7 @@ function promotionText(p) {
 }
 
 // src/cli.ts
-var VERSION = "2.1.0";
+var VERSION = "2.1.2";
 var str2 = (v, k) => v[k];
 var json = { json: { type: "boolean" } };
 async function readBody(v) {
@@ -3692,7 +3692,10 @@ async function main(argv, io = {}) {
   try {
     parsed = parseArgs({ args: rest, options: verb.options, allowPositionals: true, strict: true });
   } catch (err) {
-    throw new UsageError(`${err.message}
+    const message = err.message;
+    const hint = message.includes("argument is ambiguous") ? `
+Hint: a value that starts with "-" needs the = form, e.g. --title="--dry-run for X".` : "";
+    throw new UsageError(`${message}${hint}
 Usage: ${verb.usage.join(`
 `)}`);
   }

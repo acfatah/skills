@@ -28,7 +28,7 @@ import { ADVISORY, promote, promotionText } from "./promote.ts";
 import { OPEN_STATUSES, type Status, checkStatus, splitList, today } from "./model.ts";
 import { STATUSES } from "./schema.ts";
 
-export const VERSION = "2.1.0";
+export const VERSION = "2.1.2";
 
 type Options = NonNullable<ParseArgsConfig["options"]>;
 type Values = Record<string, string | boolean | string[] | undefined>;
@@ -543,7 +543,11 @@ export async function main(argv: string[], io: Partial<Ctx> = {}): Promise<numbe
   try {
     parsed = parseArgs({ args: rest, options: verb.options, allowPositionals: true, strict: true });
   } catch (err) {
-    throw new UsageError(`${(err as Error).message}\nUsage: ${verb.usage.join("\n")}`);
+    const message = (err as Error).message;
+    const hint = message.includes("argument is ambiguous")
+      ? '\nHint: a value that starts with "-" needs the = form, e.g. --title="--dry-run for X".'
+      : "";
+    throw new UsageError(`${message}${hint}\nUsage: ${verb.usage.join("\n")}`);
   }
   const cwd = io.cwd ?? process.cwd();
   let backend: Backend | undefined;

@@ -4,7 +4,7 @@ description: Issue tracking in a local SQLite database through a bundled Bun CLI
 allowed-tools: Bash(bun ${CLAUDE_SKILL_DIR}/scripts/issues.js *)
 ---
 
-# Issue Tracker v2.1.1
+# Issue Tracker v2.1.2
 
 Track issues while you work: every issue starts in a local database, and
 moves to GitHub only when it must be shared. Capture fast, triage later, and
@@ -48,6 +48,11 @@ bun ${CLAUDE_SKILL_DIR}/scripts/issues.js <verb> [options]
   issues root itself: the top folder, or the main checkout from a linked
   worktree. It also adds `.claude/issues*` to `info/exclude` on first use.
 - **Long bodies** go through stdin: `--body-file -` with a quoted heredoc.
+- **Heredoc refused:** in a worktree-isolated session, the guard refuses a
+  heredoc body that names `git`. Write the body to a scratchpad file and
+  pass `--body-file <path>`.
+- **Dash-led values:** a value that starts with `-` needs the `=` form:
+  `--title="--dry-run for X"`. The CLI prints this hint when it fails.
 - **`--json`** gives structured output for `list`, `show`, `new`, `promote`,
   `milestone list`, and `remote status`.
 - **`--help`** lists every verb and option; `<verb> --help` shows one.
