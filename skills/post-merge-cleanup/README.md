@@ -4,7 +4,8 @@ An [agent skill](https://skills.sh) that cleans up after a merged PR. It
 removes the PR's worktree, then its local branch, then its remote branch,
 for one branch per run, together with that branch's fork sub-branches. It
 checks first that nothing can be lost, shows one summary, and asks once,
-or not at all with `--yes`.
+or not at all with `--yes`. With `--dry-run` it shows the summary and
+stops.
 
 ## What it is
 
@@ -17,9 +18,9 @@ or not at all with `--yes`.
 - **Checks before asking:** the PR is merged, the local tip equals the
   merged PR head, the worktree is clean, it is not the default branch or
   the main worktree, and no symlinks point into the worktree. Any failure
-  stops the run. A sub-branch has no PR, so it must instead be integrated
-  into its topic branch: an ancestor of it, or adding nothing when merged
-  (a squash).
+  stops the run, except in a dry run. A sub-branch has no PR, so it must
+  instead be integrated into its topic branch: an ancestor of it, or
+  adding nothing when merged (a squash).
 - **Works after squash and rebase merges.** It compares the tip with the
   merged PR head instead of relying on `git branch -d`.
 - **Warns about worktree databases.** Before removing anything, it
@@ -34,6 +35,10 @@ or not at all with `--yes`.
 - **Skips the prompt with `--yes`** (or `-y`) in your own invocation. The
   checks still run first and still stop the run; the summary is printed
   instead of asked.
+- **Previews with `--dry-run`.** It runs every check, lists every failure
+  instead of stopping at the first, and prints the summary headed
+  "Dry run: nothing will be removed". Then it stops without asking or
+  removing anything, and gives the command to run for real.
 - **Runs in order:** `git worktree remove`, `git branch -D`,
   `git push origin --delete`, `git fetch --prune origin`. Parts that are
   already gone are reported and skipped.
@@ -92,7 +97,8 @@ ln -sfn "$PWD/skills/post-merge-cleanup" ~/.claude/skills/post-merge-cleanup
 - **By name, always.** `/post-merge-cleanup …` or "use the
   post-merge-cleanup skill".
 - **What Claude asks back:** one summary with **Clean up** or **Cancel**.
-  With `--yes`, nothing: it prints the summary and cleans up. For a
+  With `--yes`, nothing: it prints the summary and cleans up. With
+  `--dry-run`, nothing either: it prints the summary and stops. For a
   detached worktree, it asks which branch is meant.
 
 ### Example prompts
@@ -104,6 +110,7 @@ ln -sfn "$PWD/skills/post-merge-cleanup" ~/.claude/skills/post-merge-cleanup
   `feat/login`."
 - **By PR number:** "/post-merge-cleanup 42"
 - **Without a prompt:** `/post-merge-cleanup 42 --yes`
+- **Preview only:** `/post-merge-cleanup 42 --dry-run`
 - **By worktree path:** "Remove the worktree at
   `~/code/app-login-form`, the PR is merged."
 - **Housekeeping:** "Housekeeping for the merged `fix/typo` branch."
@@ -123,6 +130,13 @@ Gotchas:
 - **Only your own `--yes` counts.** Auto-commit, Auto-PR, "unattended",
   "go ahead" and bypass-permissions mode never imply it, and Claude never
   adds it.
+- **`--dry-run` overrides `--yes`.** With both, nothing is removed, and
+  Claude says that `--yes` was ignored. There is no short form such as
+  `-n`.
+- **A dry run may leave and re-enter the worktree.** When a check needs to
+  run from outside, Claude leaves with `ExitWorktree`, runs it, and
+  returns with `EnterWorktree path=<wt>`. A worktree first entered with
+  `name=` loses its built-in exit prompt.
 - **Symlinks into the worktree stop the run.** A link in `~/.claude` or
   the main checkout that points into the worktree (for example a skill
   linked for testing) must be repointed or removed first.
