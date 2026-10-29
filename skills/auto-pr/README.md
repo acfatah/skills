@@ -127,7 +127,8 @@ It also needs the [GitHub CLI](https://cli.github.com), signed in with
    `, to create` from the run-mode line, and opens a draft PR against
    `main`.
 5. **Read the report.** It lists the commits, the PR URL, whether the PR
-   was opened or updated, and that it created `origin/<branch>`.
+   was opened or updated, and that it created `origin/<branch>`. It also
+   names `handle-pr-comments` as the next step once reviews arrive.
 
 Gotchas:
 

@@ -3,7 +3,7 @@ name: auto-pr
 description: "Opt-in Auto-PR run mode: commit each change as Auto-commit does, then push the branch to its upstream and open or update a draft PR after a clean finish. Also covers a one-off request to push and open a PR for finished work. Load when the user picks Auto-PR in the auto-commit run-mode question, when a plan's run-mode line says Auto-PR, or when the user says \"auto-PR\", \"open a PR when done\", \"open a PR\", \"create a PR\", or \"push and open a PR\". Depends on the auto-commit skill for the commit loop."
 ---
 
-# Auto-PR v1.5.0
+# Auto-PR v1.6.0
 
 ## What it adds to Auto-commit
 
@@ -278,6 +278,8 @@ Report everything Auto-commit reports, plus:
   too; deleting it (`git push origin --delete <branch>`) needs its own
   explicit request.
 - **Nothing pushed,** when the run stopped, with the reason.
+- **Next step,** after a PR was opened or updated: once reviews arrive,
+  the `handle-pr-comments` skill works through the review comments.
 
 ## Roadmaps
 
