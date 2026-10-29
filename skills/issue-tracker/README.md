@@ -196,6 +196,12 @@ Gotchas:
   it goes on Claude Code's own to-do list. "Log", "track", "backlog" or "for
   later" means the tracker; when it is unclear, Claude asks which one. Open
   to-do items left at the end of a request are offered as issues.
+- **Heredoc bodies can be refused.** In a worktree-isolated session, the
+  guard refuses a heredoc body that names `git`. Claude writes the body to a
+  scratchpad file and passes `--body-file <path>` instead.
+- **Dash-led values need `=`.** A title that starts with `-`, such as
+  `--dry-run for X`, fails unless written as `--title="--dry-run for X"`.
+  The CLI prints this hint when it fails.
 - **Issue bodies are not hard-wrapped.** GitHub shows single newlines as
   line breaks, so Claude writes each paragraph of an issue body on one
   line.

@@ -28,6 +28,10 @@ upstream and opens or updates a draft PR once the run finishes cleanly.
   for review, it asks before pushing, since the push notifies reviewers.
 - **One PR per roadmap.** Each phase pushes and updates the same PR,
   unless the roadmap says its phases merge on their own.
+- **One-off PR requests too.** "Open a PR for this branch", outside a run,
+  runs the same preconditions and finishing steps: summary file, push,
+  then a draft PR or an update to the open one. It authorizes that one
+  push and PR only.
 
 ## What it is not
 
@@ -48,8 +52,9 @@ upstream and opens or updates a draft PR once the run finishes cleanly.
   Auto-commit; a draft PR still runs CI.
 - **A single small task** → nothing to batch; Claude skips the question.
 
-**Negative example:** "Open a PR for this branch" on finished work is a
-plain PR request, not a run; Auto-PR applies only to a run Claude commits.
+**Negative example:** "Open a PR for this branch" on finished work does
+not start the Auto-PR run mode. Claude follows the skill's "Opening a PR on
+request" section instead: one push and one PR, and no commits.
 
 ## Install
 
@@ -79,8 +84,8 @@ It also needs the [GitHub CLI](https://cli.github.com), signed in with
 - **From the auto-commit question.** When you pick Auto-PR in "Pause,
   Auto-commit or Auto-PR?", Claude loads this skill.
 - **From a plan.** A plan whose `> Run mode:` line says Auto-PR loads it.
-- **By trigger phrase.** "auto-PR", "open a PR when done" and "push and
-  open a PR".
+- **By trigger phrase.** "auto-PR", "open a PR when done", "open a PR",
+  "create a PR" and "push and open a PR".
 - **By name, always.** `/auto-pr …` or "use the auto-pr skill".
 - **What Claude asks back:** usually nothing extra. Choosing Auto-PR up
   front is the request to push and open the PR. If a precondition fails,
@@ -103,6 +108,9 @@ It also needs the [GitHub CLI](https://cli.github.com), signed in with
   branch has no upstream, so Claude offers
   `Auto-PR (creates origin/<branch> at finish)`, and the first push at a
   clean finish creates it.
+- **One-off request:** "Open a PR for this branch." Claude pushes the
+  committed work and opens a draft PR against the default branch.
+- **Ready PR:** "Open a ready PR." The same, without `--draft`.
 - **Undo:** "Close the PR." Claude runs `gh pr close <n>`; the pushed
   commits stay on the remote.
 
@@ -159,6 +167,10 @@ Gotchas:
 - **A failed PR step after the push is reported,** as "Pushed, no PR" or
   "Pushed, PR not updated" with the `gh` error. Claude never retries
   without `--draft`.
+- **A one-off request never commits.** Claude names uncommitted changes
+  and asks whether to go on with the committed work only.
+- **A ready PR needs an explicit ask,** such as "open a ready PR" or "not
+  a draft". Claude never marks an existing PR ready.
 - **Undo does not reach the remote.** `git reset --soft` cannot undo
   pushed commits; closing the PR is the undo.
 
