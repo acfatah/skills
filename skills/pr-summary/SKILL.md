@@ -3,7 +3,7 @@ name: pr-summary
 description: Write or update a PR summary draft, `drafts/PR_SUMMARY-<task>.md`: a PR title, a comprehensive description for reviewers, and the attribution line. Load when the user asks to suggest a PR, write a PR summary or description, or when `auto-pr` writes its summary file. Not for pushing, or for opening or editing a PR on GitHub.
 ---
 
-# PR Summary v1.2.0
+# PR Summary v1.2.1
 
 Write a PR suggestion to a draft file the user reads and pastes, or that
 `auto-pr` sends as the PR body. This skill only writes the file; it never
@@ -84,8 +84,9 @@ These win over the default sections above:
 
 ## Never
 
-- **Run `gh`, push, or commit.** Opening or updating a PR needs its own
-  explicit request, or Auto-PR (see the `auto-pr` skill).
+- **Run `gh`, push, or commit.** Opening or updating a PR goes through
+  the `auto-pr` skill: its run mode, or its "Opening a PR on request"
+  section.
 
 ## Report
 

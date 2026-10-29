@@ -45,8 +45,8 @@ never talks to GitHub.
   only what is committed unless you say otherwise.
 
 **Negative example:** "Push this and open a PR" is not this skill's job.
-It never pushes or runs `gh`; that needs Auto-PR or its own explicit
-request.
+It never pushes or runs `gh`; use [`auto-pr`](../auto-pr), its run mode or
+its "Opening a PR on request" section.
 
 ## Install
 
