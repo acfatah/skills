@@ -3,7 +3,7 @@ name: auto-commit
 description: "Opt-in Auto-commit mode: ask once, then commit each finished logical change with its suggested message and continue, stopping on gaps or failures. Load before approving or executing a plan, before a phased plan or roadmap phase, when the user asks for two or more distinct changes, or when the user says \"auto-commit\", \"unattended\", \"run it all\", \"commit as you go\", or \"don't stop between phases\"."
 ---
 
-# Auto-commit v1.4.0
+# Auto-commit v1.5.0
 
 By default Claude never commits unless asked: it finishes a logical change,
 suggests a commit message, and waits. That is **Pause** mode. **Auto-commit**
@@ -68,9 +68,22 @@ halting it later.
   suggested message, attribution trailer included.
 - **Stage by explicit path,** only the files changed for that task. Never
   `git add -A`, `git add .` or `git commit -a`.
-- **Branch off the default branch.** If the run starts on the default
-  branch, create a topic branch first and say its name. Committing to an
-  existing topic branch is fine.
+- **Branch off a protected branch.** If the run starts on a protected
+  branch (see Protected branches), create `<type>/<topic>` before the
+  first commit and say its name. The name is fixed when the run-mode
+  question is asked, so `auto-pr` can check it on the remote. Committing
+  to an existing topic branch is fine.
+
+## Protected branches
+
+The one definition other skills point to:
+
+- **Protected:** the repo's default branch, `main`, and `master`. Find
+  the default with
+  `gh repo view --json defaultBranchRef -q .defaultBranchRef.name`, or
+  `git symbolic-ref --short refs/remotes/origin/HEAD` without the
+  `origin/`. Other names, such as `dev`, are not protected.
+- **Check:** compare `git branch --show-current` with that set.
 
 ## What it never authorizes
 
