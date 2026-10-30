@@ -3,7 +3,7 @@ name: auto-pr
 description: "Opt-in Auto-PR run mode: commit each change as Auto-commit does, then push the branch to its upstream and open or update a draft PR after a clean finish. Also covers a one-off request to push and open a PR for finished work. Load when the user picks Auto-PR in the auto-commit run-mode question, when a plan's run-mode line says Auto-PR, or when the user says \"auto-PR\", \"open a PR when done\", \"open a PR\", \"create a PR\", or \"push and open a PR\". Depends on the auto-commit skill for the commit loop."
 ---
 
-# Auto-PR v1.6.0
+# Auto-PR v1.7.0
 
 ## What it adds to Auto-commit
 
@@ -27,11 +27,8 @@ request instead; it does not need `auto-commit`.
 Offer Auto-PR only when all of these pass. Otherwise hide the option and
 say in one line which check failed.
 
-- **Not the default branch.** The current branch is not the repo's default
-  branch (`gh repo view --json defaultBranchRef -q .defaultBranchRef.name`,
-  or `git symbolic-ref --short refs/remotes/origin/HEAD`).
 - **Has an upstream, or can create one.** One of the two paths below
-  passes.
+  passes. On a protected branch, see On a protected branch below.
 - **The remote is `gh`'s repo.** The upstream's remote (from `@{u}`, or
   `origin` when there is none) names the same host, owner and repo as
   `gh repo view --json url -q .url`. Compare `git remote get-url <remote>`
@@ -40,19 +37,20 @@ say in one line which check failed.
   fail this check; the one-line reason says so.
 - **The base exists.** The base (see Recording the choice) is on `origin`:
   `git ls-remote --exit-code --heads origin <base>` finds it, and it is
-  not the current branch.
+  not the branch the run commits to.
 - **`gh` is signed in.** `gh auth status` succeeds.
 
 **Existing upstream.**
 `git rev-parse --abbrev-ref --symbolic-full-name @{u}` succeeds, and the
-upstream is not the default branch either. A topic branch tracking
-`origin/main` fails this check.
+upstream is not a protected branch (see the `auto-commit` skill's
+Protected branches). A topic branch tracking `origin/main` fails this
+check.
 
-- **Fix for an upstream on the default branch.** A branch created from
-  `origin/<default>` without `--no-track` tracks it. Offer, in the
+- **Fix for an upstream on a protected branch.** A branch created from
+  `origin/<protected>` without `--no-track` tracks it. Offer, in the
   run-mode question, to run `git branch --unset-upstream` first, so the
   branch takes the no-upstream path below. Label it
-  `Auto-PR (unsets origin/<default> upstream, creates origin/<branch> at finish)`.
+  `Auto-PR (unsets origin/<protected> upstream, creates origin/<branch> at finish)`.
   Run it only when the user picks that option; never unset it silently.
 
 **No upstream.** `@{u}` does not resolve, and all of these pass. The first
@@ -70,6 +68,22 @@ On this path, the option label says what happens:
 path. So does a `worktree-<name>` branch from the built-in
 `EnterWorktree name=`, which branches from `origin/<default>` without
 tracking it.
+
+**On a protected branch.** Offer Auto-PR instead of hiding it: the run
+never commits there, so it always lands on a fresh topic branch with no
+upstream. Check the no-upstream path against that branch, not the
+current one:
+
+- **Which branch:** the worktree branch, when the same prompt offers a
+  worktree, else the `<type>/<topic>` name that `auto-commit` fixes for
+  its branch-off. One option covers both answers, since the worktree and
+  run-mode questions are answered at once, so check that each name the
+  answers could produce is free on the remote.
+- **The set:** the `auto-commit` skill's Protected branches.
+- **Label:** `Auto-PR (branches off <b>, creates origin/<branch> at finish)`,
+  with `<b>` the current branch and `<branch>` the one the run commits
+  to. If the user picks the worktree, the worktree branch is the one
+  recorded and pushed.
 
 **Ready PR.** When these checks pass, also run the PR lookup from step 3 of
 Finishing a run. If the branch's open PR is ready for review, offer two
@@ -240,8 +254,10 @@ nothing is merged or sent for review until the user does it.
   this one push and PR only. It does not start Auto-PR or Auto-commit, and
   is never saved or inferred.
 - **Preconditions:** run the Preconditions section. On a failure, say
-  which check failed and stop, with nothing pushed. For an upstream on the
-  default branch, ask before `git branch --unset-upstream`, as there.
+  which check failed and stop, with nothing pushed. For an upstream on a
+  protected branch, ask before `git branch --unset-upstream`, as there.
+- **On a protected branch,** stop: no run branches off, so On a protected
+  branch does not apply. Suggest a topic branch first.
 - **Uncommitted changes:** if `git status --short` shows any, say so in
   one line. Never commit them; a commit needs its own request. Ask whether
   to go on with the committed work only.

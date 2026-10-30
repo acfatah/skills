@@ -10,12 +10,16 @@ upstream and opens or updates a draft PR once the run finishes cleanly.
 
 - **Auto-commit plus one step.** Everything in `auto-commit` still applies:
   the question, the baseline, staging by path, checks, gaps and the report.
-- **Offered only when safe:** on a non-default branch that tracks a
-  non-default upstream, with `gh` signed in. A branch with no upstream
-  qualifies too, when the name is free on `origin`; the first push then
-  creates `origin/<branch>`. On both paths, the upstream's remote must be
-  the repo `gh` resolves to, and the PR base must exist on `origin`.
-  Otherwise the option is hidden and Claude says which check failed.
+- **Offered only when safe:** on a topic branch whose upstream is not a
+  protected branch (the default branch, `main`, `master`), with `gh`
+  signed in. A branch with no upstream qualifies too, when the name is
+  free on `origin`; the first push then creates `origin/<branch>`. On
+  both paths, the upstream's remote must be the repo `gh` resolves to,
+  and the PR base must exist on `origin`. Otherwise the option is hidden
+  and Claude says which check failed.
+- **Offered on a protected branch too.** The run never commits there: it
+  lands on a worktree branch or on auto-commit's `<type>/<topic>`
+  branch-off, and the label says `branches off <b>`.
 - **Records the upstream, base and summary file** in the plan's
   `> Run mode:` line, so a fresh session checks the same branch, targets
   the same base and updates the same `drafts/PR_SUMMARY-<task>.md`.
@@ -46,8 +50,8 @@ upstream and opens or updates a draft PR once the run finishes cleanly.
 
 - **You want to review the branch before anything goes public** → use
   Auto-commit, then push yourself.
-- **You are on the default branch** → the option is hidden; create a
-  topic branch first.
+- **A one-off "open a PR" on a protected branch** → Claude stops; create
+  a topic branch first. In a run, Auto-PR branches off for you.
 - **Pushes trigger expensive or risky CI, deploys or webhooks** → use
   Auto-commit; a draft PR still runs CI.
 - **A single small task** → nothing to batch; Claude skips the question.
@@ -138,7 +142,7 @@ Gotchas:
   finish, and undo does not delete it; that needs its own request.
 - **A name already taken on `origin` hides the option** for a branch with
   no upstream.
-- **A branch tracking the default branch** fails the upstream check.
+- **A branch tracking a protected branch** fails the upstream check.
   Claude offers to unset that upstream in the run-mode question, so the
   first push creates `origin/<branch>`; it never unsets it on its own.
   Worktree branches from `git worktree add --no-track` or the built-in
