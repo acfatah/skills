@@ -26,13 +26,15 @@ split into phased plans and multi-session roadmaps.
   finish. Without `auto-pr`, the line runs as Auto-commit, or as Pause
   when `auto-commit` is missing too.
 - **Offers a worktree at plan approval,** in the same prompt as the
-  run-mode question. No worktree is the default. A worktree branches from
-  the current HEAD or from the repo's default branch on `origin` (falling
-  back to `dev`, `development`, `main`, `master`), under
-  `.claude/worktrees/`, and can carry uncommitted changes over by copy or
-  move. When the base matches `worktree.baseRef`, it uses Claude Code's
-  built-in `EnterWorktree name=`; otherwise `git worktree add`. The
-  choice is written into the plan, so it survives a context clear.
+  run-mode question. No worktree is the default, except on a protected
+  branch (the default branch, `main`, `master`), where a worktree comes
+  first, marked recommended. A worktree branches from the current HEAD
+  or from the repo's default branch on `origin` (falling back to `dev`,
+  `development`, `main`, `master`), under `.claude/worktrees/`, and can
+  carry uncommitted changes over by copy or move. When the base matches
+  `worktree.baseRef`, it uses Claude Code's built-in
+  `EnterWorktree name=`; otherwise `git worktree add`. The choice is
+  written into the plan, so it survives a context clear.
 - **Plans in the session that has the tools.** When a tool, such as an
   MCP server, loads only in a session started from another directory,
   it hands off a brief and a launch command instead of planning here.
@@ -108,7 +110,9 @@ ln -sfn "$PWD/skills/plans-and-roadmaps" ~/.claude/skills/plans-and-roadmaps
   for two or more distinct changes in a git repo, load that skill and ask
   the same question, in the same prompt as the auto-commit run-mode
   question. Two rules hold even without it: No worktree is the default,
-  and never exit or remove a worktree unless asked.
+  except on a protected branch (the default branch, `main`, `master`),
+  where a worktree is recommended first; and never exit or remove a
+  worktree unless asked.
   ```
 
 - **By name, always.** `/plans-and-roadmaps …` or "use the
