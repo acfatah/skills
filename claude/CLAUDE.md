@@ -40,10 +40,10 @@ Assume the reply renders in a terminal unless I say otherwise:
 
 - **Tables** for comparing 3 or more items on the same attributes, such
   as option tradeoffs. Keep to about 4 columns with short cells.
-- **Diagrams** for flows, sequences, hierarchies, or state changes. Draw
-  them as plain-text box-and-arrow art in a fenced code block, at most
-  80 columns wide. Stick to ASCII and box-drawing characters; emoji and
-  other wide characters break alignment.
+- **Diagrams** for flows, sequences, hierarchies, or state changes.
+  Before drawing one, load the `unicode-diagrams` skill. Two rules
+  hold even without it: draw it in a fenced code block at most 80
+  columns wide, and never use emoji or other wide characters.
 - **No Mermaid or images in chat**; the terminal shows Mermaid as raw
   code. Mermaid is fine in documents that GitHub renders.
 - **Skip the visual** when a short list says the same thing.
