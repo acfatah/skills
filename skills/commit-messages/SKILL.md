@@ -3,7 +3,7 @@ name: commit-messages
 description: "Conventional Commits 1.0.0 format for commit messages and PR titles: type, optional scope, lowercase description, body, footers, breaking changes, and the attribution trailer. Load before writing or suggesting a commit message, a plan's or phase's commit message, a squash commit message, or a PR title, and before `auto-commit` commits. An explicit repo convention wins."
 ---
 
-# Commit Messages v1.0.0
+# Commit Messages v1.0.1
 
 Write every suggested or committed message in the
 [Conventional Commits 1.0.0](https://www.conventionalcommits.org/en/v1.0.0/)
@@ -93,6 +93,8 @@ Co-Authored-By: Claude Opus 5.5 <noreply@anthropic.com>
   it does not show.
 - **The rationale goes here,** not in long multiline inline comments
   above the changed code.
+- **A diagram in the body is ASCII only;** see the `unicode-diagrams`
+  skill.
 
 ## Breaking changes
 

@@ -3,7 +3,7 @@ name: pr-summary
 description: Write or update a PR summary draft, `drafts/PR_SUMMARY-<task>.md`: a PR title, a comprehensive description for reviewers, and the attribution line. Load when the user asks to suggest a PR, write a PR summary or description, or when `auto-pr` writes its summary file. Not for pushing, or for opening or editing a PR on GitHub.
 ---
 
-# PR Summary v1.2.1
+# PR Summary v1.2.2
 
 Write a PR suggestion to a draft file the user reads and pastes, or that
 `auto-pr` sends as the PR body. This skill only writes the file; it never
@@ -71,6 +71,8 @@ talks to GitHub.
   or the repo says otherwise.
 - **No hard wrapping.** One line per paragraph or bullet: GitHub renders a
   single newline as a line break.
+- **A diagram** uses Tier 1 glyphs in a fenced code block, or Mermaid; see
+  the `unicode-diagrams` skill.
 
 ## Overrides
 

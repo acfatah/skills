@@ -1,0 +1,944 @@
+{
+  "description": "Glyph tiers for the unicode-diagrams skill. Each tier allows its own glyphs plus every lower tier's. The deny list only improves error messages: anything outside the allowed tiers is already an error.",
+  "tiers": {
+    "ascii": {
+      "summary": "Printable ASCII only: commit messages, log lines, code comments, and any terminal that is not UTF-8.",
+      "range": {
+        "from": "U+0020",
+        "to": "U+007E",
+        "name": "printable ASCII"
+      },
+      "connects": {
+        "|": "both",
+        "+": "both",
+        "^": "both",
+        "v": "both"
+      }
+    },
+    "tier1": {
+      "summary": "Always safe in a UTF-8 terminal: light, heavy and double lines, basic arrows, blocks and shapes.",
+      "glyphs": [
+        {
+          "glyph": "─",
+          "cp": "U+2500",
+          "name": "BOX DRAWINGS LIGHT HORIZONTAL",
+          "ascii": "-"
+        },
+        {
+          "glyph": "│",
+          "cp": "U+2502",
+          "name": "BOX DRAWINGS LIGHT VERTICAL",
+          "connects": "both",
+          "ascii": "|"
+        },
+        {
+          "glyph": "┌",
+          "cp": "U+250C",
+          "name": "BOX DRAWINGS LIGHT DOWN AND RIGHT",
+          "connects": "down",
+          "ascii": "+"
+        },
+        {
+          "glyph": "┐",
+          "cp": "U+2510",
+          "name": "BOX DRAWINGS LIGHT DOWN AND LEFT",
+          "connects": "down",
+          "ascii": "+"
+        },
+        {
+          "glyph": "└",
+          "cp": "U+2514",
+          "name": "BOX DRAWINGS LIGHT UP AND RIGHT",
+          "connects": "up",
+          "ascii": "+"
+        },
+        {
+          "glyph": "┘",
+          "cp": "U+2518",
+          "name": "BOX DRAWINGS LIGHT UP AND LEFT",
+          "connects": "up",
+          "ascii": "+"
+        },
+        {
+          "glyph": "├",
+          "cp": "U+251C",
+          "name": "BOX DRAWINGS LIGHT VERTICAL AND RIGHT",
+          "connects": "both",
+          "ascii": "+"
+        },
+        {
+          "glyph": "┤",
+          "cp": "U+2524",
+          "name": "BOX DRAWINGS LIGHT VERTICAL AND LEFT",
+          "connects": "both",
+          "ascii": "+"
+        },
+        {
+          "glyph": "┬",
+          "cp": "U+252C",
+          "name": "BOX DRAWINGS LIGHT DOWN AND HORIZONTAL",
+          "connects": "down",
+          "ascii": "+"
+        },
+        {
+          "glyph": "┴",
+          "cp": "U+2534",
+          "name": "BOX DRAWINGS LIGHT UP AND HORIZONTAL",
+          "connects": "up",
+          "ascii": "+"
+        },
+        {
+          "glyph": "┼",
+          "cp": "U+253C",
+          "name": "BOX DRAWINGS LIGHT VERTICAL AND HORIZONTAL",
+          "connects": "both",
+          "ascii": "+"
+        },
+        {
+          "glyph": "━",
+          "cp": "U+2501",
+          "name": "BOX DRAWINGS HEAVY HORIZONTAL",
+          "ascii": "-"
+        },
+        {
+          "glyph": "┃",
+          "cp": "U+2503",
+          "name": "BOX DRAWINGS HEAVY VERTICAL",
+          "connects": "both",
+          "ascii": "|"
+        },
+        {
+          "glyph": "┏",
+          "cp": "U+250F",
+          "name": "BOX DRAWINGS HEAVY DOWN AND RIGHT",
+          "connects": "down",
+          "ascii": "+"
+        },
+        {
+          "glyph": "┓",
+          "cp": "U+2513",
+          "name": "BOX DRAWINGS HEAVY DOWN AND LEFT",
+          "connects": "down",
+          "ascii": "+"
+        },
+        {
+          "glyph": "┗",
+          "cp": "U+2517",
+          "name": "BOX DRAWINGS HEAVY UP AND RIGHT",
+          "connects": "up",
+          "ascii": "+"
+        },
+        {
+          "glyph": "┛",
+          "cp": "U+251B",
+          "name": "BOX DRAWINGS HEAVY UP AND LEFT",
+          "connects": "up",
+          "ascii": "+"
+        },
+        {
+          "glyph": "┣",
+          "cp": "U+2523",
+          "name": "BOX DRAWINGS HEAVY VERTICAL AND RIGHT",
+          "connects": "both",
+          "ascii": "+"
+        },
+        {
+          "glyph": "┫",
+          "cp": "U+252B",
+          "name": "BOX DRAWINGS HEAVY VERTICAL AND LEFT",
+          "connects": "both",
+          "ascii": "+"
+        },
+        {
+          "glyph": "┳",
+          "cp": "U+2533",
+          "name": "BOX DRAWINGS HEAVY DOWN AND HORIZONTAL",
+          "connects": "down",
+          "ascii": "+"
+        },
+        {
+          "glyph": "┻",
+          "cp": "U+253B",
+          "name": "BOX DRAWINGS HEAVY UP AND HORIZONTAL",
+          "connects": "up",
+          "ascii": "+"
+        },
+        {
+          "glyph": "╋",
+          "cp": "U+254B",
+          "name": "BOX DRAWINGS HEAVY VERTICAL AND HORIZONTAL",
+          "connects": "both",
+          "ascii": "+"
+        },
+        {
+          "glyph": "═",
+          "cp": "U+2550",
+          "name": "BOX DRAWINGS DOUBLE HORIZONTAL",
+          "ascii": "="
+        },
+        {
+          "glyph": "║",
+          "cp": "U+2551",
+          "name": "BOX DRAWINGS DOUBLE VERTICAL",
+          "connects": "both",
+          "ascii": "|"
+        },
+        {
+          "glyph": "╔",
+          "cp": "U+2554",
+          "name": "BOX DRAWINGS DOUBLE DOWN AND RIGHT",
+          "connects": "down",
+          "ascii": "+"
+        },
+        {
+          "glyph": "╗",
+          "cp": "U+2557",
+          "name": "BOX DRAWINGS DOUBLE DOWN AND LEFT",
+          "connects": "down",
+          "ascii": "+"
+        },
+        {
+          "glyph": "╚",
+          "cp": "U+255A",
+          "name": "BOX DRAWINGS DOUBLE UP AND RIGHT",
+          "connects": "up",
+          "ascii": "+"
+        },
+        {
+          "glyph": "╝",
+          "cp": "U+255D",
+          "name": "BOX DRAWINGS DOUBLE UP AND LEFT",
+          "connects": "up",
+          "ascii": "+"
+        },
+        {
+          "glyph": "╠",
+          "cp": "U+2560",
+          "name": "BOX DRAWINGS DOUBLE VERTICAL AND RIGHT",
+          "connects": "both",
+          "ascii": "+"
+        },
+        {
+          "glyph": "╣",
+          "cp": "U+2563",
+          "name": "BOX DRAWINGS DOUBLE VERTICAL AND LEFT",
+          "connects": "both",
+          "ascii": "+"
+        },
+        {
+          "glyph": "╦",
+          "cp": "U+2566",
+          "name": "BOX DRAWINGS DOUBLE DOWN AND HORIZONTAL",
+          "connects": "down",
+          "ascii": "+"
+        },
+        {
+          "glyph": "╩",
+          "cp": "U+2569",
+          "name": "BOX DRAWINGS DOUBLE UP AND HORIZONTAL",
+          "connects": "up",
+          "ascii": "+"
+        },
+        {
+          "glyph": "╬",
+          "cp": "U+256C",
+          "name": "BOX DRAWINGS DOUBLE VERTICAL AND HORIZONTAL",
+          "connects": "both",
+          "ascii": "+"
+        },
+        {
+          "glyph": "┍",
+          "cp": "U+250D",
+          "name": "BOX DRAWINGS DOWN LIGHT AND RIGHT HEAVY",
+          "connects": "down",
+          "ascii": "+"
+        },
+        {
+          "glyph": "┎",
+          "cp": "U+250E",
+          "name": "BOX DRAWINGS DOWN HEAVY AND RIGHT LIGHT",
+          "connects": "down",
+          "ascii": "+"
+        },
+        {
+          "glyph": "┑",
+          "cp": "U+2511",
+          "name": "BOX DRAWINGS DOWN LIGHT AND LEFT HEAVY",
+          "connects": "down",
+          "ascii": "+"
+        },
+        {
+          "glyph": "┒",
+          "cp": "U+2512",
+          "name": "BOX DRAWINGS DOWN HEAVY AND LEFT LIGHT",
+          "connects": "down",
+          "ascii": "+"
+        },
+        {
+          "glyph": "┕",
+          "cp": "U+2515",
+          "name": "BOX DRAWINGS UP LIGHT AND RIGHT HEAVY",
+          "connects": "up",
+          "ascii": "+"
+        },
+        {
+          "glyph": "┖",
+          "cp": "U+2516",
+          "name": "BOX DRAWINGS UP HEAVY AND RIGHT LIGHT",
+          "connects": "up",
+          "ascii": "+"
+        },
+        {
+          "glyph": "┙",
+          "cp": "U+2519",
+          "name": "BOX DRAWINGS UP LIGHT AND LEFT HEAVY",
+          "connects": "up",
+          "ascii": "+"
+        },
+        {
+          "glyph": "┚",
+          "cp": "U+251A",
+          "name": "BOX DRAWINGS UP HEAVY AND LEFT LIGHT",
+          "connects": "up",
+          "ascii": "+"
+        },
+        {
+          "glyph": "┝",
+          "cp": "U+251D",
+          "name": "BOX DRAWINGS VERTICAL LIGHT AND RIGHT HEAVY",
+          "connects": "both",
+          "ascii": "+"
+        },
+        {
+          "glyph": "┠",
+          "cp": "U+2520",
+          "name": "BOX DRAWINGS VERTICAL HEAVY AND RIGHT LIGHT",
+          "connects": "both",
+          "ascii": "+"
+        },
+        {
+          "glyph": "┥",
+          "cp": "U+2525",
+          "name": "BOX DRAWINGS VERTICAL LIGHT AND LEFT HEAVY",
+          "connects": "both",
+          "ascii": "+"
+        },
+        {
+          "glyph": "┨",
+          "cp": "U+2528",
+          "name": "BOX DRAWINGS VERTICAL HEAVY AND LEFT LIGHT",
+          "connects": "both",
+          "ascii": "+"
+        },
+        {
+          "glyph": "┯",
+          "cp": "U+252F",
+          "name": "BOX DRAWINGS DOWN LIGHT AND HORIZONTAL HEAVY",
+          "connects": "down",
+          "ascii": "+"
+        },
+        {
+          "glyph": "┰",
+          "cp": "U+2530",
+          "name": "BOX DRAWINGS DOWN HEAVY AND HORIZONTAL LIGHT",
+          "connects": "down",
+          "ascii": "+"
+        },
+        {
+          "glyph": "┷",
+          "cp": "U+2537",
+          "name": "BOX DRAWINGS UP LIGHT AND HORIZONTAL HEAVY",
+          "connects": "up",
+          "ascii": "+"
+        },
+        {
+          "glyph": "┸",
+          "cp": "U+2538",
+          "name": "BOX DRAWINGS UP HEAVY AND HORIZONTAL LIGHT",
+          "connects": "up",
+          "ascii": "+"
+        },
+        {
+          "glyph": "┿",
+          "cp": "U+253F",
+          "name": "BOX DRAWINGS VERTICAL LIGHT AND HORIZONTAL HEAVY",
+          "connects": "both",
+          "ascii": "+"
+        },
+        {
+          "glyph": "╂",
+          "cp": "U+2542",
+          "name": "BOX DRAWINGS VERTICAL HEAVY AND HORIZONTAL LIGHT",
+          "connects": "both",
+          "ascii": "+"
+        },
+        {
+          "glyph": "╒",
+          "cp": "U+2552",
+          "name": "BOX DRAWINGS DOWN SINGLE AND RIGHT DOUBLE",
+          "connects": "down",
+          "ascii": "+"
+        },
+        {
+          "glyph": "╓",
+          "cp": "U+2553",
+          "name": "BOX DRAWINGS DOWN DOUBLE AND RIGHT SINGLE",
+          "connects": "down",
+          "ascii": "+"
+        },
+        {
+          "glyph": "╕",
+          "cp": "U+2555",
+          "name": "BOX DRAWINGS DOWN SINGLE AND LEFT DOUBLE",
+          "connects": "down",
+          "ascii": "+"
+        },
+        {
+          "glyph": "╖",
+          "cp": "U+2556",
+          "name": "BOX DRAWINGS DOWN DOUBLE AND LEFT SINGLE",
+          "connects": "down",
+          "ascii": "+"
+        },
+        {
+          "glyph": "╘",
+          "cp": "U+2558",
+          "name": "BOX DRAWINGS UP SINGLE AND RIGHT DOUBLE",
+          "connects": "up",
+          "ascii": "+"
+        },
+        {
+          "glyph": "╙",
+          "cp": "U+2559",
+          "name": "BOX DRAWINGS UP DOUBLE AND RIGHT SINGLE",
+          "connects": "up",
+          "ascii": "+"
+        },
+        {
+          "glyph": "╛",
+          "cp": "U+255B",
+          "name": "BOX DRAWINGS UP SINGLE AND LEFT DOUBLE",
+          "connects": "up",
+          "ascii": "+"
+        },
+        {
+          "glyph": "╜",
+          "cp": "U+255C",
+          "name": "BOX DRAWINGS UP DOUBLE AND LEFT SINGLE",
+          "connects": "up",
+          "ascii": "+"
+        },
+        {
+          "glyph": "╞",
+          "cp": "U+255E",
+          "name": "BOX DRAWINGS VERTICAL SINGLE AND RIGHT DOUBLE",
+          "connects": "both",
+          "ascii": "+"
+        },
+        {
+          "glyph": "╟",
+          "cp": "U+255F",
+          "name": "BOX DRAWINGS VERTICAL DOUBLE AND RIGHT SINGLE",
+          "connects": "both",
+          "ascii": "+"
+        },
+        {
+          "glyph": "╡",
+          "cp": "U+2561",
+          "name": "BOX DRAWINGS VERTICAL SINGLE AND LEFT DOUBLE",
+          "connects": "both",
+          "ascii": "+"
+        },
+        {
+          "glyph": "╢",
+          "cp": "U+2562",
+          "name": "BOX DRAWINGS VERTICAL DOUBLE AND LEFT SINGLE",
+          "connects": "both",
+          "ascii": "+"
+        },
+        {
+          "glyph": "╤",
+          "cp": "U+2564",
+          "name": "BOX DRAWINGS DOWN SINGLE AND HORIZONTAL DOUBLE",
+          "connects": "down",
+          "ascii": "+"
+        },
+        {
+          "glyph": "╥",
+          "cp": "U+2565",
+          "name": "BOX DRAWINGS DOWN DOUBLE AND HORIZONTAL SINGLE",
+          "connects": "down",
+          "ascii": "+"
+        },
+        {
+          "glyph": "╧",
+          "cp": "U+2567",
+          "name": "BOX DRAWINGS UP SINGLE AND HORIZONTAL DOUBLE",
+          "connects": "up",
+          "ascii": "+"
+        },
+        {
+          "glyph": "╨",
+          "cp": "U+2568",
+          "name": "BOX DRAWINGS UP DOUBLE AND HORIZONTAL SINGLE",
+          "connects": "up",
+          "ascii": "+"
+        },
+        {
+          "glyph": "╪",
+          "cp": "U+256A",
+          "name": "BOX DRAWINGS VERTICAL SINGLE AND HORIZONTAL DOUBLE",
+          "connects": "both",
+          "ascii": "+"
+        },
+        {
+          "glyph": "╫",
+          "cp": "U+256B",
+          "name": "BOX DRAWINGS VERTICAL DOUBLE AND HORIZONTAL SINGLE",
+          "connects": "both",
+          "ascii": "+"
+        },
+        {
+          "glyph": "←",
+          "cp": "U+2190",
+          "name": "LEFTWARDS ARROW",
+          "ascii": "<"
+        },
+        {
+          "glyph": "→",
+          "cp": "U+2192",
+          "name": "RIGHTWARDS ARROW",
+          "ascii": ">"
+        },
+        {
+          "glyph": "↑",
+          "cp": "U+2191",
+          "name": "UPWARDS ARROW",
+          "connects": "both",
+          "ascii": "^"
+        },
+        {
+          "glyph": "↓",
+          "cp": "U+2193",
+          "name": "DOWNWARDS ARROW",
+          "connects": "both",
+          "ascii": "v"
+        },
+        {
+          "glyph": "↔",
+          "cp": "U+2194",
+          "name": "LEFT RIGHT ARROW",
+          "ascii": "<->"
+        },
+        {
+          "glyph": "↕",
+          "cp": "U+2195",
+          "name": "UP DOWN ARROW",
+          "connects": "both",
+          "ascii": "|"
+        },
+        {
+          "glyph": "⇐",
+          "cp": "U+21D0",
+          "name": "LEFTWARDS DOUBLE ARROW",
+          "ascii": "<="
+        },
+        {
+          "glyph": "⇒",
+          "cp": "U+21D2",
+          "name": "RIGHTWARDS DOUBLE ARROW",
+          "ascii": "=>"
+        },
+        {
+          "glyph": "█",
+          "cp": "U+2588",
+          "name": "FULL BLOCK",
+          "ascii": "#"
+        },
+        {
+          "glyph": "▓",
+          "cp": "U+2593",
+          "name": "DARK SHADE",
+          "ascii": "#"
+        },
+        {
+          "glyph": "▒",
+          "cp": "U+2592",
+          "name": "MEDIUM SHADE",
+          "ascii": "="
+        },
+        {
+          "glyph": "░",
+          "cp": "U+2591",
+          "name": "LIGHT SHADE",
+          "ascii": "."
+        },
+        {
+          "glyph": "▏",
+          "cp": "U+258F",
+          "name": "LEFT ONE EIGHTH BLOCK"
+        },
+        {
+          "glyph": "▎",
+          "cp": "U+258E",
+          "name": "LEFT ONE QUARTER BLOCK"
+        },
+        {
+          "glyph": "▍",
+          "cp": "U+258D",
+          "name": "LEFT THREE EIGHTHS BLOCK"
+        },
+        {
+          "glyph": "▌",
+          "cp": "U+258C",
+          "name": "LEFT HALF BLOCK"
+        },
+        {
+          "glyph": "▋",
+          "cp": "U+258B",
+          "name": "LEFT FIVE EIGHTHS BLOCK"
+        },
+        {
+          "glyph": "▊",
+          "cp": "U+258A",
+          "name": "LEFT THREE QUARTERS BLOCK"
+        },
+        {
+          "glyph": "▉",
+          "cp": "U+2589",
+          "name": "LEFT SEVEN EIGHTHS BLOCK"
+        },
+        {
+          "glyph": "●",
+          "cp": "U+25CF",
+          "name": "BLACK CIRCLE",
+          "ascii": "*"
+        },
+        {
+          "glyph": "○",
+          "cp": "U+25CB",
+          "name": "WHITE CIRCLE",
+          "ascii": "o"
+        },
+        {
+          "glyph": "■",
+          "cp": "U+25A0",
+          "name": "BLACK SQUARE",
+          "ascii": "#"
+        },
+        {
+          "glyph": "□",
+          "cp": "U+25A1",
+          "name": "WHITE SQUARE",
+          "ascii": "[]"
+        },
+        {
+          "glyph": "◆",
+          "cp": "U+25C6",
+          "name": "BLACK DIAMOND",
+          "ascii": "<>"
+        },
+        {
+          "glyph": "◇",
+          "cp": "U+25C7",
+          "name": "WHITE DIAMOND",
+          "ascii": "<>"
+        },
+        {
+          "glyph": "▲",
+          "cp": "U+25B2",
+          "name": "BLACK UP-POINTING TRIANGLE",
+          "connects": "both",
+          "ascii": "^"
+        },
+        {
+          "glyph": "▼",
+          "cp": "U+25BC",
+          "name": "BLACK DOWN-POINTING TRIANGLE",
+          "connects": "both",
+          "ascii": "v"
+        },
+        {
+          "glyph": "▶",
+          "cp": "U+25B6",
+          "name": "BLACK RIGHT-POINTING TRIANGLE",
+          "ascii": ">"
+        },
+        {
+          "glyph": "◀",
+          "cp": "U+25C0",
+          "name": "BLACK LEFT-POINTING TRIANGLE",
+          "ascii": "<"
+        },
+        {
+          "glyph": "·",
+          "cp": "U+00B7",
+          "name": "MIDDLE DOT",
+          "ascii": "."
+        },
+        {
+          "glyph": "◐",
+          "cp": "U+25D0",
+          "name": "CIRCLE WITH LEFT HALF BLACK",
+          "ascii": "[~]"
+        }
+      ]
+    },
+    "tier2": {
+      "summary": "Modern terminals only: rounded corners, dashed lines, check and cross marks.",
+      "glyphs": [
+        {
+          "glyph": "╭",
+          "cp": "U+256D",
+          "name": "BOX DRAWINGS LIGHT ARC DOWN AND RIGHT",
+          "connects": "down",
+          "tier1": "┌",
+          "ascii": "+"
+        },
+        {
+          "glyph": "╮",
+          "cp": "U+256E",
+          "name": "BOX DRAWINGS LIGHT ARC DOWN AND LEFT",
+          "connects": "down",
+          "tier1": "┐",
+          "ascii": "+"
+        },
+        {
+          "glyph": "╰",
+          "cp": "U+2570",
+          "name": "BOX DRAWINGS LIGHT ARC UP AND RIGHT",
+          "connects": "up",
+          "tier1": "└",
+          "ascii": "+"
+        },
+        {
+          "glyph": "╯",
+          "cp": "U+256F",
+          "name": "BOX DRAWINGS LIGHT ARC UP AND LEFT",
+          "connects": "up",
+          "tier1": "┘",
+          "ascii": "+"
+        },
+        {
+          "glyph": "┄",
+          "cp": "U+2504",
+          "name": "BOX DRAWINGS LIGHT TRIPLE DASH HORIZONTAL",
+          "tier1": "─",
+          "ascii": "-"
+        },
+        {
+          "glyph": "┅",
+          "cp": "U+2505",
+          "name": "BOX DRAWINGS HEAVY TRIPLE DASH HORIZONTAL",
+          "tier1": "━",
+          "ascii": "-"
+        },
+        {
+          "glyph": "┆",
+          "cp": "U+2506",
+          "name": "BOX DRAWINGS LIGHT TRIPLE DASH VERTICAL",
+          "connects": "both",
+          "tier1": "│",
+          "ascii": "|"
+        },
+        {
+          "glyph": "┇",
+          "cp": "U+2507",
+          "name": "BOX DRAWINGS HEAVY TRIPLE DASH VERTICAL",
+          "connects": "both",
+          "tier1": "┃",
+          "ascii": "|"
+        },
+        {
+          "glyph": "┈",
+          "cp": "U+2508",
+          "name": "BOX DRAWINGS LIGHT QUADRUPLE DASH HORIZONTAL",
+          "connects": "up",
+          "tier1": "─",
+          "ascii": "+"
+        },
+        {
+          "glyph": "┉",
+          "cp": "U+2509",
+          "name": "BOX DRAWINGS HEAVY QUADRUPLE DASH HORIZONTAL",
+          "connects": "up",
+          "tier1": "━",
+          "ascii": "+"
+        },
+        {
+          "glyph": "┊",
+          "cp": "U+250A",
+          "name": "BOX DRAWINGS LIGHT QUADRUPLE DASH VERTICAL",
+          "connects": "both",
+          "tier1": "│",
+          "ascii": "|"
+        },
+        {
+          "glyph": "┋",
+          "cp": "U+250B",
+          "name": "BOX DRAWINGS HEAVY QUADRUPLE DASH VERTICAL",
+          "connects": "both",
+          "tier1": "┃",
+          "ascii": "|"
+        },
+        {
+          "glyph": "✓",
+          "cp": "U+2713",
+          "name": "CHECK MARK",
+          "ascii": "[x]"
+        },
+        {
+          "glyph": "✗",
+          "cp": "U+2717",
+          "name": "BALLOT X",
+          "ascii": "[!]"
+        }
+      ]
+    }
+  },
+  "deny": [
+    {
+      "glyph": "✅",
+      "cp": "U+2705",
+      "name": "WHITE HEAVY CHECK MARK",
+      "use": {
+        "tier2": "✓",
+        "ascii": "[x]"
+      }
+    },
+    {
+      "glyph": "✔",
+      "cp": "U+2714",
+      "name": "HEAVY CHECK MARK",
+      "use": {
+        "tier2": "✓",
+        "ascii": "[x]"
+      }
+    },
+    {
+      "glyph": "☑",
+      "cp": "U+2611",
+      "name": "BALLOT BOX WITH CHECK",
+      "use": {
+        "tier2": "✓",
+        "ascii": "[x]"
+      }
+    },
+    {
+      "glyph": "❌",
+      "cp": "U+274C",
+      "name": "CROSS MARK",
+      "use": {
+        "tier2": "✗",
+        "ascii": "[!]"
+      }
+    },
+    {
+      "glyph": "✖",
+      "cp": "U+2716",
+      "name": "HEAVY MULTIPLICATION X",
+      "use": {
+        "tier2": "✗",
+        "ascii": "[!]"
+      }
+    },
+    {
+      "glyph": "⭐",
+      "cp": "U+2B50",
+      "name": "WHITE MEDIUM STAR",
+      "use": {
+        "tier1": "◆",
+        "ascii": "*"
+      }
+    },
+    {
+      "glyph": "★",
+      "cp": "U+2605",
+      "name": "BLACK STAR",
+      "use": {
+        "tier1": "◆",
+        "ascii": "*"
+      }
+    },
+    {
+      "glyph": "⚠",
+      "cp": "U+26A0",
+      "name": "WARNING SIGN",
+      "use": {
+        "tier1": "▲",
+        "ascii": "!"
+      }
+    },
+    {
+      "glyph": "➡",
+      "cp": "U+27A1",
+      "name": "BLACK RIGHTWARDS ARROW",
+      "use": {
+        "tier1": "→",
+        "ascii": ">"
+      }
+    },
+    {
+      "glyph": "⬅",
+      "cp": "U+2B05",
+      "name": "LEFTWARDS BLACK ARROW",
+      "use": {
+        "tier1": "←",
+        "ascii": "<"
+      }
+    },
+    {
+      "glyph": "⬆",
+      "cp": "U+2B06",
+      "name": "UPWARDS BLACK ARROW",
+      "use": {
+        "tier1": "↑",
+        "ascii": "^"
+      }
+    },
+    {
+      "glyph": "⬇",
+      "cp": "U+2B07",
+      "name": "DOWNWARDS BLACK ARROW",
+      "use": {
+        "tier1": "↓",
+        "ascii": "v"
+      }
+    },
+    {
+      "glyph": "🔴",
+      "cp": "U+1F534",
+      "name": "LARGE RED CIRCLE",
+      "use": {
+        "tier1": "●",
+        "ascii": "*"
+      }
+    },
+    {
+      "glyph": "🟢",
+      "cp": "U+1F7E2",
+      "name": "LARGE GREEN CIRCLE",
+      "use": {
+        "tier1": "●",
+        "ascii": "*"
+      }
+    },
+    {
+      "glyph": "️",
+      "cp": "U+FE0F",
+      "name": "VARIATION SELECTOR-16",
+      "use": {
+        "tier1": "",
+        "ascii": ""
+      }
+    },
+    {
+      "glyph": "\t",
+      "cp": "U+0009",
+      "name": "CHARACTER TABULATION",
+      "use": {
+        "ascii": "spaces"
+      }
+    }
+  ]
+}
