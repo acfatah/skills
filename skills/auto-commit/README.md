@@ -19,6 +19,9 @@ that removes those round trips.
   it lists them and asks: commit them first, stash them, or continue.
 - **In Auto-commit, commits** each finished change with its suggested
   message, staging only the files that change touched, on a topic branch.
+- **Branches off a protected branch.** On the default branch, `main` or
+  `master`, it creates `<type>/<topic>` before the first commit. Other
+  branches, such as `dev`, stay committable.
 - **Checks each message before committing.** It must follow the
   [`commit-messages`](../commit-messages) skill or your repo's explicit
   convention, and Claude fixes it if not. When the repo configures

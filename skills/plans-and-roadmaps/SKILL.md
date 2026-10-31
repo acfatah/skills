@@ -3,7 +3,7 @@ name: plans-and-roadmaps
 description: "Rules for plan documents and roadmaps: where plan files live, whether a plan runs in a worktree, which session a plan is written in, progress stamps, state directories, phased plans, multi-session roadmaps. Load before writing, executing, stamping, or moving a plan: the plan-mode file, any .md under .claude/plans/, or a PLAN*.md / TODO.md being executed. Also load to resume a paused or shelved plan, or to list plans by state."
 ---
 
-# Plans and Roadmaps v1.16.0
+# Plans and Roadmaps v1.17.0
 
 These rules apply to the plan-mode plan file, any `.md` under a
 `.claude/plans/` directory, and any `PLAN*.md` or `TODO.md` you are executing
@@ -106,12 +106,22 @@ worktree or in the current checkout.
 **The question.** Ask in the same AskUserQuestion call as the `auto-commit`
 run-mode question, never as a second prompt. Offer:
 
-- **No worktree** (default): run in the current checkout. Always first,
-  except in a background fork, which leaves it out (see Background forks).
+- **No worktree** (default): run in the current checkout. First, with two
+  exceptions: on a protected branch it comes last, and a background fork
+  leaves it out (see Background forks).
 - **Worktree from HEAD:** a new branch at `.claude/worktrees/<topic>`,
   based on the current local HEAD.
 - **Worktree from origin/<base>:** the same path, based on the detected
   remote base branch, e.g. "Worktree from origin/main".
+
+**On a protected branch** (the `auto-commit` skill's Protected branches:
+the default branch, `main`, `master`), recommend a worktree instead:
+
+- **First:** the worktree option that `worktree.baseRef` puts first,
+  labelled "(Recommended)".
+- **Last:** No worktree, without the default mark.
+- **Elsewhere,** such as on `dev` or a topic branch, the order above
+  stands.
 
 Show the real base, branch and path in each option. The branch is
 `worktree-<topic>` when the option uses the built-in tool, else

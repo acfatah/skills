@@ -4,7 +4,7 @@ description: "Handle the review comments on a GitHub pull request, via `gh`: fet
 allowed-tools: Bash(bun ${CLAUDE_SKILL_DIR}/scripts/fetch-threads.ts *)
 ---
 
-# Handle PR Comments v1.0.0
+# Handle PR Comments v1.0.1
 
 After a PR is opened, its review comments arrive from `/code-review
 --comment`, from bots, and from people. This skill works through them in
@@ -57,10 +57,10 @@ PR's head branch `<head>`:
      add`): give the commands for the user to run with `!`, and stop.
 
 **Protected-branch guard.** Before every commit, check
-`git branch --show-current`. Never commit when it is the repo's default
-branch (`gh repo view --json defaultBranchRef -q .defaultBranchRef.name`),
-`main` or `master`. A branch such as `dev` is not protected. If the guard
-trips, stop: the steps above went wrong.
+`git branch --show-current`. Never commit when it is a protected branch
+(the repo's default branch, `main` or `master`; see the `auto-commit`
+skill's Protected branches). If the guard trips, stop: the steps above
+went wrong.
 
 ## Fetch
 
