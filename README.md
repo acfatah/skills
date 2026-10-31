@@ -37,6 +37,7 @@ problem‑solving.
 | [pr-summary](skills/pr-summary) | Write or update a PR suggestion in `drafts/PR_SUMMARY-<task>.md`: a title, a comprehensive description for reviewers of every commit on the branch, and the attribution line, in an untracked file. Never pushes or runs `gh`; auto-pr opens the PR, in its run mode or on request, and uses it for the PR body. |
 | [readme-badges](skills/readme-badges) | Add, audit, or repair a README's badge block: shields.io and qlty badges in one HTML format, each verified before writing. |
 | [session-sync](skills/session-sync) | Keep several Claude sessions on one branch or PR in sync: forks on sub-branches, a shared sessions file, a sync step before acting, and a repo-checked recap after a break. |
+| [unicode-diagrams](skills/unicode-diagrams) | One design system for text diagrams in chat: ASCII, Tier 1 and Tier 2 glyph sets picked from the output target and terminal, fixed meanings for line styles and status glyphs, templates with ASCII twins, and a bundled Bun checker for unsafe glyphs, lines over 80 columns and broken box edges. |
 | [windows-screenshots](skills/windows-screenshots) | Locate, list, and read Windows screenshots (Win+PrtScn, Snipping Tool) from WSL or native Windows shells. |
 
 Each skill loads when your request matches its description, and naming
@@ -78,7 +79,7 @@ Other software, by skill:
 | Software | Needed by | Notes |
 |---|---|---|
 | [git](https://git-scm.com) | auto-commit, auto-pr, handle-pr-comments, plans-and-roadmaps, post-merge-cleanup, pr-summary, session-sync, readme-badges, webapp-security-audit | |
-| [Bun](https://bun.sh) | handle-pr-comments, issue-tracker, lint-skills | Runs each one's bundled script; the skill stops without it |
+| [Bun](https://bun.sh) | handle-pr-comments, issue-tracker, lint-skills, unicode-diagrams | Runs each one's bundled script; the skill stops without it, except unicode-diagrams, which draws unchecked |
 | [GitHub CLI (`gh`)](https://cli.github.com), logged in | auto-pr, handle-pr-comments, post-merge-cleanup, issue-tracker (promotion) | Check with `gh auth status`. readme-badges and plans-and-roadmaps use it when present |
 | GitHub account | auto-pr, handle-pr-comments, post-merge-cleanup, issue-tracker (promotion) | For PRs, remote branches and GitHub Issues |
 | [`jq`](https://jqlang.org) | status line | plans-and-roadmaps falls back to reading files without it |
