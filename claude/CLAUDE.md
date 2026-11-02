@@ -7,6 +7,10 @@ paragraphs are hard to follow. Optimize for scanning, not just brevity:
 - Short chunks: paragraphs of 1–3 sentences; prefer bullets and
   headings over prose.
 - Bold the key word or action in a bullet, so skimming works.
+- Mark headings so they stand apart from paragraphs: start every
+  heading's text with `█ ` (top level) or `▌ ` (subsection), as in
+  `## █ Next step`, with a blank line before and after it. This applies
+  to chat replies only; documents keep plain `#` headings.
 - Plain, complete sentences. No cryptic shorthand or dropped words
   that make me decode.
 - Cut filler, recaps, and restating my question.
