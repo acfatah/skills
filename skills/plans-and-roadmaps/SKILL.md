@@ -3,7 +3,7 @@ name: plans-and-roadmaps
 description: "Rules for plan documents and roadmaps: where plan files live, whether a plan runs in a worktree, which session a plan is written in, progress stamps, state directories, phased plans, multi-session roadmaps. Load before writing, executing, stamping, or moving a plan: the plan-mode file, any .md under .claude/plans/, or a PLAN*.md / TODO.md being executed. Also load to resume a paused or shelved plan, or to list plans by state."
 ---
 
-# Plans and Roadmaps v1.18.0
+# Plans and Roadmaps v1.19.0
 
 These rules apply to the plan-mode plan file, any `.md` under a
 `.claude/plans/` directory, and any `PLAN*.md` or `TODO.md` you are executing
@@ -704,9 +704,10 @@ A plan with phases gets one commit per phase:
     ### Phase 1 commit message
     ### Phase 1 outcome
 
-- **Under review.** The user wants to revisit one commit per phase and
-  leans toward running independent steps as parallel subagents; see
-  issue 0070. Until that is decided, the rule below stands.
+- **A phase is one logical change.** Keep commits small by sizing phases,
+  not by splitting a phase's commit: if a phase's commit body would list
+  unrelated changes, make them separate phases. Independent changes that
+  can run side by side form a wave phase instead (see Wave phases).
 - Headings: `## Phase N`, with `### Step N.M` under it. Stamp each step on
   completion. Stamp the phase heading only when all its steps are stamped.
 - Each phase ends with its own `### Phase N commit message`. That replaces
@@ -770,6 +771,80 @@ Handle these cases:
   and conversation refer to the numbers. Insert a new phase as `Phase 2a`.
   Keep a dropped phase and strike it through:
   `## ~~Phase 3. ...~~ (dropped: <reason>)`.
+
+## Wave phases
+
+A wave phase runs its steps in parallel, one subagent per step, and
+commits each step on its own. Use it for independent changes, such as one
+fix applied to several skill folders.
+
+    ## Phase 2. Add trigger phrases (wave)
+    > Wave: parallel subagents only under Auto-commit or Auto-PR; one commit per step. See plans-and-roadmaps, Wave phases.
+    ### Step 2.1 auto-pr triggers
+    Files: skills/auto-pr/
+    Shared: root README row for auto-pr
+    #### Step 2.1 commit message
+    ### Step 2.2 session-sync triggers
+    ...
+    ### Phase 2 outcome
+
+**Writing one.** Mark a phase `(wave)` only when every step:
+
+- **Depends on no other step** in the phase. Dependent work goes in the
+  next phase.
+- **Owns its files.** List them on a `Files:` line; no two steps share a
+  file.
+- **Leaves shared files to the main agent.** Root README rows, index
+  tables, changelogs and lockfiles go on a `Shared:` line, never in
+  `Files:`.
+- **Can be checked alone** with the repo's tests or lint.
+- **Has no open questions.** Ask them before approval.
+
+A wave holds 3 to 5 substantial steps. Two small steps run faster in
+order; split more than five into two wave phases. Each step gets its own
+`#### Step N.M commit message`, which replaces the phase's message. The
+phase still gets one outcome, and still stops at its boundary in Pause.
+The `> Wave:` line under the heading keeps the rule with the plan after
+a context clear.
+
+**Running one** under Auto-commit or Auto-PR, from the main agent:
+
+1. **Start clean.** The tree must match the run's baseline, so the wave
+   builds on the committed previous phase. Record `HEAD` as the wave base.
+2. **Create one worktree per step** yourself, under `.claude/worktrees/`:
+   `git worktree add -b wave/<slug>-<N.M> <main>/.claude/worktrees/<slug>-<N.M> <wave base>`.
+   Do not use the Agent tool's `isolation: "worktree"`; its base may not
+   be `HEAD`.
+3. **Launch the subagents in one message,** with the Agent tool, not the
+   Workflow tool. A plan's `(wave)` mark plus its Auto-commit or Auto-PR
+   run mode is the opt-in. Brief each one with its step, its worktree
+   path, its `Files:` line, the shared files it must not touch, and the
+   checks to run. It commits its work on its step branch, which is never
+   pushed.
+4. **Wait for all of them.** That is the barrier.
+5. **Commit the steps in step order.** For each finished step:
+   - **Check its files** with `git diff --name-only <wave base> wave/<slug>-<N.M>`.
+     A file outside its `Files:` line is a hard gap.
+   - **Bring it in** with `git merge --squash wave/<slug>-<N.M>`. A
+     conflict is a hard gap: `git merge --abort` and stop.
+   - **Add its shared-file edits,** run the checks, and commit with the
+     step's message, following `auto-commit`'s Before each commit.
+   - **Stamp the step.**
+6. **Write the phase outcome** once, listing each step's commit.
+
+Handle these cases:
+
+- **A step fails or blocks.** Mark it `⛔` as in Blocked steps, keep its
+  worktree for inspection, and still commit the steps that finished;
+  their edits never touched the main tree. Then stop after the phase,
+  since later phases may depend on the blocked step.
+- **Pause, or no `auto-commit` skill.** Run the steps in order in the
+  main tree, with no subagents. At the phase boundary, show each step's
+  message with its files, so the user can commit them one by one.
+- **Leftover worktrees.** Never remove the step worktrees or branches
+  unless asked. List them in the stop or finish report. Squash merges
+  leave the branches looking unmerged, so removing one takes
+  `git worktree remove` and `git branch -D`, on request.
 
 ## Roadmap plans
 

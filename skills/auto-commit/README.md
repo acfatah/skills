@@ -26,6 +26,10 @@ that removes those round trips.
   [`commit-messages`](../commit-messages) skill or your repo's explicit
   convention, and Claude fixes it if not. When the repo configures
   commitlint and has it installed locally, Claude runs that too.
+- **Commits wave phases per step.** In a plan's wave phase (see
+  [`plans-and-roadmaps`](../plans-and-roadmaps)), it runs one subagent
+  per step in its own worktree and commits each step separately. The
+  worktrees stay until you ask to remove them.
 - **Never pushes by itself,** amends, forces, rebases, or skips hooks.
   Pushing and draft PRs come only with Auto-PR, via `auto-pr`.
 - **Sorts gaps** into soft (default chosen and recorded), hard (task parked,
