@@ -76,9 +76,11 @@ runs without a permission prompt in the turn that loads it.
 
 ### How it loads
 
-- **By description match.** Claude loads it before drawing a diagram,
-  flowchart, sequence diagram, tree, state machine, timeline or text bar
-  chart in chat, or in a markdown document when you ask for one there.
+- **By description match.** Claude loads it before drawing any text
+  diagram in chat, however small, including one inside a longer answer:
+  a flowchart, sequence diagram, tree, state machine, timeline or text
+  bar chart. It also loads for a markdown document when you ask for a
+  text diagram there.
 - **By name, always.** `/unicode-diagrams …` or "use the unicode-diagrams
   skill".
 - **For every diagram, add a `CLAUDE.md` pointer.** A request that only

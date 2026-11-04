@@ -1,10 +1,10 @@
 ---
 name: unicode-diagrams
-description: One design system for text diagrams - glyph tiers (ASCII, Tier 1, Tier 2) picked from the output target and terminal, fixed meanings for line styles and status glyphs, templates, and a bundled Bun checker for unsafe glyphs, lines over 80 columns and broken box edges. Load before drawing a diagram, flowchart, sequence diagram, tree, state machine, timeline or text bar chart in chat, or in a markdown document when the user asks for one there.
+description: One design system for text diagrams - glyph tiers (ASCII, Tier 1, Tier 2) picked from the output target and terminal, fixed meanings for line styles and status glyphs, templates, and a bundled Bun checker for unsafe glyphs, lines over 80 columns and broken box edges. Load before drawing any text diagram in chat, however small, including one inside a longer answer: a flowchart, sequence diagram, tree, state machine, timeline or text bar chart. Also load it for a markdown document when the user asks for a text diagram there.
 allowed-tools: Bash(bun ${CLAUDE_SKILL_DIR}/scripts/check.ts *)
 ---
 
-# Unicode Diagrams v1.0.0
+# Unicode Diagrams v1.0.1
 
 Draw every text diagram with the same small set of glyphs and the same
 meanings, then check it with the bundled script before sending it. The
