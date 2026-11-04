@@ -3,7 +3,7 @@ name: session-sync
 description: "Keep several Claude sessions on one branch or PR in sync, and recap from the repo, not the transcript, after a break: forks on sub-branches, a shared sessions file, and a sync step before acting. Load when forking a session, starting a second session on the same branch or PR, resuming after a break, merging a fork back, or when the user says \"sync\", \"catch up\", \"what changed\", \"outline progress\", or \"merge the fork back\"."
 ---
 
-# Session Sync v1.1.1
+# Session Sync v1.2.0
 
 A session's context is private and goes stale as soon as another session,
 or the user, changes the repo. Do not sync memories, which load only at
@@ -53,6 +53,10 @@ every repo, so this path stays light: **no questions, no files**.
    checks were not run.
 3. **Recap** in this shape, from the checked state, not from memory:
    - **Goal:** what we are working toward, in one line.
+   - **Plan:** only when a plan exists, one line counted from its
+     headings: stamped `✅`, blocked `⛔`, and still open, then the first
+     open step. For example: "Plan: 7 of 12 steps done, 1 blocked;
+     next: Step 2.3 Route callers". Read the latest phase outcome too.
    - **Done:** finished items, verified against the current state.
    - **In progress:** partial or uncommitted work, with paths.
    - **Drift:** anything that changed since the session last looked, or

@@ -10,7 +10,11 @@ split into phased plans and multi-session roadmaps.
 - **Leaves the plan-mode file** where plan mode puts it and symlinks it
   into the target repo under a meaningful name, never over an existing
   file. Links work the same wherever `plansDirectory` puts the file.
-- **Stamps finished steps** with a real timestamp from `date`.
+- **Stamps finished steps** with a real timestamp from `date`, and marks
+  a step that waits on your answer with `⛔ … Blocked: <question>`.
+- **Writes a phase outcome** after each phase of a phased plan: what
+  changed, deviations and new decisions, so a later session can resume
+  without the old chat.
 - **Marks state by directory:** `completed/`, `paused/`, `superseded/`,
   `archived/`. A plan leaving the top level becomes a real copy, so
   Claude Code's cleanup of `~/.claude/plans/` cannot break it.

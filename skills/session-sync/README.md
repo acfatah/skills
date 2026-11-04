@@ -11,8 +11,9 @@ a break gets only a recap, checked against the repo.
 
 - **Recaps from the repo, not the transcript.** On "outline progress" or
   "catch up", it checks `git status`, recent commits, the upstream, the
-  plan and the tests first. The recap has a fixed shape: Goal, Done, In
-  progress, Drift, Waiting on me, Next step.
+  plan and the tests first. The recap has a fixed shape: Goal, Plan
+  (steps done, blocked and next, when a plan exists), Done, In progress,
+  Drift, Waiting on me, Next step.
 - **Stays light for one session:** no questions and no files, unless you
   stop with no plan to resume from; then it offers a one-row handoff file.
 - **Keeps a sessions file** at `<main>/.claude/sessions/<topic>.md` in the

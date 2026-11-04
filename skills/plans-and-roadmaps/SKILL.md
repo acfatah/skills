@@ -3,7 +3,7 @@ name: plans-and-roadmaps
 description: "Rules for plan documents and roadmaps: where plan files live, whether a plan runs in a worktree, which session a plan is written in, progress stamps, state directories, phased plans, multi-session roadmaps. Load before writing, executing, stamping, or moving a plan: the plan-mode file, any .md under .claude/plans/, or a PLAN*.md / TODO.md being executed. Also load to resume a paused or shelved plan, or to list plans by state."
 ---
 
-# Plans and Roadmaps v1.17.0
+# Plans and Roadmaps v1.18.0
 
 These rules apply to the plan-mode plan file, any `.md` under a
 `.claude/plans/` directory, and any `PLAN*.md` or `TODO.md` you are executing
@@ -538,6 +538,30 @@ completion stamp to that step's heading:
   its stamps over the conversation. A `/branch` or another session may
   have advanced it; skip a step it already stamps.
 
+### Blocked steps
+
+A step that cannot go on until a question is answered gets a blocked
+mark, in Pause and Auto-commit alike. Put `⛔` where `✅` would go, and the
+question after the title, with the time from `date`:
+
+    ## ⛔ Step 3. Wire up the loader — Blocked: which API key? (2026-11-04 10:12)
+    ### ⛔ Step 4. Add tests — Blocked by Step 3
+    - [ ] ⛔ Item — Blocked: which API key? (2026-11-04 10:12)
+
+- **Keep the word.** `Blocked:` and `Blocked by` stay next to the glyph,
+  so `grep -n Blocked` finds every blocked step.
+- **Dependents** get `Blocked by <step>`, with no time; they wait on the
+  step, not on a question.
+- **Blocked is not in progress.** It marks a step that needs the user;
+  the ban on ⏳ / 🚧 markers still holds.
+- **On unblock,** remove the `⛔` and the `— Blocked…` part, and add the
+  answer to the step's body when later steps rely on it. Stamp `✅` on
+  completion as usual.
+- **Whether to go on** is the `auto-commit` skill's Gaps rule in
+  Auto-commit runs; in Pause, stop and ask.
+- **Stopping with blocked steps** leaves the plan at the top level; it is
+  not complete.
+
 ## Plan states
 
 State directories are siblings of the plan, inside the directory it
@@ -678,12 +702,24 @@ A plan with phases gets one commit per phase:
     ### ✅ Step 1.1 Add Loader type (2026-09-26 10:02)
     ### Step 1.2 Route callers through it
     ### Phase 1 commit message
+    ### Phase 1 outcome
 
+- **Under review.** The user wants to revisit one commit per phase and
+  leans toward running independent steps as parallel subagents; see
+  issue 0070. Until that is decided, the rule below stands.
 - Headings: `## Phase N`, with `### Step N.M` under it. Stamp each step on
   completion. Stamp the phase heading only when all its steps are stamped.
 - Each phase ends with its own `### Phase N commit message`. That replaces
   the single message at the end of the plan.
-- Stop at every phase boundary. Show the phase's commit message and wait.
+- **Phase outcome.** When a phase finishes, write `### Phase N outcome`
+  after its commit message: what actually changed (`git diff --stat`),
+  deviations from the plan, surprises, and new decisions, in a few
+  bullets. A session that resumes after a context clear reads it instead
+  of the lost chat. Write `None.` for a phase that went as planned. A
+  `(no separate commit)` phase shares the next phase's outcome. Roadmaps
+  write the outcome in `roadmap.md` instead (see Roadmap plans).
+- Stop at every phase boundary, after writing the outcome. Show the
+  phase's commit message and wait.
   Do not start the next phase until the user says so.
 - **Auto-commit run mode.** When the plan carries
   `> Run mode: Auto-commit` under its title, commit the phase with its
@@ -703,7 +739,7 @@ A plan with phases gets one commit per phase:
   carries this line under its title, with the real plan-mode path (a
   roadmap and its phase plans use their own lines; see Roadmap plans):
 
-      > Phased plan: stop after each phase, show its commit message, and wait. Plan file: ~/.claude/plans/<slug>.md
+      > Phased plan: stop after each phase, write its outcome, show its commit message, and wait. Plan file: ~/.claude/plans/<slug>.md
 
   The line stays true for the plan's whole life; never remove it. The
   run-mode line and the `> Worktree:` line (see Worktrees) follow it, in
