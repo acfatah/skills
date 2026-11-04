@@ -3,7 +3,7 @@ name: auto-commit
 description: "Opt-in Auto-commit mode: ask once, then commit each finished logical change with its suggested message and continue, stopping on gaps or failures. Load before approving or executing a plan, before a phased plan or roadmap phase, when the user asks for two or more distinct changes, or when the user says \"auto-commit\", \"unattended\", \"run it all\", \"commit as you go\", or \"don't stop between phases\"."
 ---
 
-# Auto-commit v1.5.0
+# Auto-commit v1.5.1
 
 By default Claude never commits unless asked: it finishes a logical change,
 suggests a commit message, and waits. That is **Pause** mode. **Auto-commit**
@@ -129,9 +129,11 @@ Sort every question or surprise into one of three kinds:
   wording, a minor default). Pick a sensible default, say so in the commit
   body, and list it in the final report.
 - **Hard:** later tasks depend on the answer. Leave the task uncommitted.
-  In the plan, mark its heading `Blocked: <question>` and each dependent
-  task `Blocked by <task>`. Continue with independent tasks only if the
-  blocked task left no edits in the working tree; otherwise stop.
+  In the plan, mark its heading `⛔ … Blocked: <question>` and each
+  dependent task `⛔ … Blocked by <task>`, in the format of the
+  `plans-and-roadmaps` skill's Blocked steps. Continue with independent
+  tasks only if the blocked task left no edits in the working tree;
+  otherwise stop.
 - **Unsafe:** the next step is destructive or outward-facing, or checks or
   hooks fail. Stop.
 
