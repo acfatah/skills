@@ -21,6 +21,13 @@ split into phased plans and multi-session roadmaps.
 - **Freezes an idle linked plan** into a real file before that cleanup,
   and says so plainly when a link is already broken.
 - **Ends every plan, or every phase,** with a suggested commit message.
+- **Keeps commits small** by sizing phases: a phase is one logical
+  change, and unrelated changes become separate phases.
+- **Runs wave phases** of independent steps in parallel, one subagent and
+  one worktree per step, under Auto-commit or Auto-PR. Each step gets its
+  own commit, made by the main agent in step order; a file outside the
+  step's `Files:` line or a merge conflict stops the run. In Pause, the
+  steps run in order instead.
 - **Honours a plan's Auto-commit run mode** (see
   [`auto-commit`](../auto-commit)) by committing each phase instead of
   waiting. This needs the `auto-commit` skill installed; without it, the

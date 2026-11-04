@@ -3,7 +3,7 @@ name: auto-commit
 description: "Opt-in Auto-commit mode: ask once, then commit each finished logical change with its suggested message and continue, stopping on gaps or failures. Load before approving or executing a plan, before a phased plan or roadmap phase, when the user asks for two or more distinct changes, or when the user says \"auto-commit\", \"unattended\", \"run it all\", \"commit as you go\", or \"don't stop between phases\"."
 ---
 
-# Auto-commit v1.5.1
+# Auto-commit v1.6.0
 
 By default Claude never commits unless asked: it finishes a logical change,
 suggests a commit message, and waits. That is **Pause** mode. **Auto-commit**
@@ -65,7 +65,13 @@ halting it later.
 ## What it authorizes
 
 - **`git commit`** once per finished logical change or phase, using its
-  suggested message, attribution trailer included.
+  suggested message, attribution trailer included. In a wave phase, once
+  per step instead.
+- **Wave phases** (see the `plans-and-roadmaps` skill's Wave phases):
+  creating one worktree and local branch per step, launching one Agent
+  subagent per step, the subagents' commits on those branches, and
+  `git merge --squash` and `git merge --abort` in the main tree. This is
+  the only opt-in to subagents that a run gives.
 - **Stage by explicit path,** only the files changed for that task. Never
   `git add -A`, `git add .` or `git commit -a`.
 - **Branch off a protected branch.** If the run starts on a protected
@@ -148,6 +154,8 @@ Whenever the run stops or ends, report:
   from. It drops the run's commits and keeps their changes staged. After
   an Auto-PR push, it no longer reaches them; see the `auto-pr` skill.
 - **Defaults chosen** for soft gaps.
+- **Wave worktrees** left behind, with their paths and branches. They are
+  never removed without a request.
 - **Blocking question,** if any, with its options and a recommendation.
 
 ## Undoing the run
