@@ -65,6 +65,14 @@ export const MIGRATIONS: string[][] = [
     )`,
     "CREATE INDEX notes_issue ON notes(issue_id)",
   ],
+  [
+    `CREATE TABLE issue_branches (
+      issue_id INTEGER NOT NULL REFERENCES issues(id) ON DELETE CASCADE,
+      branch   TEXT NOT NULL CHECK (branch <> ''),
+      PRIMARY KEY (issue_id, branch)
+    )`,
+    "CREATE INDEX issue_branches_branch ON issue_branches(branch)",
+  ],
 ];
 
 export const LATEST_VERSION = MIGRATIONS.length;

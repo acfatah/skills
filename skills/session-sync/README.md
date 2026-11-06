@@ -12,8 +12,14 @@ a break gets only a recap, checked against the repo.
 - **Recaps from the repo, not the transcript.** On "outline progress" or
   "catch up", it checks `git status`, recent commits, the upstream, the
   plan and the tests first. The recap has a fixed shape: Goal, Plan
-  (steps done, blocked and next, when a plan exists), Done, In progress,
-  Drift, Waiting on me, Next step.
+  (steps done, blocked and next, when a plan exists), Issues, Done, In
+  progress, Drift, Waiting on me, Next step.
+- **Names the session's issues** on the Issues line, when the
+  [`issue-tracker`](../issue-tracker) skill and an issues database are
+  present: issues linked to the current branch, open issues whose id or
+  title matches the branch or plan name (marked as guessed), and the
+  in-progress issues linked to no branch. It never changes an issue; it
+  suggests the `edit --set branches=` command under "Waiting on me".
 - **Stays light for one session:** no questions and no files, unless you
   stop with no plan to resume from; then it offers a one-row handoff file.
 - **Keeps a sessions file** at `<main>/.claude/sessions/<topic>.md` in the
@@ -71,6 +77,9 @@ For local development, link the folder instead:
 ```bash
 ln -sfn "$PWD/skills/session-sync" ~/.claude/skills/session-sync
 ```
+
+The Issues line needs [`issue-tracker`](../issue-tracker) installed and an
+issues database in the repo; without them, the line is skipped.
 
 ## Usage
 
@@ -138,6 +147,9 @@ Gotchas:
 - **Concurrent edits to the sessions file.** Each session re-reads the file
   right before editing its own line; two edits in the same instant can
   still race.
+- **Issues started on `main` show as unlinked.** The Issues line finds an
+  issue by its branch link, which `move <id> in-progress` records only on
+  a topic branch. Others appear as guessed or "not linked to this branch".
 - **Forks start stale.** A fork inherits its parent's beliefs; it syncs
   first, before acting.
 - **Shared branch means taking turns.** Git refuses two worktrees on one

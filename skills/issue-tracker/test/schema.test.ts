@@ -1,7 +1,7 @@
 import { describe, expect, test } from "bun:test";
 import { Database } from "bun:sqlite";
 import { join } from "node:path";
-import { LATEST_VERSION, getVersion, migrate } from "../src/schema.ts";
+import { LATEST_VERSION, MIGRATIONS, getVersion, migrate } from "../src/schema.ts";
 import { LocalStore } from "../src/store/local.ts";
 import { tempDir } from "./helpers.ts";
 
@@ -30,6 +30,27 @@ describe("migrations", () => {
     await migrate(store);
     await migrate(store);
     expect(await getVersion(store)).toBe(LATEST_VERSION);
+    await store.close();
+  });
+
+  test("version 1 → 2 adds issue_branches and keeps the rows", async () => {
+    const path = join(tempDir(), "issues.sqlite3");
+    const raw = new Database(path);
+    for (const sql of MIGRATIONS[0]!) raw.run(sql);
+    raw.run("PRAGMA user_version = 1");
+    raw.run("INSERT INTO issues (title, type, status, created, updated) VALUES ('kept', 'bug', 'open', '2026-01-01', '2026-01-01')");
+    raw.run("INSERT INTO labels (issue_id, label) VALUES (1, 'ui')");
+    raw.close();
+    const store = new LocalStore(path);
+    await migrate(store);
+    expect(await getVersion(store)).toBe(2);
+    expect(await store.query("SELECT id, title FROM issues")).toEqual([{ id: 1, title: "kept" }]);
+    expect(await store.query("SELECT label FROM labels")).toEqual([{ label: "ui" }]);
+    await store.exec("INSERT INTO issue_branches (issue_id, branch) VALUES (1, 'feat/x')");
+    await expect(store.exec("INSERT INTO issue_branches (issue_id, branch) VALUES (1, '')")).rejects.toThrow();
+    await expect(store.exec("INSERT INTO issue_branches (issue_id, branch) VALUES (1, 'feat/x')")).rejects.toThrow();
+    await store.exec("DELETE FROM issues WHERE id = 1");
+    expect(await store.query("SELECT * FROM issue_branches")).toEqual([]);
     await store.close();
   });
 

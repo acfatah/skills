@@ -138,6 +138,43 @@ describe("export and import --from", () => {
     rmSync(repo, { recursive: true, force: true });
   });
 
+  test("branches round-trip; a schema-1 export imports with none", () => {
+    const repo = gitRepo();
+    const $ = (...args: string[]) => run(args, repo, { env });
+    ok($("new", "--title", "Linked", "--type", "bug"));
+    ok($("edit", "1", "--set", "branches=feat/a,feat/b"));
+    const out = join(tempDir(), "backup.jsonl");
+    ok($("export", "--out", out));
+    const issue = readFileSync(out, "utf8")
+      .split("\n")
+      .filter(Boolean)
+      .map((l) => JSON.parse(l))
+      .find((r) => r.record === "issue");
+    expect(issue.branches).toEqual(["feat/a", "feat/b"]);
+
+    const other = gitRepo();
+    const $2 = (...args: string[]) => run(args, other, { env });
+    ok($2("import", "--from", out));
+    expect(JSON.parse(ok($2("show", "1", "--json")).stdout).branches).toEqual(["feat/a", "feat/b"]);
+
+    // A schema-1 export: meta says 1, issue records carry no branches field.
+    const v1 = readFileSync(out, "utf8")
+      .split("\n")
+      .filter(Boolean)
+      .map((l) => JSON.parse(l))
+      .map((r) => {
+        if (r.record === "meta") return { ...r, schema: 1 };
+        const { branches: _, ...rest } = r;
+        return rest;
+      });
+    const old = join(tempDir(), "v1.jsonl");
+    writeFileSync(old, v1.map((r) => `${JSON.stringify(r)}\n`).join(""));
+    const third = gitRepo();
+    const $3 = (...args: string[]) => run(args, third, { env });
+    ok($3("import", "--from", old));
+    expect(JSON.parse(ok($3("show", "1", "--json")).stdout)).toMatchObject({ title: "Linked", branches: [] });
+  });
+
   test("export warns inside a repo when not ignored, and needs --out", () => {
     const repo = gitRepo();
     const $ = (...args: string[]) => run(args, repo, { env });

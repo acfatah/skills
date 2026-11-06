@@ -3,10 +3,10 @@ name: session-recap
 description: One-line /recap-style summary, then a full recap of progress, changes since last active, and next step
 argument-hint: [short | focus area]
 disable-model-invocation: true
-allowed-tools: Bash(git status:*), Bash(git log:*), Bash(git fetch:*), Bash(git diff:*), Bash(git rev-parse:*), Bash(git branch:*), Bash(git worktree list:*), Bash(git for-each-ref:*)
+allowed-tools: Bash(git status:*), Bash(git log:*), Bash(git fetch:*), Bash(git diff:*), Bash(git rev-parse:*), Bash(git branch:*), Bash(git worktree list:*), Bash(git for-each-ref:*), Bash(test -e *), Bash(bun *issue-tracker/scripts/issues.js list *)
 ---
 
-# Session Recap v1.0.0
+# Session Recap v1.1.0
 
 Recap the current work. Arguments: "$ARGUMENTS"
 
@@ -43,11 +43,14 @@ Check for a repo with `git rev-parse --is-inside-work-tree`.
 recap. Use the "Single session (resume)" steps, or the Sync step if a
 sessions file names the current branch, but apply the Read-only rules
 above to both: skip the tests and do not update the sessions file.
+Its recap includes an Issues line when the `issue-tracker` skill and an
+issues database are present. The line only runs `list`; a link it
+suggests goes under "Waiting on me", never run.
 
 **Outside a git repo:** recap from the conversation only, in the same
-shape: Goal, Done, In progress, Drift, Waiting on me, Next step. State
-in one line that git checks were skipped because this folder is not a
-repo. Check claims about files with reads where it is cheap.
+shape: Goal, Done, In progress, Drift, Waiting on me, Next step. Skip
+the Issues line. State in one line that git checks were skipped because
+this folder is not a repo. Check claims about files with reads where it is cheap.
 
 ## Sources
 

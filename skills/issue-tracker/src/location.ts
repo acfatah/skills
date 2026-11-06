@@ -21,6 +21,25 @@ export function git(args: string[], cwd: string): { ok: boolean; out: string } {
   return { ok: proc.exitCode === 0, out: proc.stdout.toString().trim() };
 }
 
+// The branch that `move <id> in-progress` links, or why it links none.
+// An explicit --branch is recorded as given, protected names included.
+export function branchToLink(
+  cwd: string,
+  opts: { branch?: string; noBranch?: boolean },
+): { branch: string } | { skip: string } {
+  if (opts.noBranch) return { skip: "not linked: --no-branch" };
+  if (opts.branch !== undefined) return { branch: opts.branch.trim() };
+  const how = "pass --branch to link";
+  if (!git(["rev-parse", "--is-inside-work-tree"], cwd).ok) return { skip: `not linked: not in a git repo; ${how}` };
+  const current = git(["branch", "--show-current"], cwd).out;
+  if (!current) return { skip: `not linked: detached HEAD; ${how}` };
+  const head = git(["symbolic-ref", "--short", "refs/remotes/origin/HEAD"], cwd);
+  const protectedNames = ["main", "master"];
+  if (head.ok && head.out) protectedNames.push(head.out.replace(/^origin\//, ""));
+  if (protectedNames.includes(current)) return { skip: `not linked: on ${current}; ${how}` };
+  return { branch: current };
+}
+
 function nearestExisting(path: string): string {
   let p = path;
   while (!existsSync(p) && dirname(p) !== p) p = dirname(p);

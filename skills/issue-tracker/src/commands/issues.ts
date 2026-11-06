@@ -12,23 +12,32 @@ import {
   checkType,
   splitList,
 } from "../model.ts";
-import type { SqlValue, Stmt, Store } from "../store/types.ts";
+import type { Row, SqlValue, Stmt, Store } from "../store/types.ts";
 
 const COLUMNS =
   "id, client_id, title, type, status, priority, milestone, parent, github, resolution, created, updated, closed, body";
 
-type IssueRow = Omit<Issue, "labels">;
+type IssueRow = Omit<Issue, "labels" | "branches">;
 
+function groupBy(rows: Row[]): Map<number, string[]> {
+  const byIssue = new Map<number, string[]>();
+  for (const r of rows) {
+    const id = r.issue_id as number;
+    byIssue.set(id, [...(byIssue.get(id) ?? []), r.value as string]);
+  }
+  return byIssue;
+}
+
+// Adds each issue's labels and branch links.
 async function withLabels(store: Store, rows: IssueRow[]): Promise<Issue[]> {
   if (rows.length === 0) return [];
-  const labels = await store.query<{ issue_id: number; label: string }>(
-    "SELECT issue_id, label FROM labels ORDER BY label",
-  );
-  const byIssue = new Map<number, string[]>();
-  for (const l of labels) {
-    byIssue.set(l.issue_id, [...(byIssue.get(l.issue_id) ?? []), l.label]);
-  }
-  return rows.map((r) => ({ ...r, labels: byIssue.get(r.id) ?? [] }));
+  const [labels, branches] = await store.batch([
+    { sql: "SELECT issue_id, label AS value FROM labels ORDER BY label" },
+    { sql: "SELECT issue_id, branch AS value FROM issue_branches ORDER BY branch" },
+  ]);
+  const byLabel = groupBy(labels!);
+  const byBranch = groupBy(branches!);
+  return rows.map((r) => ({ ...r, labels: byLabel.get(r.id) ?? [], branches: byBranch.get(r.id) ?? [] }));
 }
 
 export async function findIssue(store: Store, id: number): Promise<Issue | null> {
@@ -152,6 +161,7 @@ export interface ListFilters {
   type?: string;
   milestone?: string;
   label?: string;
+  branch?: string;
   parent?: number;
   query?: string;
   // Extra ids that also satisfy the query, such as issues with a matching
@@ -186,6 +196,10 @@ export async function listIssues(store: Store, f: ListFilters): Promise<Issue[]>
   if (f.label) {
     where.push("id IN (SELECT issue_id FROM labels WHERE label = ?)");
     args.push(f.label);
+  }
+  if (f.branch) {
+    where.push("id IN (SELECT issue_id FROM issue_branches WHERE branch = ?)");
+    args.push(f.branch);
   }
   if (f.query) {
     const pattern = likePattern(f.query);
@@ -231,7 +245,7 @@ function noteStmt(issueId: number, date: string, text: string, clientId: string 
   };
 }
 
-export const EDITABLE = ["type", "priority", "milestone", "parent", "github", "labels"] as const;
+export const EDITABLE = ["type", "priority", "milestone", "parent", "github", "labels", "branches"] as const;
 
 export interface EditChanges {
   title?: string;
@@ -290,6 +304,12 @@ export async function editIssue(
           stmts.push({ sql: "INSERT INTO labels (issue_id, label) VALUES (?, ?)", args: [id, label] });
         }
         break;
+      case "branches":
+        stmts.push({ sql: "DELETE FROM issue_branches WHERE issue_id = ?", args: [id] });
+        for (const branch of splitList(value)) {
+          stmts.push({ sql: "INSERT INTO issue_branches (issue_id, branch) VALUES (?, ?)", args: [id, branch] });
+        }
+        break;
       default:
         throw new UsageError(
           `Cannot --set ${key}. Editable: ${EDITABLE.join(", ")}. Use move, close, or reopen for status.`,
@@ -333,8 +353,12 @@ export async function moveIssue(
   to: Status,
   note: string | undefined,
   date: string,
+  branch: string | null = null,
 ): Promise<Status> {
   if (to === "closed") throw new UsageError("Use close <id> --resolution … to close an issue.");
+  if (branch !== null && to !== "in-progress") {
+    throw new UsageError("--branch goes with move <id> in-progress.");
+  }
   const issue = await loadIssue(store, db, id);
   const label = formatId(db, id);
   if (issue.status === to) throw new ValidationError(`${label} is already ${to}.`);
@@ -354,6 +378,10 @@ export async function moveIssue(
     { sql: "UPDATE issues SET status = ?, updated = ? WHERE id = ?", args: [to, date, id] },
   ];
   if (note?.trim()) stmts.push(noteStmt(id, date, note.trim()));
+  // OR IGNORE: a second move to in-progress on the same branch keeps one link.
+  if (branch) {
+    stmts.push({ sql: "INSERT OR IGNORE INTO issue_branches (issue_id, branch) VALUES (?, ?)", args: [id, branch] });
+  }
   await store.batch(stmts);
   return issue.status;
 }

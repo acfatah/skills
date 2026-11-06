@@ -3,7 +3,7 @@ name: session-sync
 description: "Keep several Claude sessions on one branch or PR in sync, and recap from the repo, not the transcript, after a break: forks on sub-branches, a shared sessions file, and a sync step before acting. Load when forking a session, starting a second session on the same branch or PR, resuming after a break, merging a fork back, or when the user says \"sync\", \"catch up\", \"what changed\", \"outline progress\", or \"merge the fork back\"."
 ---
 
-# Session Sync v1.2.0
+# Session Sync v1.3.0
 
 A session's context is private and goes stale as soon as another session,
 or the user, changes the repo. Do not sync memories, which load only at
@@ -57,6 +57,8 @@ every repo, so this path stays light: **no questions, no files**.
      headings: stamped `✅`, blocked `⛔`, and still open, then the first
      open step. For example: "Plan: 7 of 12 steps done, 1 blocked;
      next: Step 2.3 Route callers". Read the latest phase outcome too.
+   - **Issues:** only when the `issue-tracker` skill is installed and the
+     repo has an issues database; see Issues line below.
    - **Done:** finished items, verified against the current state.
    - **In progress:** partial or uncommitted work, with paths.
    - **Drift:** anything that changed since the session last looked, or
@@ -67,6 +69,38 @@ every repo, so this path stays light: **no questions, no files**.
 **Lazy handoff.** When the user stops for a while and there is no plan to
 resume from, offer once to write a one-row sessions file as the handoff
 (see End-of-session handoff). Write it only if they agree.
+
+### Issues line
+
+Names the issues this session works on. Skip it silently when either
+check fails:
+
+- **The skill:** `<it>` is the `issue-tracker` skill's folder, usually
+  `~/.claude/skills/issue-tracker`; `<it>/scripts/issues.js` must exist.
+- **The database:** `test -e <main>/.claude/issues.sqlite3`, where
+  `<main>` is the first `worktree` line of `git worktree list --porcelain`.
+  Never run the CLI without it: `list` creates an empty database.
+
+Then build the line in this order, each command on its own:
+
+1. **Linked:** `bun <it>/scripts/issues.js list --branch <current> --json`.
+   Show each issue as its id, title and status, such as
+   `0074 Link issues to branches (in-progress)`.
+2. **Guessed:** from `bun <it>/scripts/issues.js list --json`, take the
+   open, in-progress and blocked issues with no `branches`. Match the id
+   (`0074`, or `74` as a separate token) or the title's topic against the
+   branch name and the plan's name. Mark each match "(guessed from name)".
+3. **Unlinked:** the in-progress issues with no `branches` left after
+   step 2, on one line, as "not linked to this branch".
+4. **Skip** closed issues, and issues linked only to other branches.
+
+- **Read-only:** never run `move` or `edit` from a recap. For a guessed
+  match that looks right, put
+  `bun <it>/scripts/issues.js edit <id> --set branches=<current>` under
+  "Waiting on me".
+- **Nothing found:** write "Issues: none linked to this branch", so the
+  user knows the check ran.
+- **Detached HEAD:** skip step 1, and say so on the line.
 
 ## Sessions file
 
@@ -266,6 +300,8 @@ notifies a session of another one's change; it learns only by syncing.
    (Rebase strategy, unpushed sub-branch only).
 6. **Update your row:** status and `Last sync` from `date`; refresh
    `updated`.
+7. **Recap** in the Single session shape, with its Issues line, when the
+   sync answers a recap or a "catch up".
 
 ## Write step
 

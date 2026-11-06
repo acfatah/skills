@@ -224,6 +224,7 @@ export function toDumps(tree: V1Tree): Record<DbName, Dump> {
       milestones: db === "issues" ? tree.milestones.map((m) => ({ ...m })) : [],
       issues: issues.map((i) => i.row),
       labels: issues.flatMap((i) => i.labels.map((label) => ({ issue_id: i.row.id, label }))),
+      branches: [],
       notes: issues.flatMap((i) => i.notes.map((n) => ({ id: null, client_id: null, issue_id: i.row.id, ...n }))),
       seq: [],
     };

@@ -90,6 +90,7 @@ export function queuedIssues(db: DbName, outbox: Outbox): QueuedIssue[] {
         closed: null,
         body: e.issue.body ?? "",
         labels: e.issue.labels ?? [],
+        branches: [],
       },
     }));
 }
@@ -99,6 +100,7 @@ export function matches(i: Issue, f: ListFilters, notes: Pick<Note, "text">[] = 
     (!f.type || i.type === f.type) &&
     (!f.milestone || i.milestone === f.milestone) &&
     (!f.label || i.labels.includes(f.label)) &&
+    (!f.branch || i.branches.includes(f.branch)) &&
     (f.parent === undefined || i.parent === f.parent) &&
     (!f.query || [i.title, i.body, ...notes.map((n) => n.text)].some((t) => t.toLowerCase().includes(f.query!.toLowerCase())))
   );

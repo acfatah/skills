@@ -23,12 +23,12 @@ import { exportAll, parseExport } from "./exporter.ts";
 import { detailText, issueJson, issueLine, milestoneLine } from "./format.ts";
 import { type DbName, formatId, parseId, parseRealId } from "./ids.ts";
 import { assertClean, countRows, deleteV1, readV1, toDumps, writeDumps } from "./importer.ts";
-import { resolveLocation } from "./location.ts";
+import { branchToLink, resolveLocation } from "./location.ts";
 import { ADVISORY, promote, promotionText } from "./promote.ts";
 import { OPEN_STATUSES, type Status, checkStatus, splitList, today } from "./model.ts";
 import { STATUSES } from "./schema.ts";
 
-export const VERSION = "2.2.0";
+export const VERSION = "2.3.0";
 
 type Options = NonNullable<ParseArgsConfig["options"]>;
 type Values = Record<string, string | boolean | string[] | undefined>;
@@ -123,13 +123,14 @@ export const VERBS: Record<string, Verb> = {
   list: {
     usage: [
       "list [--status <s,s>|all] [--type <type>] [--milestone <name>] [--label <label>]",
-      "    [--parent <id>] [--query <text>] [--security] [--json]",
+      "    [--branch <name>] [--parent <id>] [--query <text>] [--security] [--json]",
     ],
     options: {
       status: { type: "string" },
       type: { type: "string" },
       milestone: { type: "string" },
       label: { type: "string" },
+      branch: { type: "string" },
       parent: { type: "string" },
       query: { type: "string" },
       security: { type: "boolean" },
@@ -147,6 +148,7 @@ export const VERBS: Record<string, Verb> = {
         type: str(v, "type"),
         milestone: str(v, "milestone"),
         label: str(v, "label"),
+        branch: str(v, "branch"),
         parent: parentText ? parseLocalRef(db, parentText) : undefined,
         query: str(v, "query"),
       };
@@ -227,14 +229,28 @@ export const VERBS: Record<string, Verb> = {
   },
 
   move: {
-    usage: ["move <id> <triage|open|in-progress|blocked> [--note <text>]"],
-    options: { note: { type: "string" } },
+    usage: [
+      "move <id> <triage|open|in-progress|blocked> [--note <text>]",
+      "move <id> in-progress [--branch <name> | --no-branch]",
+    ],
+    options: { note: { type: "string" }, branch: { type: "string" }, "no-branch": { type: "boolean" } },
     async run(ctx, v, pos) {
       if (pos.length !== 2) throw new UsageError("move needs <id> and a status.");
       const { db, id } = parseRealId(pos[0]!);
       const to = checkStatus(pos[1]!);
-      const from = await ctx.backend().run(db, (s) => moveIssue(s, db, id, to, str(v, "note"), today()), { write: true });
-      ctx.out(`Moved ${formatId(db, id)}: ${from} → ${to}.`);
+      const given = str(v, "branch");
+      if (given !== undefined && v["no-branch"]) throw new UsageError("Pass --branch or --no-branch, not both.");
+      if (given !== undefined && !given.trim()) throw new UsageError("--branch needs a name.");
+      if (to !== "in-progress" && (given !== undefined || v["no-branch"])) {
+        throw new UsageError("--branch and --no-branch go with move <id> in-progress.");
+      }
+      const pick = to === "in-progress" ? branchToLink(ctx.cwd, { branch: given, noBranch: Boolean(v["no-branch"]) }) : null;
+      const branch = pick && "branch" in pick ? pick.branch : null;
+      const from = await ctx.backend().run(db, (s) => moveIssue(s, db, id, to, str(v, "note"), today(), branch), {
+        write: true,
+      });
+      ctx.out(`Moved ${formatId(db, id)}: ${from} → ${to}.${branch ? ` Linked to branch ${branch}.` : ""}`);
+      if (pick && "skip" in pick) ctx.err(pick.skip);
     },
   },
 

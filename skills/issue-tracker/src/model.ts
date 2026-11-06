@@ -22,6 +22,7 @@ export interface Issue {
   closed: string | null;
   body: string;
   labels: string[];
+  branches: string[];
 }
 
 export interface Note {
