@@ -19,8 +19,13 @@ its claims against the repo through the `session-sync` recap.
   follows its recap: the "Single session (resume)" steps, or the Sync step
   when a sessions file names the current branch. It skips the tests and
   never updates the sessions file.
+- **Names the session's issues** on an Issues line, when the
+  [`issue-tracker`](../issue-tracker) skill and an issues database are
+  present. It only runs the tracker's `list`; a link it suggests goes under
+  "Waiting on me".
 - **Outside a git repo,** it recaps from the conversation only, in the same
-  shape, and says in one line that git checks were skipped. It checks
+  shape, without the Issues line, and says in one line that git checks
+  were skipped. It checks
   claims about files with reads where that is cheap.
 - **Trusts the repo over the conversation.** It uses the conversation for
   the Goal, decisions and open questions, but checks every claim against
@@ -66,7 +71,8 @@ ln -sfn "$PWD/skills/session-recap" ~/.claude/skills/session-recap
 ```
 
 Inside a git repo, the full recap also needs
-[`session-sync`](../session-sync) installed.
+[`session-sync`](../session-sync) installed. The Issues line also needs
+[`issue-tracker`](../issue-tracker); without it, the line is skipped.
 
 ## Usage
 
@@ -97,8 +103,9 @@ Gotchas:
   and the conversation, not a test run; run the named command yourself.
 - **A focus area limits only the full recap.** The recap line comes first
   as usual.
-- **Only some git commands are pre-approved,** the ones in
-  `allowed-tools`: `status`, `log`, `fetch`, `diff`, `rev-parse`,
-  `branch`, `worktree list` and `for-each-ref`.
+- **Only some commands are pre-approved,** the ones in `allowed-tools`:
+  the git commands `status`, `log`, `fetch`, `diff`, `rev-parse`,
+  `branch`, `worktree list` and `for-each-ref`, plus `test -e` and the
+  issue tracker's `list`.
 
 The full rules are in [`SKILL.md`](SKILL.md).
