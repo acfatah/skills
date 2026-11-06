@@ -94,13 +94,13 @@ export function queuedIssues(db: DbName, outbox: Outbox): QueuedIssue[] {
     }));
 }
 
-export function matches(i: Issue, f: ListFilters): boolean {
+export function matches(i: Issue, f: ListFilters, notes: Pick<Note, "text">[] = []): boolean {
   return (
     (!f.type || i.type === f.type) &&
     (!f.milestone || i.milestone === f.milestone) &&
     (!f.label || i.labels.includes(f.label)) &&
     (f.parent === undefined || i.parent === f.parent) &&
-    (!f.query || [i.title, i.body].some((t) => t.toLowerCase().includes(f.query!.toLowerCase())))
+    (!f.query || [i.title, i.body, ...notes.map((n) => n.text)].some((t) => t.toLowerCase().includes(f.query!.toLowerCase())))
   );
 }
 
@@ -110,4 +110,15 @@ export function queuedNotesOn(outbox: Outbox, id: number): Pick<Note, "date" | "
     .read()
     .filter((e): e is Extract<Entry, { kind: "note" }> => e.kind === "note" && "id" in e.target && e.target.id === id)
     .map((e) => ({ date: e.date, text: e.text }));
+}
+
+// Real issues with a queued note that contains the query, in any case.
+export function queuedNoteMatches(outbox: Outbox, query: string): number[] {
+  const q = query.toLowerCase();
+  const ids = outbox
+    .read()
+    .filter((e): e is Extract<Entry, { kind: "note" }> => e.kind === "note" && "id" in e.target)
+    .filter((e) => e.text.toLowerCase().includes(q))
+    .map((e) => (e.target as { id: number }).id);
+  return [...new Set(ids)];
 }

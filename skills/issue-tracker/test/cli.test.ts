@@ -50,6 +50,9 @@ describe("issue verbs through the bundle", () => {
     expect(ids(["--query", "100%"])).toEqual(["0004"]);
     expect(ids(["--query", "o%t"])).toEqual([]);
     expect(ids(["--query", "1_0"])).toEqual([]);
+    // Note text matches too, with the same literal wildcards.
+    expect(ids(["--query", "staging"])).toEqual(["0001"]);
+    expect(ids(["--query", "st_ging"])).toEqual([]);
 
     const shown = ok($(["show", "1"]));
     expect(shown).toContain("0001 Login fails on empty password");
@@ -122,6 +125,8 @@ describe("issue verbs through the bundle", () => {
     expect(ok($(["list", "--security"]))).toContain("S0001");
     expect(ok($(["list", "--security", "--query", "token"]))).toContain("S0001");
     expect(ok($(["list", "--security", "--query", "regular"]))).toBe("No matching issues.\n");
+    ok($(["note", "S1", "Leaks the bearer header"]));
+    expect(ok($(["list", "--security", "--query", "bearer"]))).toContain("S0001");
     expect(JSON.parse(ok($(["show", "S0001", "--json"]))).children[0].id).toBe("S0002");
     expect($(["new", "--title", "x", "--type", "security", "--milestone", "v1"]).code).toBe(1);
     expect($(["edit", "1", "--set", "parent=S1"]).code).toBe(1);

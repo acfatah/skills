@@ -21,7 +21,7 @@ SQLite database that Claude reads and writes only through a bundled Bun CLI.
   then returns to the task at hand.
 - **Supports** types, priorities, labels, milestones, sub-issues, and
   dated notes.
-- **Searches** issue titles and bodies, in any case, with
+- **Searches** issue titles, bodies and notes, in any case, with
   `list --query <text>`, alone or with the other filters.
 - **Keeps security findings** in a separate database, with `S` ids such as
   `S0007`, that never becomes a public issue.
