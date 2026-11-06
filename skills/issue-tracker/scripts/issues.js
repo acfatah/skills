@@ -108,6 +108,25 @@ function git(args, cwd) {
   const proc = Bun.spawnSync(["git", ...args], { cwd, stdout: "pipe", stderr: "pipe" });
   return { ok: proc.exitCode === 0, out: proc.stdout.toString().trim() };
 }
+function branchToLink(cwd, opts) {
+  if (opts.noBranch)
+    return { skip: "not linked: --no-branch" };
+  if (opts.branch !== undefined)
+    return { branch: opts.branch.trim() };
+  const how = "pass --branch to link";
+  if (!git(["rev-parse", "--is-inside-work-tree"], cwd).ok)
+    return { skip: `not linked: not in a git repo; ${how}` };
+  const current = git(["branch", "--show-current"], cwd).out;
+  if (!current)
+    return { skip: `not linked: detached HEAD; ${how}` };
+  const head = git(["symbolic-ref", "--short", "refs/remotes/origin/HEAD"], cwd);
+  const protectedNames = ["main", "master"];
+  if (head.ok && head.out)
+    protectedNames.push(head.out.replace(/^origin\//, ""));
+  if (protectedNames.includes(current))
+    return { skip: `not linked: on ${current}; ${how}` };
+  return { branch: current };
+}
 function nearestExisting(path) {
   let p = path;
   while (!existsSync2(p) && dirname2(p) !== p)
@@ -188,10 +207,11 @@ var ISSUE_COLS = [
 var MILESTONE_COLS = ["name", "goal", "due", "state", "github"];
 var NOTE_COLS = ["id", "client_id", "issue_id", "date", "text"];
 async function dump(store) {
-  const [milestones, issues, labels, notes, seq] = await store.batch([
+  const [milestones, issues, labels, branches, notes, seq] = await store.batch([
     { sql: `SELECT ${MILESTONE_COLS.join(", ")} FROM milestones ORDER BY name` },
     { sql: `SELECT ${ISSUE_COLS.join(", ")} FROM issues ORDER BY id` },
     { sql: "SELECT issue_id, label FROM labels ORDER BY issue_id, label" },
+    { sql: "SELECT issue_id, branch FROM issue_branches ORDER BY issue_id, branch" },
     { sql: `SELECT ${NOTE_COLS.join(", ")} FROM notes ORDER BY id` },
     { sql: "SELECT name, seq FROM sqlite_sequence WHERE name IN ('issues', 'notes')" }
   ]);
@@ -199,6 +219,7 @@ async function dump(store) {
     milestones,
     issues,
     labels,
+    branches,
     notes,
     seq
   };
@@ -232,13 +253,14 @@ function parentsFirst(issues) {
   return out;
 }
 function clearStmts() {
-  return ["labels", "notes", "issues", "milestones"].map((t) => ({ sql: `DELETE FROM ${t}` }));
+  return ["labels", "issue_branches", "notes", "issues", "milestones"].map((t) => ({ sql: `DELETE FROM ${t}` }));
 }
 function loadStmts(d) {
   return [
     ...d.milestones.map((m) => insert("milestones", MILESTONE_COLS, m)),
     ...parentsFirst(d.issues).map((i) => insert("issues", ISSUE_COLS, i)),
     ...d.labels.map((l) => insert("labels", ["issue_id", "label"], l)),
+    ...d.branches.map((b) => insert("issue_branches", ["issue_id", "branch"], b)),
     ...d.notes.map((n) => insert("notes", NOTE_COLS, n))
   ];
 }
@@ -375,6 +397,14 @@ var MIGRATIONS = [
       text      TEXT NOT NULL
     )`,
     "CREATE INDEX notes_issue ON notes(issue_id)"
+  ],
+  [
+    `CREATE TABLE issue_branches (
+      issue_id INTEGER NOT NULL REFERENCES issues(id) ON DELETE CASCADE,
+      branch   TEXT NOT NULL CHECK (branch <> ''),
+      PRIMARY KEY (issue_id, branch)
+    )`,
+    "CREATE INDEX issue_branches_branch ON issue_branches(branch)"
   ]
 ];
 var LATEST_VERSION = MIGRATIONS.length;
@@ -467,15 +497,24 @@ function today() {
 
 // src/commands/issues.ts
 var COLUMNS = "id, client_id, title, type, status, priority, milestone, parent, github, resolution, created, updated, closed, body";
+function groupBy(rows) {
+  const byIssue = new Map;
+  for (const r of rows) {
+    const id = r.issue_id;
+    byIssue.set(id, [...byIssue.get(id) ?? [], r.value]);
+  }
+  return byIssue;
+}
 async function withLabels(store, rows) {
   if (rows.length === 0)
     return [];
-  const labels = await store.query("SELECT issue_id, label FROM labels ORDER BY label");
-  const byIssue = new Map;
-  for (const l of labels) {
-    byIssue.set(l.issue_id, [...byIssue.get(l.issue_id) ?? [], l.label]);
-  }
-  return rows.map((r) => ({ ...r, labels: byIssue.get(r.id) ?? [] }));
+  const [labels, branches] = await store.batch([
+    { sql: "SELECT issue_id, label AS value FROM labels ORDER BY label" },
+    { sql: "SELECT issue_id, branch AS value FROM issue_branches ORDER BY branch" }
+  ]);
+  const byLabel = groupBy(labels);
+  const byBranch = groupBy(branches);
+  return rows.map((r) => ({ ...r, labels: byLabel.get(r.id) ?? [], branches: byBranch.get(r.id) ?? [] }));
 }
 async function findIssue(store, id) {
   const rows = await store.query(`SELECT ${COLUMNS} FROM issues WHERE id = ?`, [id]);
@@ -596,6 +635,10 @@ async function listIssues(store, f) {
     where.push("id IN (SELECT issue_id FROM labels WHERE label = ?)");
     args.push(f.label);
   }
+  if (f.branch) {
+    where.push("id IN (SELECT issue_id FROM issue_branches WHERE branch = ?)");
+    args.push(f.branch);
+  }
   if (f.query) {
     const pattern = likePattern(f.query);
     const ors = [
@@ -625,7 +668,7 @@ function noteStmt(issueId, date, text, clientId = null) {
     args: [clientId, issueId, date, text]
   };
 }
-var EDITABLE = ["type", "priority", "milestone", "parent", "github", "labels"];
+var EDITABLE = ["type", "priority", "milestone", "parent", "github", "labels", "branches"];
 async function editIssue(store, db, id, changes, date) {
   const issue = await loadIssue(store, db, id);
   const cols = {};
@@ -675,6 +718,12 @@ async function editIssue(store, db, id, changes, date) {
           stmts.push({ sql: "INSERT INTO labels (issue_id, label) VALUES (?, ?)", args: [id, label] });
         }
         break;
+      case "branches":
+        stmts.push({ sql: "DELETE FROM issue_branches WHERE issue_id = ?", args: [id] });
+        for (const branch of splitList(value)) {
+          stmts.push({ sql: "INSERT INTO issue_branches (issue_id, branch) VALUES (?, ?)", args: [id, branch] });
+        }
+        break;
       default:
         throw new UsageError(`Cannot --set ${key}. Editable: ${EDITABLE.join(", ")}. Use move, close, or reopen for status.`);
     }
@@ -703,9 +752,12 @@ function parseLocalRef(db, text) {
   }
   return Number(m[3]);
 }
-async function moveIssue(store, db, id, to, note, date) {
+async function moveIssue(store, db, id, to, note, date, branch = null) {
   if (to === "closed")
     throw new UsageError("Use close <id> --resolution \u2026 to close an issue.");
+  if (branch !== null && to !== "in-progress") {
+    throw new UsageError("--branch goes with move <id> in-progress.");
+  }
   const issue = await loadIssue(store, db, id);
   const label = formatId(db, id);
   if (issue.status === to)
@@ -726,6 +778,9 @@ async function moveIssue(store, db, id, to, note, date) {
   ];
   if (note?.trim())
     stmts.push(noteStmt(id, date, note.trim()));
+  if (branch) {
+    stmts.push({ sql: "INSERT OR IGNORE INTO issue_branches (issue_id, branch) VALUES (?, ?)", args: [id, branch] });
+  }
   await store.batch(stmts);
   return issue.status;
 }
@@ -2573,12 +2628,13 @@ function queuedIssues(db, outbox) {
       updated: e.date,
       closed: null,
       body: e.issue.body ?? "",
-      labels: e.issue.labels ?? []
+      labels: e.issue.labels ?? [],
+      branches: []
     }
   }));
 }
 function matches(i, f, notes = []) {
-  return (!f.type || i.type === f.type) && (!f.milestone || i.milestone === f.milestone) && (!f.label || i.labels.includes(f.label)) && (f.parent === undefined || i.parent === f.parent) && (!f.query || [i.title, i.body, ...notes.map((n) => n.text)].some((t) => t.toLowerCase().includes(f.query.toLowerCase())));
+  return (!f.type || i.type === f.type) && (!f.milestone || i.milestone === f.milestone) && (!f.label || i.labels.includes(f.label)) && (!f.branch || i.branches.includes(f.branch)) && (f.parent === undefined || i.parent === f.parent) && (!f.query || [i.title, i.body, ...notes.map((n) => n.text)].some((t) => t.toLowerCase().includes(f.query.toLowerCase())));
 }
 function queuedNotesOn(outbox, id) {
   return outbox.read().filter((e) => e.kind === "note" && ("id" in e.target) && e.target.id === id).map((e) => ({ date: e.date, text: e.text }));
@@ -2731,10 +2787,14 @@ async function exportAll(b, out, warn) {
     const labels = new Map;
     for (const l of d.labels)
       labels.set(l.issue_id, [...labels.get(l.issue_id) ?? [], l.label]);
+    const branches = new Map;
+    for (const x of d.branches)
+      branches.set(x.issue_id, [...branches.get(x.issue_id) ?? [], x.branch]);
     for (const m of d.milestones)
       lines.push({ record: "milestone", db, ...m });
-    for (const i of d.issues)
-      lines.push({ record: "issue", db, ...i, labels: labels.get(i.id) ?? [] });
+    for (const i of d.issues) {
+      lines.push({ record: "issue", db, ...i, labels: labels.get(i.id) ?? [], branches: branches.get(i.id) ?? [] });
+    }
     for (const { id: _, issue_id, ...n } of d.notes)
       lines.push({ record: "note", db, issue: issue_id, ...n });
     for (const s of d.seq)
@@ -2754,8 +2814,8 @@ async function exportAll(b, out, warn) {
 }
 function parseExport(text) {
   const dumps = {
-    issues: { milestones: [], issues: [], labels: [], notes: [], seq: [] },
-    security: { milestones: [], issues: [], labels: [], notes: [], seq: [] }
+    issues: { milestones: [], issues: [], labels: [], branches: [], notes: [], seq: [] },
+    security: { milestones: [], issues: [], labels: [], branches: [], notes: [], seq: [] }
   };
   let meta = false;
   text.split(`
@@ -2782,10 +2842,12 @@ function parseExport(text) {
     if (record === "milestone")
       d.milestones.push(rest);
     else if (record === "issue") {
-      const { labels, ...row } = rest;
+      const { labels, branches, ...row } = rest;
       d.issues.push(row);
       for (const label of labels ?? [])
         d.labels.push({ issue_id: row.id, label });
+      for (const branch of branches ?? [])
+        d.branches.push({ issue_id: row.id, branch });
     } else if (record === "note") {
       const { issue, ...note } = rest;
       d.notes.push({ id: null, issue_id: issue, ...note });
@@ -2816,6 +2878,8 @@ function issueLine(db, issue, shownId) {
     extras.push(`parent ${formatId(db, issue.parent)}`);
   if (issue.labels.length)
     extras.push(`labels ${issue.labels.join(",")}`);
+  if (issue.branches.length)
+    extras.push(`branches ${issue.branches.join(",")}`);
   if (issue.resolution)
     extras.push(`resolution ${issue.resolution}`);
   const head = [
@@ -2841,6 +2905,7 @@ function detailText(db, d, shownId) {
     field("milestone", i.milestone),
     field("parent", i.parent === null ? null : formatId(db, i.parent)),
     field("labels", i.labels.join(", ")),
+    field("branches", i.branches.join(", ")),
     field("created", i.created),
     field("updated", i.updated),
     field("resolution", i.resolution),
@@ -3071,6 +3136,7 @@ function toDumps(tree) {
       milestones: db === "issues" ? tree.milestones.map((m) => ({ ...m })) : [],
       issues: issues.map((i) => i.row),
       labels: issues.flatMap((i) => i.labels.map((label) => ({ issue_id: i.row.id, label }))),
+      branches: [],
       notes: issues.flatMap((i) => i.notes.map((n) => ({ id: null, client_id: null, issue_id: i.row.id, ...n }))),
       seq: []
     };
@@ -3233,7 +3299,7 @@ function promotionText(p) {
 }
 
 // src/cli.ts
-var VERSION = "2.2.0";
+var VERSION = "2.3.0";
 var str2 = (v, k) => v[k];
 var json = { json: { type: "boolean" } };
 async function readBody(v) {
@@ -3299,13 +3365,14 @@ var VERBS = {
   list: {
     usage: [
       "list [--status <s,s>|all] [--type <type>] [--milestone <name>] [--label <label>]",
-      "    [--parent <id>] [--query <text>] [--security] [--json]"
+      "    [--branch <name>] [--parent <id>] [--query <text>] [--security] [--json]"
     ],
     options: {
       status: { type: "string" },
       type: { type: "string" },
       milestone: { type: "string" },
       label: { type: "string" },
+      branch: { type: "string" },
       parent: { type: "string" },
       query: { type: "string" },
       security: { type: "boolean" },
@@ -3321,6 +3388,7 @@ var VERBS = {
         type: str2(v, "type"),
         milestone: str2(v, "milestone"),
         label: str2(v, "label"),
+        branch: str2(v, "branch"),
         parent: parentText ? parseLocalRef(db, parentText) : undefined,
         query: str2(v, "query")
       };
@@ -3384,15 +3452,32 @@ var VERBS = {
     }
   },
   move: {
-    usage: ["move <id> <triage|open|in-progress|blocked> [--note <text>]"],
-    options: { note: { type: "string" } },
+    usage: [
+      "move <id> <triage|open|in-progress|blocked> [--note <text>]",
+      "move <id> in-progress [--branch <name> | --no-branch]"
+    ],
+    options: { note: { type: "string" }, branch: { type: "string" }, "no-branch": { type: "boolean" } },
     async run(ctx, v, pos) {
       if (pos.length !== 2)
         throw new UsageError("move needs <id> and a status.");
       const { db, id } = parseRealId(pos[0]);
       const to = checkStatus(pos[1]);
-      const from = await ctx.backend().run(db, (s) => moveIssue(s, db, id, to, str2(v, "note"), today()), { write: true });
-      ctx.out(`Moved ${formatId(db, id)}: ${from} \u2192 ${to}.`);
+      const given = str2(v, "branch");
+      if (given !== undefined && v["no-branch"])
+        throw new UsageError("Pass --branch or --no-branch, not both.");
+      if (given !== undefined && !given.trim())
+        throw new UsageError("--branch needs a name.");
+      if (to !== "in-progress" && (given !== undefined || v["no-branch"])) {
+        throw new UsageError("--branch and --no-branch go with move <id> in-progress.");
+      }
+      const pick = to === "in-progress" ? branchToLink(ctx.cwd, { branch: given, noBranch: Boolean(v["no-branch"]) }) : null;
+      const branch = pick && "branch" in pick ? pick.branch : null;
+      const from = await ctx.backend().run(db, (s) => moveIssue(s, db, id, to, str2(v, "note"), today(), branch), {
+        write: true
+      });
+      ctx.out(`Moved ${formatId(db, id)}: ${from} \u2192 ${to}.${branch ? ` Linked to branch ${branch}.` : ""}`);
+      if (pick && "skip" in pick)
+        ctx.err(pick.skip);
     }
   },
   close: {

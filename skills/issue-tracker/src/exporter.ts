@@ -11,7 +11,7 @@ import type { Row } from "./store/types.ts";
 const DBS: DbName[] = ["issues", "security"];
 
 // D10: one JSONL file, lossless, that import --from reads back. Records:
-// meta, milestone, issue (labels inline), note, sequence, named by
+// meta, milestone, issue (labels and branches inline), note, sequence, named by
 // a `record` field.
 export async function exportAll(b: Backend, out: string, warn: (m: string) => void): Promise<Record<string, number>> {
   const lines: unknown[] = [
@@ -22,8 +22,12 @@ export async function exportAll(b: Backend, out: string, warn: (m: string) => vo
     const d = await b.run(db, dump);
     const labels = new Map<unknown, string[]>();
     for (const l of d.labels) labels.set(l.issue_id, [...(labels.get(l.issue_id) ?? []), l.label as string]);
+    const branches = new Map<unknown, string[]>();
+    for (const x of d.branches) branches.set(x.issue_id, [...(branches.get(x.issue_id) ?? []), x.branch as string]);
     for (const m of d.milestones) lines.push({ record: "milestone", db, ...m });
-    for (const i of d.issues) lines.push({ record: "issue", db, ...i, labels: labels.get(i.id) ?? [] });
+    for (const i of d.issues) {
+      lines.push({ record: "issue", db, ...i, labels: labels.get(i.id) ?? [], branches: branches.get(i.id) ?? [] });
+    }
     for (const { id: _, issue_id, ...n } of d.notes) lines.push({ record: "note", db, issue: issue_id, ...n });
     for (const s of d.seq) lines.push({ record: "sequence", db, ...s });
     counts[db] = d.issues.length;
@@ -41,8 +45,8 @@ export async function exportAll(b: Backend, out: string, warn: (m: string) => vo
 
 export function parseExport(text: string): Record<DbName, Dump> {
   const dumps: Record<DbName, Dump> = {
-    issues: { milestones: [], issues: [], labels: [], notes: [], seq: [] },
-    security: { milestones: [], issues: [], labels: [], notes: [], seq: [] },
+    issues: { milestones: [], issues: [], labels: [], branches: [], notes: [], seq: [] },
+    security: { milestones: [], issues: [], labels: [], branches: [], notes: [], seq: [] },
   };
   let meta = false;
   text.split("\n").forEach((line, n) => {
@@ -65,9 +69,11 @@ export function parseExport(text: string): Record<DbName, Dump> {
     if (!d) throw new ValidationError(`Line ${n + 1}: unknown db "${db}".`);
     if (record === "milestone") d.milestones.push(rest);
     else if (record === "issue") {
-      const { labels, ...row } = rest;
+      // A schema-1 export has no branches field.
+      const { labels, branches, ...row } = rest;
       d.issues.push(row);
       for (const label of (labels as string[]) ?? []) d.labels.push({ issue_id: row.id, label });
+      for (const branch of (branches as string[]) ?? []) d.branches.push({ issue_id: row.id, branch });
     } else if (record === "note") {
       const { issue, ...note } = rest;
       d.notes.push({ id: null, issue_id: issue, ...note });

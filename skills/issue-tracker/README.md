@@ -23,6 +23,9 @@ SQLite database that Claude reads and writes only through a bundled Bun CLI.
   dated notes.
 - **Searches** issue titles, bodies and notes, in any case, with
   `list --query <text>`, alone or with the other filters.
+- **Links issues to branches.** Starting an issue records the current
+  branch, so session recaps can name the issue the branch works on.
+  `list --branch <name>` finds them.
 - **Keeps security findings** in a separate database, with `S` ids such as
   `S0007`, that never becomes a public issue.
 - **Syncs your own machines through Turso**, optionally, with an offline
@@ -162,7 +165,8 @@ A local project needs no configuration. Two setups need a step from you.
    starts in `triage`.
 3. "Triage issues" proposes a type and priority; once you approve, it
    moves to `open`.
-4. "Start 0007" moves it to `in-progress`.
+4. "Start 0007" moves it to `in-progress` and links it to the current
+   branch.
 5. When it is done, close it locally, or promote it to GitHub.
 
 The CLI's output stays short:
@@ -205,6 +209,12 @@ Gotchas:
 - **Issue bodies are not hard-wrapped.** GitHub shows single newlines as
   line breaks, so Claude writes each paragraph of an issue body on one
   line.
+- **Starting work on `main` links no branch.** On `main`, `master`, the
+  default branch or a detached HEAD, `move <id> in-progress` prints
+  `not linked: …; pass --branch to link`. Start from the topic branch, or
+  fix it later with `edit <id> --set branches=<name>`.
+- **Branch links stay local.** Promoting an issue to GitHub leaves them
+  out, and closed issues keep them as history.
 - **Worktrees share one issue list.** Inside a git worktree, the CLI uses
   the main checkout's `.claude/`, so issues survive when the worktree is
   removed.

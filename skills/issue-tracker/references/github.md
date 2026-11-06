@@ -196,4 +196,5 @@ GitHub stay there.
 | `resolution: invalid`             | Closed as `not planned` + label `invalid`      |
 | `resolution: duplicate`           | `--duplicate-of <original>` + label `duplicate` |
 | `created`, `updated`              | Set by GitHub; not copied                      |
+| `branches`                        | Not copied; branch links stay local            |
 | `type: security`                  | Never an issue; private security advisory only |

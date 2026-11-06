@@ -18,6 +18,7 @@ export function issueLine(db: DbName, issue: Issue, shownId?: string): string {
   if (issue.milestone) extras.push(`milestone ${issue.milestone}`);
   if (issue.parent !== null) extras.push(`parent ${formatId(db, issue.parent)}`);
   if (issue.labels.length) extras.push(`labels ${issue.labels.join(",")}`);
+  if (issue.branches.length) extras.push(`branches ${issue.branches.join(",")}`);
   if (issue.resolution) extras.push(`resolution ${issue.resolution}`);
   const head = [
     (shownId ?? formatId(db, issue.id)).padEnd(6),
@@ -43,6 +44,7 @@ export function detailText(db: DbName, d: IssueDetail, shownId?: string): string
     field("milestone", i.milestone),
     field("parent", i.parent === null ? null : formatId(db, i.parent)),
     field("labels", i.labels.join(", ")),
+    field("branches", i.branches.join(", ")),
     field("created", i.created),
     field("updated", i.updated),
     field("resolution", i.resolution),

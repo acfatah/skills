@@ -4,7 +4,7 @@ description: Issue tracking in a local SQLite database through a bundled Bun CLI
 allowed-tools: Bash(bun ${CLAUDE_SKILL_DIR}/scripts/issues.js *)
 ---
 
-# Issue Tracker v2.2.0
+# Issue Tracker v2.3.0
 
 Track issues while you work: every issue starts in a local database, and
 moves to GitHub only when it must be shared. Capture fast, triage later, and
@@ -115,8 +115,11 @@ Ids are accepted as `7`, `0007`, or `S0007`, and printed zero-padded.
   contain the text, in any case, e.g. `list --status all --query login`. It
   combines with the other filters and with `--security`, and also searches
   queued offline issues and notes.
+- **`list --branch <name>`** lists issues linked to that branch; it combines
+  with the other filters.
 - **`edit --set`** takes `type`, `priority`, `milestone`, `parent`,
-  `github`, and `labels` (comma-separated); an empty value clears it.
+  `github`, `labels` and `branches` (both comma-separated); an empty value
+  clears it.
 - **`milestone`** takes `add`, `list`, `edit`, and `close`. `close` refuses
   while open issues name the milestone.
 
@@ -236,7 +239,8 @@ The user approves, edits, or rejects each proposal. Then apply it with
 
 ### Working
 
-- **Starting work:** `move <id> in-progress` yourself.
+- **Starting work:** `move <id> in-progress` yourself. It links the issue
+  to the current branch; see Branch links.
 - **Blocked:** `move <id> blocked --note "<what it waits for>"`.
 - **Done:** propose closing with a resolution, and close once the user
   confirms. A user's own "close 0007" is that confirmation; ask which
@@ -244,6 +248,24 @@ The user approves, edits, or rejects each proposal. Then apply it with
 - **Parent with open children:** `close` refuses and lists them. Ask
   whether to close, re-parent, or keep them; pass `--keep-children` only
   to keep them open.
+
+### Branch links
+
+An issue lists the branches it is worked on, and a branch can carry
+several issues. Session recaps use the links to name the session's issue.
+
+- **Automatic:** `move <id> in-progress` records the current branch, from
+  `open` or from `blocked`. Moving again on the same branch keeps one link.
+- **Skipped, with a one-line hint:** a detached HEAD, a folder outside git,
+  and `main`, `master` or the repo's default branch (`origin/HEAD`), as in
+  `not linked: on main; pass --branch to link`.
+- **`--branch <name>`** records that branch instead, a protected one
+  included. **`--no-branch`** records none. Pass one, not both, and only
+  with `in-progress`.
+- **Fix links by hand** with `edit <id> --set branches=a,b`, or clear them
+  with `--set branches=`.
+- **Closed issues keep their links,** as history.
+- **`show`, `list` and `--json`** print the links.
 
 ### Sub-issues
 
@@ -335,6 +357,8 @@ others, and only on the user's request:
 3. **Run `gh` yourself**, creating any missing labels or milestone after
    asking.
 4. **`close <id> --resolution moved --github <url>`** records the link.
+
+Branch links stay local: `promote` leaves them out.
 
 Before any `gh` command for issues, labels, milestones, sub-issues, or
 Projects, read [`references/github.md`](references/github.md).

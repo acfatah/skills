@@ -259,6 +259,26 @@ describe("Turso projects through the bundle", () => {
     expect(p.issues.db.query("SELECT id FROM issues ORDER BY id").all().map((x) => (x as { id: number }).id)).toEqual([1, 2, 3, 4, 5, 7]);
   });
 
+  test("branch links go to Turso and back into the mirror", async () => {
+    const p = project();
+    await ok(p.$("new", "--title", "Local", "--type", "bug"));
+    await ok(p.$("edit", "1", "--set", "branches=feat/local"));
+    await ok(p.enable());
+    expect(p.issues.db.query("SELECT issue_id, branch FROM issue_branches").all()).toEqual([
+      { issue_id: 1, branch: "feat/local" },
+    ]);
+    await ok(p.$("edit", "1", "--set", "branches=feat/a,feat/b"));
+    expect(p.issues.db.query("SELECT branch FROM issue_branches ORDER BY branch").all()).toEqual([
+      { branch: "feat/a" },
+      { branch: "feat/b" },
+    ]);
+    // Offline reads come from the mirror, which holds the links too.
+    p.issues.stop();
+    const r = await ok(p.$("list", "--branch", "feat/b"));
+    expect(r.stdout).toContain("(branches feat/a,feat/b)");
+    p.issues.start();
+  });
+
   test("remote disable flushes, pulls a final copy, and goes local", async () => {
     const p = project();
     await ok(p.enable());

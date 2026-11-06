@@ -5,6 +5,7 @@ export interface Dump {
   milestones: Row[];
   issues: Row[];
   labels: Row[];
+  branches: Row[];
   notes: Row[];
   seq: { name: string; seq: number }[];
 }
@@ -29,10 +30,11 @@ const MILESTONE_COLS = ["name", "goal", "due", "state", "github"] as const;
 const NOTE_COLS = ["id", "client_id", "issue_id", "date", "text"] as const;
 
 export async function dump(store: Store): Promise<Dump> {
-  const [milestones, issues, labels, notes, seq] = await store.batch([
+  const [milestones, issues, labels, branches, notes, seq] = await store.batch([
     { sql: `SELECT ${MILESTONE_COLS.join(", ")} FROM milestones ORDER BY name` },
     { sql: `SELECT ${ISSUE_COLS.join(", ")} FROM issues ORDER BY id` },
     { sql: "SELECT issue_id, label FROM labels ORDER BY issue_id, label" },
+    { sql: "SELECT issue_id, branch FROM issue_branches ORDER BY issue_id, branch" },
     { sql: `SELECT ${NOTE_COLS.join(", ")} FROM notes ORDER BY id` },
     { sql: "SELECT name, seq FROM sqlite_sequence WHERE name IN ('issues', 'notes')" },
   ]);
@@ -40,6 +42,7 @@ export async function dump(store: Store): Promise<Dump> {
     milestones: milestones!,
     issues: issues!,
     labels: labels!,
+    branches: branches!,
     notes: notes!,
     seq: seq! as Dump["seq"],
   };
@@ -75,7 +78,7 @@ function parentsFirst(issues: Row[]): Row[] {
 }
 
 export function clearStmts(): Stmt[] {
-  return ["labels", "notes", "issues", "milestones"].map((t) => ({ sql: `DELETE FROM ${t}` }));
+  return ["labels", "issue_branches", "notes", "issues", "milestones"].map((t) => ({ sql: `DELETE FROM ${t}` }));
 }
 
 export function loadStmts(d: Dump): Stmt[] {
@@ -83,6 +86,7 @@ export function loadStmts(d: Dump): Stmt[] {
     ...d.milestones.map((m) => insert("milestones", MILESTONE_COLS, m)),
     ...parentsFirst(d.issues).map((i) => insert("issues", ISSUE_COLS, i)),
     ...d.labels.map((l) => insert("labels", ["issue_id", "label"], l)),
+    ...d.branches.map((b) => insert("issue_branches", ["issue_id", "branch"], b)),
     ...d.notes.map((n) => insert("notes", NOTE_COLS, n)),
   ];
 }

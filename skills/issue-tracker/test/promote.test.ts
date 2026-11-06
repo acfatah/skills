@@ -45,6 +45,15 @@ Then record the link: close 0001 --resolution moved --github <issue-url>
 `);
   });
 
+  test("branches stay local: absent from the dry run", () => {
+    const $ = setup();
+    ok($("new", "--title", "Linked", "--type", "bug"));
+    ok($("move", "1", "open"));
+    ok($("edit", "1", "--set", "branches=feat/secret-topic"));
+    expect(ok($("promote", "1", "--dry-run"))).not.toContain("feat/secret-topic");
+    expect(ok($("promote", "1", "--dry-run", "--json"))).not.toContain("feat/secret-topic");
+  });
+
   test("a feature whose parent and child are already on GitHub", () => {
     const $ = setup();
     ok($("new", "--title", "Accounts", "--type", "feature"));
