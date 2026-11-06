@@ -16,7 +16,7 @@ import {
   showIssue,
 } from "./commands/issues.ts";
 import { addMilestone, closeMilestone, editMilestone, listMilestones } from "./commands/milestones.ts";
-import { matches, queueNew, queueNote, queuedIssues, queuedNotesOn } from "./commands/offline.ts";
+import { matches, queueNew, queueNote, queuedIssues, queuedNoteMatches, queuedNotesOn } from "./commands/offline.ts";
 import { remoteDisable, remoteEnable, remoteStatus } from "./commands/remote.ts";
 import { CliError, Offline, UsageError, ValidationError } from "./errors.ts";
 import { exportAll, parseExport } from "./exporter.ts";
@@ -28,7 +28,7 @@ import { ADVISORY, promote, promotionText } from "./promote.ts";
 import { OPEN_STATUSES, type Status, checkStatus, splitList, today } from "./model.ts";
 import { STATUSES } from "./schema.ts";
 
-export const VERSION = "2.1.2";
+export const VERSION = "2.2.0";
 
 type Options = NonNullable<ParseArgsConfig["options"]>;
 type Values = Record<string, string | boolean | string[] | undefined>;
@@ -151,8 +151,13 @@ export const VERBS: Record<string, Verb> = {
         query: str(v, "query"),
       };
       const b = ctx.backend();
-      const issues = await b.run(db, (s) => listIssues(s, filters));
-      const queued = b.offline.has(db) ? queuedIssues(db, b.outboxFor(db)).filter((q) => matches(q.issue, filters)) : [];
+      const issues = await b.run(db, (s) => listIssues(s, filters), {
+        offlineRead: (q) =>
+          listIssues(q.mirror, { ...filters, alsoIds: filters.query ? queuedNoteMatches(q.outbox, filters.query) : [] }),
+      });
+      const queued = b.offline.has(db)
+        ? queuedIssues(db, b.outboxFor(db)).filter((q) => matches(q.issue, filters, q.notes))
+        : [];
       const lines = [
         ...issues.map((i) => issueLine(db, i)),
         ...queued.map((q) => issueLine(db, q.issue, q.shownId)),

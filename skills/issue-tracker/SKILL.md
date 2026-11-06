@@ -4,7 +4,7 @@ description: Issue tracking in a local SQLite database through a bundled Bun CLI
 allowed-tools: Bash(bun ${CLAUDE_SKILL_DIR}/scripts/issues.js *)
 ---
 
-# Issue Tracker v2.1.2
+# Issue Tracker v2.2.0
 
 Track issues while you work: every issue starts in a local database, and
 moves to GitHub only when it must be shared. Capture fast, triage later, and
@@ -111,10 +111,10 @@ Ids are accepted as `7`, `0007`, or `S0007`, and printed zero-padded.
 
 - **`list`** shows the four open statuses by default; `--status all` adds
   closed ones. `--security` lists security issues.
-- **`list --query <text>`** finds issues whose title or body contains the
-  text, in any case, e.g. `list --status all --query login`. It combines
-  with the other filters and with `--security`, and also searches queued
-  offline issues.
+- **`list --query <text>`** finds issues whose title, body, or notes
+  contain the text, in any case, e.g. `list --status all --query login`. It
+  combines with the other filters and with `--security`, and also searches
+  queued offline issues and notes.
 - **`edit --set`** takes `type`, `priority`, `milestone`, `parent`,
   `github`, and `labels` (comma-separated); an empty value clears it.
 - **`milestone`** takes `add`, `list`, `edit`, and `close`. `close` refuses

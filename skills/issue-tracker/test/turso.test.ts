@@ -205,6 +205,13 @@ describe("Turso projects through the bundle", () => {
     const found = await ok(p.$("list", "--query", "OFFLINE"));
     expect(found.stdout).toMatch(/P1\s+queued/);
     expect(found.stdout).not.toContain("0001");
+    // Queued notes match: on a queued issue, and on a real one.
+    expect((await ok(p.$("list", "--query", "MORE DETAIL"))).stdout).toMatch(/P1\s+queued/);
+    const noted = await ok(p.$("list", "--query", "seen again"));
+    expect(noted.stdout).toContain("0001");
+    expect(noted.stdout).not.toContain("P1");
+    // The other filters still apply to an issue matched by a queued note.
+    expect((await ok(p.$("list", "--query", "seen again", "--type", "idea"))).stdout).toBe("No matching issues.\n");
     expect(list.stderr).toMatch(/offline; issues as of \d{4}-\d{2}-\d{2} \d{2}:\d{2}/);
     const shown = await ok(p.$("show", "P1"));
     expect(shown.stdout).toContain("- 2026-10-20: more detail");

@@ -597,9 +597,18 @@ async function listIssues(store, f) {
     args.push(f.label);
   }
   if (f.query) {
-    where.push("(title LIKE ? ESCAPE '\\' OR body LIKE ? ESCAPE '\\')");
     const pattern = likePattern(f.query);
-    args.push(pattern, pattern);
+    const ors = [
+      "title LIKE ? ESCAPE '\\'",
+      "body LIKE ? ESCAPE '\\'",
+      "EXISTS (SELECT 1 FROM notes n WHERE n.issue_id = issues.id AND n.text LIKE ? ESCAPE '\\')"
+    ];
+    args.push(pattern, pattern, pattern);
+    if (f.alsoIds?.length) {
+      ors.push(`id IN (${f.alsoIds.map(() => "?").join(",")})`);
+      args.push(...f.alsoIds);
+    }
+    where.push(`(${ors.join(" OR ")})`);
   }
   const sql = `SELECT ${COLUMNS} FROM issues${where.length ? ` WHERE ${where.join(" AND ")}` : ""} ORDER BY id`;
   return withLabels(store, await store.query(sql, args));
@@ -2568,11 +2577,16 @@ function queuedIssues(db, outbox) {
     }
   }));
 }
-function matches(i, f) {
-  return (!f.type || i.type === f.type) && (!f.milestone || i.milestone === f.milestone) && (!f.label || i.labels.includes(f.label)) && (f.parent === undefined || i.parent === f.parent) && (!f.query || [i.title, i.body].some((t) => t.toLowerCase().includes(f.query.toLowerCase())));
+function matches(i, f, notes = []) {
+  return (!f.type || i.type === f.type) && (!f.milestone || i.milestone === f.milestone) && (!f.label || i.labels.includes(f.label)) && (f.parent === undefined || i.parent === f.parent) && (!f.query || [i.title, i.body, ...notes.map((n) => n.text)].some((t) => t.toLowerCase().includes(f.query.toLowerCase())));
 }
 function queuedNotesOn(outbox, id) {
   return outbox.read().filter((e) => e.kind === "note" && ("id" in e.target) && e.target.id === id).map((e) => ({ date: e.date, text: e.text }));
+}
+function queuedNoteMatches(outbox, query) {
+  const q = query.toLowerCase();
+  const ids = outbox.read().filter((e) => e.kind === "note" && ("id" in e.target)).filter((e) => e.text.toLowerCase().includes(q)).map((e) => e.target.id);
+  return [...new Set(ids)];
 }
 
 // src/commands/remote.ts
@@ -3219,7 +3233,7 @@ function promotionText(p) {
 }
 
 // src/cli.ts
-var VERSION = "2.1.2";
+var VERSION = "2.2.0";
 var str2 = (v, k) => v[k];
 var json = { json: { type: "boolean" } };
 async function readBody(v) {
@@ -3311,8 +3325,10 @@ var VERBS = {
         query: str2(v, "query")
       };
       const b = ctx.backend();
-      const issues = await b.run(db, (s) => listIssues(s, filters));
-      const queued = b.offline.has(db) ? queuedIssues(db, b.outboxFor(db)).filter((q) => matches(q.issue, filters)) : [];
+      const issues = await b.run(db, (s) => listIssues(s, filters), {
+        offlineRead: (q) => listIssues(q.mirror, { ...filters, alsoIds: filters.query ? queuedNoteMatches(q.outbox, filters.query) : [] })
+      });
+      const queued = b.offline.has(db) ? queuedIssues(db, b.outboxFor(db)).filter((q) => matches(q.issue, filters, q.notes)) : [];
       const lines = [
         ...issues.map((i) => issueLine(db, i)),
         ...queued.map((q) => issueLine(db, q.issue, q.shownId))

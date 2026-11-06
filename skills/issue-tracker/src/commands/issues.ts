@@ -154,6 +154,9 @@ export interface ListFilters {
   label?: string;
   parent?: number;
   query?: string;
+  // Extra ids that also satisfy the query, such as issues with a matching
+  // note still queued offline. Ignored without query.
+  alsoIds?: number[];
 }
 
 // LIKE treats % and _ as wildcards; escape them so the text matches literally.
@@ -185,9 +188,18 @@ export async function listIssues(store: Store, f: ListFilters): Promise<Issue[]>
     args.push(f.label);
   }
   if (f.query) {
-    where.push("(title LIKE ? ESCAPE '\\' OR body LIKE ? ESCAPE '\\')");
     const pattern = likePattern(f.query);
-    args.push(pattern, pattern);
+    const ors = [
+      "title LIKE ? ESCAPE '\\'",
+      "body LIKE ? ESCAPE '\\'",
+      "EXISTS (SELECT 1 FROM notes n WHERE n.issue_id = issues.id AND n.text LIKE ? ESCAPE '\\')",
+    ];
+    args.push(pattern, pattern, pattern);
+    if (f.alsoIds?.length) {
+      ors.push(`id IN (${f.alsoIds.map(() => "?").join(",")})`);
+      args.push(...f.alsoIds);
+    }
+    where.push(`(${ors.join(" OR ")})`);
   }
   const sql = `SELECT ${COLUMNS} FROM issues${where.length ? ` WHERE ${where.join(" AND ")}` : ""} ORDER BY id`;
   return withLabels(store, await store.query<IssueRow>(sql, args));
