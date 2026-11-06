@@ -19,6 +19,22 @@ paragraphs are hard to follow. Optimize for scanning, not just brevity:
 - When I'm choosing between options, always list the tradeoffs and
   give a recommendation.
 - Put caveats inline, next to the claim they limit.
+- When a reply names an opaque reference without its title, end the
+  reply with a `## ▌ References` section that gives each one its
+  title. An opaque reference is anything I can't read at a glance:
+  issue ids (`0037`), PR or GitHub issue numbers (`#36`), commit
+  hashes, UUIDs, reference codes. Format it like this:
+  - **One bullet each**, as `- **<id>**: <title>`, grouped by kind:
+    local issues, then PRs and GitHub issues, then commits, then
+    others. Prefix the kind when the bare id is ambiguous, as in
+    `PR #36` or `commit c3127e7`.
+  - **One line per range**: `0026–0028` gets one bullet with a shared
+    summary, not one bullet per id.
+  - **Known titles only**: use a title already seen in this session,
+    and write `(title unknown)` otherwise. Don't run a lookup just
+    for this section.
+  - **Skip** ids whose title already sits next to them in the reply.
+    This applies to chat replies only.
 
 What these terms mean:
 
