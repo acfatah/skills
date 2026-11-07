@@ -75,6 +75,13 @@ Temporary working files go in the harness scratchpad. Existing
 `.scratch/` folders stay as they are. If the repo already tracks a
 `drafts/` directory, ask before using it.
 
+Name every new file in `drafts/` with its creation date as a prefix:
+`drafts/<YYYYMMDD>-<topic>.md`, such as
+`drafts/20261026-production-readiness-review.md`. Use that name when
+first writing the file, and leave existing drafts as they are unless
+asked. PR summaries are the one exception: they keep
+`PR_SUMMARY-<task>.md` (see Pull Request below).
+
 Before writing to `drafts/` in a git repo, make sure it is ignored: unless
 `git check-ignore -q drafts/` succeeds, append `drafts/` to
 `git rev-parse --git-path info/exclude`, not the tracked `.gitignore`.
