@@ -36,6 +36,7 @@ problem‑solving.
 | [post-merge-cleanup](skills/post-merge-cleanup) | After a PR merges, remove its worktree, local branch and remote branch, and its fork sub-branches, after safety checks and one confirmation (or none with `--yes`, or a preview only with `--dry-run`), and name any database the worktree leaves behind. |
 | [pr-summary](skills/pr-summary) | Write or update a PR suggestion in `drafts/PR_SUMMARY-<task>.md`: a title, a comprehensive description for reviewers of every commit on the branch, and the attribution line, in an untracked file. Never pushes or runs `gh`; auto-pr opens the PR, in its run mode or on request, and uses it for the PR body. |
 | [readme-badges](skills/readme-badges) | Add, audit, or repair a README's badge block: shields.io and qlty badges in one HTML format, each verified before writing. |
+| [release](skills/release) | Release one package in another repo through a release PR: propose the next SemVer or CalVer version from Conventional Commits with a bundled Bun planner, commit it on `release/v<version>` and open a draft PR; after the merge, tag the merge commit and optionally push the tag and create the GitHub Release. Locks the scheme, hands bumpp projects the exact command, and writes no CHANGELOG. |
 | [session-recap](skills/session-recap) | A `/session-recap` command: a one-line `/recap`-style summary, then a full read-only recap (Goal, Issues, Done, In progress, Drift, Waiting on me, Next step), checked against the repo through session-sync. Takes `short` or a focus area. |
 | [session-sync](skills/session-sync) | Keep several Claude sessions on one branch or PR in sync: forks on sub-branches, a shared sessions file, a sync step before acting, and a repo-checked recap after a break that names the branch's issues when issue-tracker is installed. |
 | [unicode-diagrams](skills/unicode-diagrams) | One design system for text diagrams in chat: ASCII, Tier 1 and Tier 2 glyph sets picked from the output target and terminal, fixed meanings for line styles and status glyphs, templates with ASCII twins, and a bundled Bun checker for unsafe glyphs, lines over 80 columns and broken box edges. |
@@ -79,10 +80,10 @@ Other software, by skill:
 
 | Software | Needed by | Notes |
 |---|---|---|
-| [git](https://git-scm.com) | auto-commit, auto-pr, handle-pr-comments, plans-and-roadmaps, post-merge-cleanup, pr-summary, session-sync, readme-badges, webapp-security-audit | |
-| [Bun](https://bun.sh) | handle-pr-comments, issue-tracker, lint-skills, unicode-diagrams | Runs each one's bundled script; the skill stops without it, except unicode-diagrams, which draws unchecked. session-sync and session-recap use it through issue-tracker for their optional Issues line |
-| [GitHub CLI (`gh`)](https://cli.github.com), logged in | auto-pr, handle-pr-comments, post-merge-cleanup, issue-tracker (promotion) | Check with `gh auth status`. readme-badges and plans-and-roadmaps use it when present |
-| GitHub account | auto-pr, handle-pr-comments, post-merge-cleanup, issue-tracker (promotion) | For PRs, remote branches and GitHub Issues |
+| [git](https://git-scm.com) | auto-commit, auto-pr, handle-pr-comments, plans-and-roadmaps, post-merge-cleanup, pr-summary, release, session-sync, readme-badges, webapp-security-audit | |
+| [Bun](https://bun.sh) | handle-pr-comments, issue-tracker, lint-skills, release, unicode-diagrams | Runs each one's bundled script; the skill stops without it, except unicode-diagrams, which draws unchecked. session-sync and session-recap use it through issue-tracker for their optional Issues line |
+| [GitHub CLI (`gh`)](https://cli.github.com), logged in | auto-pr, handle-pr-comments, post-merge-cleanup, release, issue-tracker (promotion) | Check with `gh auth status`. readme-badges and plans-and-roadmaps use it when present |
+| GitHub account | auto-pr, handle-pr-comments, post-merge-cleanup, release, issue-tracker (promotion) | For PRs, remote branches and GitHub Issues |
 | [`jq`](https://jqlang.org) | status line | plans-and-roadmaps falls back to reading files without it |
 | curl | readme-badges | Checks each badge image and link |
 | [Turso CLI](https://docs.turso.tech/cli) and account | issue-tracker | Optional, only for sync between your machines |
