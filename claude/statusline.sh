@@ -1,14 +1,16 @@
 #!/usr/bin/env bash
-# Claude Code status line: process id, session id and context window
+# Claude Code status line: session id, process id and context window
 # usage. Reads the status line JSON on stdin; see
 # https://code.claude.com/docs/en/statusline
 #
-# Output:   pid: 2159799 · session: <session_id> · context: 84k/1M (8%)
-#           branched from: <session_id>           (only after /branch)
-#           forked from: <session_id>             (only in a ⑂ fork)
+# Output:   <session_id> (<pid>) · 84k/1M (8%)
+#           └ <parent_session_id> (<parent pid>)   (only in a branch/fork)
+# The parent pid shows only while another process runs that session.
+# A ⑂ fork marks its parent with ⑂; a /branch has no marker.
 # Enabled by statusLine.command in ~/.claude/settings.json.
 #
-# Written with Claude Opus 5.5 (Claude Code), 2026-10-21.
+# Written with Claude Opus 5.5 (Claude Code), 2026-10-21; compact
+# layout 2026-11-08.
 
 # The JSON has no PID, so walk up the parent processes to the one named
 # claude. Prints ? when there is none, e.g. when run by hand.
@@ -26,12 +28,10 @@ input=$(cat)
 transcript=$(jq -r '.transcript_path // empty' <<<"$input")
 self=$(jq -r '.session_id // empty' <<<"$input")
 parent=''
-via=''
+mark=''
 if [ -f "$transcript" ]; then
   parent=$(grep -m1 '"forkedFrom"' "$transcript" \
     | jq -r '.forkedFrom.sessionId // empty' 2>/dev/null)
-  [ -n "$parent" ] && via=branched
-
   # A background fork has no forkedFrom. It queues a <fork-source>
   # notice instead, and each copied line keeps the session_id of the
   # session that wrote it. The last foreign one is the fork's parent.
@@ -41,11 +41,31 @@ if [ -f "$transcript" ]; then
     parent=$(tac "$transcript" \
       | grep -oE '"session_id":"[0-9a-f-]{36}"' \
       | grep -m1 -vF "$self" | cut -d'"' -f4)
-    [ -n "$parent" ] && via=forked
+    [ -n "$parent" ] && mark='⑂'
   fi
 fi
 
-jq -r --arg pid "$pid" --arg parent "$parent" --arg via "$via" <<<"$input" '
+# Find a live process running the parent session. Claude Code writes
+# ~/.claude/sessions/<pid>.json (undocumented) and leaves stale files
+# behind, so keep a pid only if it is alive and its start time matches
+# procStart, which rules out a reused pid. Our own pid is skipped: a
+# fork shares its parent's process, so it would only repeat line 1.
+parent_pid=''
+if [ -n "$parent" ]; then
+  while read -r p start; do
+    [ "$p" = "$pid" ] && continue
+    [ -r "/proc/$p/stat" ] || continue
+    # Field 22 is starttime; split after the last ) since comm may
+    # contain spaces.
+    now=$(sed 's/.*) //' "/proc/$p/stat" | awk '{print $20}')
+    [ "$now" = "$start" ] && { parent_pid=$p; break; }
+  done < <(jq -r --arg s "$parent" \
+    'select(.sessionId == $s) | "\(.pid) \(.procStart)"' \
+    ~/.claude/sessions/*.json 2>/dev/null)
+fi
+
+jq -r --arg pid "$pid" --arg parent "$parent" --arg ppid "$parent_pid" \
+  --arg mark "$mark" <<<"$input" '
   # Shorten a token count: 84213 -> 84k, 1000000 -> 1M.
   def k:
     if . >= 1000000 then "\(. / 1000000 * 10 | floor / 10)M"
@@ -56,10 +76,12 @@ jq -r --arg pid "$pid" --arg parent "$parent" --arg via "$via" <<<"$input" '
   # slightly. Fields are null before the first response and after
   # /compact, hence the // fallbacks.
   .context_window as $c
-  | "  pid: \($pid)"
-    + " · session: \(.session_id)"
-    + " · context: \(($c.total_input_tokens // 0) | k)"
+  | "\(.session_id) (\($pid))"
+    + " · \(($c.total_input_tokens // 0) | k)"
     + "/\(($c.context_window_size // 200000) | k)"
     + " (\(($c.used_percentage // 0) | floor)%)"
-    + if $parent != "" then "\n  \($via) from: \($parent)" else "" end
+    + if $parent != "" then
+        "\n└ " + (if $mark != "" then "\($mark) " else "" end) + $parent
+        + if $ppid != "" then " (\($ppid))" else "" end
+      else "" end
 '
