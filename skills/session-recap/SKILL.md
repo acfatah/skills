@@ -6,7 +6,7 @@ disable-model-invocation: true
 allowed-tools: Bash(git status:*), Bash(git log:*), Bash(git fetch:*), Bash(git diff:*), Bash(git rev-parse:*), Bash(git branch:*), Bash(git worktree list:*), Bash(git for-each-ref:*), Bash(test -e *), Bash(bun *issue-tracker/scripts/issues.js list *)
 ---
 
-# Session Recap v1.2.0
+# Session Recap v1.2.1
 
 Recap the current work. Arguments: "$ARGUMENTS"
 
@@ -66,6 +66,7 @@ is still unclear, list it under "Waiting on me".
 ## Footer
 
 When the recap ends with a References section, put a line of exactly 75
-`─` characters (U+2500) on its own line, directly above the References
-heading, with a blank line on each side. It marks where the recap ends
-and the footer starts. With no References section, add no line.
+`─` characters (U+2500) on its own line, with a blank line before it and
+the References heading on the very next line, with no blank line between
+them. It marks where the recap ends and the footer starts. With no
+References section, add no line.
