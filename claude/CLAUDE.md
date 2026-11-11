@@ -35,6 +35,9 @@ paragraphs are hard to follow. Optimize for scanning, not just brevity:
     for this section.
   - **Skip** ids whose title already sits next to them in the reply.
     This applies to chat replies only.
+  - **Rule it off**: put a line of exactly 75 `─` characters (U+2500)
+    on its own line, with a blank line before it and the References
+    heading on the very next line, with no blank line between them.
 
 What these terms mean:
 
