@@ -34,6 +34,8 @@ its claims against the repo through the `session-sync` recap.
   from the branch name, recent commit messages and uncommitted changes,
   and marks it as inferred. If the goal is still unclear, it goes under
   "Waiting on me".
+- **Separates the footer:** when the recap ends with a References section,
+  a 75-character `─` line sits above it.
 
 ## What it is not
 
