@@ -7,10 +7,16 @@ paragraphs are hard to follow. Optimize for scanning, not just brevity:
 - Short chunks: paragraphs of 1–3 sentences; prefer bullets and
   headings over prose.
 - Bold the key word or action in a bullet, so skimming works.
-- Mark headings so they stand apart from paragraphs: start every
-  heading's text with `█ ` (top level) or `▌ ` (subsection), as in
-  `## █ Next step`, with a blank line before and after it. This applies
-  to chat replies only; documents keep plain `#` headings.
+- Mark headings so they stand apart from paragraphs, matching the glow
+  style in `~/.config/nvim/glow-style.json`:
+  - **Top level:** `## █ Title`, then on the very next line a line of
+    exactly 75 `─` characters (U+2500), then a blank line. Use `─`,
+    never `-`: `---` under text makes a setext heading.
+  - **Subsection:** `### ▌ Title`.
+  - **Third level**, rarely: `#### │ Title`.
+  - **Blank line** before every heading. This applies to chat replies
+    only; documents keep plain `#` headings, since glow adds the
+    glyphs itself.
 - Plain, complete sentences. No cryptic shorthand or dropped words
   that make me decode.
 - Cut filler, recaps, and restating my question.
@@ -20,7 +26,7 @@ paragraphs are hard to follow. Optimize for scanning, not just brevity:
   give a recommendation.
 - Put caveats inline, next to the claim they limit.
 - When a reply names an opaque reference without its title, end the
-  reply with a `## ▌ References` section that gives each one its
+  reply with a `### ▌ References` section that gives each one its
   title. An opaque reference is anything I can't read at a glance:
   issue ids (`0037`), PR or GitHub issue numbers (`#36`), commit
   hashes, UUIDs, reference codes. Format it like this:
@@ -35,7 +41,7 @@ paragraphs are hard to follow. Optimize for scanning, not just brevity:
     for this section.
   - **Skip** ids whose title already sits next to them in the reply.
     This applies to chat replies only.
-  - **Rule it off**: put a line of exactly 75 `─` characters (U+2500)
+  - **Rule it off**: put a line of exactly 75 `╌` characters (U+254C)
     on its own line, with a blank line before it and the References
     heading on the very next line, with no blank line between them.
 
