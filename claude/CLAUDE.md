@@ -9,9 +9,12 @@ paragraphs are hard to follow. Optimize for scanning, not just brevity:
 - Bold the key word or action in a bullet, so skimming works.
 - Mark headings so they stand apart from paragraphs, matching the glow
   style in `~/.config/nvim/glow-style.json`:
-  - **Top level:** `## █ Title`, then on the very next line a line of
-    exactly 75 `─` characters (U+2500), then a blank line. Use `─`,
-    never `-`: `---` under text makes a setext heading.
+  - **Top level:** a bold line ending in a backslash, `**█ Title**\`,
+    then on the very next line a line of exactly 75 `─` characters
+    (U+2500), then a blank line. Not a `##` heading: the terminal
+    puts a gap under headings, which would split the title from its
+    rule. The `\` keeps the rule on its own line. Use `─`, never `-`:
+    `---` under text makes a setext heading.
   - **Subsection:** `### ▌ Title`.
   - **Third level**, rarely: `#### │ Title`.
   - **Blank line** before every heading. This applies to chat replies
