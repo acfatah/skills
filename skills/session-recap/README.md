@@ -25,8 +25,8 @@ its claims against the repo through the `session-sync` recap.
   "Waiting on me".
 - **Outside a git repo,** it recaps from the conversation only, in the same
   shape, without the Issues line, and says in one line that git checks
-  were skipped. It checks
-  claims about files with reads where that is cheap.
+  were skipped. It checks claims about files with reads where that is
+  cheap.
 - **Trusts the repo over the conversation.** It uses the conversation for
   the Goal, decisions and open questions, but checks every claim against
   the repo, and lists any mismatch under "Drift".

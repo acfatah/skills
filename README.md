@@ -39,7 +39,7 @@ problem‑solving.
 | [release](skills/release) | Release one package in another repo through a release PR: propose the next SemVer or CalVer version from Conventional Commits with a bundled Bun planner, commit it on `release/v<version>` and open a draft PR; after the merge, tag the merge commit and optionally push the tag and create the GitHub Release. Locks the scheme, hands bumpp projects the exact command, and writes no CHANGELOG. |
 | [session-recap](skills/session-recap) | A `/session-recap` command: a one-line `/recap`-style summary, then a full read-only recap (Goal, Issues, Done, In progress, Drift, Waiting on me, Next step), checked against the repo through session-sync. Takes `short` or a focus area. |
 | [session-sync](skills/session-sync) | Keep several Claude sessions on one branch or PR in sync: forks on sub-branches, a shared sessions file, a sync step before acting, and a repo-checked recap after a break that names the branch's issues when issue-tracker is installed. |
-| [unicode-diagrams](skills/unicode-diagrams) | One design system for text diagrams in chat: ASCII, Tier 1 and Tier 2 glyph sets picked from the output target and terminal, fixed meanings for line styles and status glyphs, templates with ASCII twins, and a bundled Bun checker for unsafe glyphs, lines over 80 columns and broken box edges. |
+| [unicode-diagrams](skills/unicode-diagrams) | One design system for text diagrams in chat, and in markdown documents on request: ASCII, Tier 1 and Tier 2 glyph sets picked from the output target and terminal, fixed meanings for line styles and status glyphs, templates with ASCII twins, and a bundled Bun checker for unsafe glyphs, lines over 80 columns and broken box edges. |
 | [windows-screenshots](skills/windows-screenshots) | Locate, list, and read Windows screenshots (Win+PrtScn, Snipping Tool) from WSL or native Windows shells. |
 
 Each skill loads when your request matches its description, and naming
@@ -80,8 +80,8 @@ Other software, by skill:
 
 | Software | Needed by | Notes |
 |---|---|---|
-| [git](https://git-scm.com) | auto-commit, auto-pr, handle-pr-comments, plans-and-roadmaps, post-merge-cleanup, pr-summary, release, session-sync, readme-badges, webapp-security-audit | |
-| [Bun](https://bun.sh) | handle-pr-comments, issue-tracker, lint-skills, release, unicode-diagrams | Runs each one's bundled script; the skill stops without it, except unicode-diagrams, which draws unchecked. session-sync and session-recap use it through issue-tracker for their optional Issues line |
+| [git](https://git-scm.com) | auto-commit, auto-pr, handle-pr-comments, plans-and-roadmaps, post-merge-cleanup, pr-summary, readme-badges, release, session-recap, session-sync, webapp-security-audit | session-recap works outside a repo, from the conversation only |
+| [Bun](https://bun.sh) | handle-pr-comments, issue-tracker, lint-skills, release, unicode-diagrams | Runs each one's bundled script; the skill stops without it, except unicode-diagrams, which draws unchecked, and handle-pr-comments, which has no Bun check, so its fetch script just fails. session-sync and session-recap use it through issue-tracker for their optional Issues line |
 | [GitHub CLI (`gh`)](https://cli.github.com), logged in | auto-pr, handle-pr-comments, post-merge-cleanup, release, issue-tracker (promotion) | Check with `gh auth status`. readme-badges and plans-and-roadmaps use it when present |
 | GitHub account | auto-pr, handle-pr-comments, post-merge-cleanup, release, issue-tracker (promotion) | For PRs, remote branches and GitHub Issues |
 | [`jq`](https://jqlang.org) | status line | plans-and-roadmaps falls back to reading files without it |
@@ -91,8 +91,8 @@ Other software, by skill:
 
 - **Gotcha:** promoting issues to a GitHub Project needs an extra scope:
   run `gh auth refresh -s project` once.
-- **Gotcha:** the status line script needs bash and `tac`, which macOS
-  lacks.
+- **Gotcha:** the status line script needs bash, `tac` and `/proc`,
+  which macOS lacks.
 - **Gotcha:** some settings and commands need a recent Claude Code:
   `timeFormat` needs v2.1.257, and `/doctor prompt-audit` v2.1.283.
 
@@ -131,14 +131,18 @@ claude/
 └── statusline.sh    status line script (see below)
 workflows/
 └── <name>/
-    ├── <name>.js    Claude Code workflow script; symlink this file
+    ├── <name>.js    Claude Code workflow script; the one file you
+    |                download
     └── README.md    install, usage, and background
 skills/
 └── <skill-name>/
-    ├── SKILL.md     required - frontmatter `name` must match the folder 
+    ├── SKILL.md     required - frontmatter `name` must match the folder
     |                name
-    └── README.md    human-facing docs (SKILL.md is the agent-facing 
-                     contract)
+    ├── README.md    human-facing docs (SKILL.md is the agent-facing
+    |                contract)
+    ├── references/  optional - longer docs SKILL.md points to
+    ├── scripts/     optional - bundled Bun scripts the skill runs
+    └── test/        optional - tests for those scripts
 ```
 
 Every skill and workflow `README.md` uses the same sections: What it
@@ -172,7 +176,8 @@ the `VERSION` constant in its `.js` file, the one file users install.
 Claude Code: response style, line width, PR and commit conventions, a
 worktree prompt and one-off worktree rule, and pointers to the
 `plans-and-roadmaps`, `auto-commit`, `auto-pr`, `pr-summary`,
-`issue-tracker` and `session-sync` skills. Claude Code loads it from
+`commit-messages`, `issue-tracker`, `session-sync` and
+`unicode-diagrams` skills. Claude Code loads it from
 `~/.claude/CLAUDE.md`, so link it there:
 
 ```bash
@@ -192,12 +197,12 @@ skill.
 ## Status line
 
 [`claude/statusline.sh`](claude/statusline.sh) is a Claude Code status
-line script. It shows the Claude Code process id, the session id, and
-how much of the context window is in use:
+line script. It shows the session id, the Claude Code process id, and how
+much of the context window is in use:
 
 ```
-pid: 2159799 · session: <session_id> · context: 84k/1M (8%)
-branched from: <session_id>
+<session_id> (2159799) · 84k/1M (8%)
+└ <parent_session_id> (2160412)
 ```
 
 Claude Code pipes JSON to the script on stdin. The session comes from
@@ -207,15 +212,23 @@ the script walks up its parent processes with `ps` to the one named
 `claude`. It requires [`jq`](https://jqlang.org).
 
 The second line appears only in a branched or forked session, and names
-the session it came from. Its label tells the two apart, because the
+the session it came from. A marker tells the two apart, because the
 other session behaves differently:
 
-- **`branched from:`** after `/branch`. You switched away from the original
+- **No marker** after `/branch`. You switched away from the original
   session, which stopped there; `/resume <id>` returns to it.
-- **`forked from:`** in a background fork (⑂). The original runs in parallel
+- **`└ ⑂ <id>`** in a background fork (⑂). The original runs in parallel
   and may still be changing the same files.
 
-The script reads the id from the transcript at `transcript_path`:
+The parent's process id shows in brackets only while another process
+runs that session. The script finds it in
+`~/.claude/sessions/<pid>.json`, and keeps a pid only while that process
+is alive and its start time matches, which rules out a stale file or a
+reused pid. A fork shares its parent's process, so its own pid is
+skipped rather than repeated.
+
+The script reads the parent session id from the transcript at
+`transcript_path`:
 
 - **`/branch`:** the `forkedFrom.sessionId` field on the copied messages.
 - **Background fork (⑂):** the `session_id` of the last copied message,
@@ -241,9 +254,13 @@ first.
   are undocumented transcript details, checked against Claude Code
   2.1.309. If a later version changes them, the second line silently
   stops showing.
+- **Gotcha:** `~/.claude/sessions/<pid>.json` is undocumented too. If
+  Claude Code changes it, the parent's process id silently stops
+  showing.
 - **Gotcha:** for a fork of a fork, the second line can name the
   grandparent if the parent wrote nothing before it was forked.
-- **Gotcha:** the background-fork check uses `tac`, which macOS lacks.
+- **Gotcha:** the background-fork check uses `tac`, and the parent
+  process check reads `/proc`; macOS has neither.
 
 ## Recommended settings
 
