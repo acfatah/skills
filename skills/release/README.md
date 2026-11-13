@@ -55,6 +55,8 @@ the GitHub Release. Release notes go to GitHub Releases; there is no
   the tip of the default branch.
 - **Your default branch is behind, ahead or dirty** → sync or commit
   first; the skill stops and says which check failed.
+- **A release PR is already open** (`release/v*`) → finish or close it
+  first; the skill stops with its link.
 
 **Negative example:** "Bump the version of the auto-pr skill" in this
 skills repo does not use it; the skill stops in a skills repo.

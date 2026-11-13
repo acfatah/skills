@@ -24,7 +24,9 @@ never talks to GitHub.
   notes, review focus, how it was verified, and follow-ups. Each gets its
   own heading where it has content.
 - **Writes for GitHub:** an imperative H1 title under about 72 characters,
-  no hard wrapping, and the PR attribution line at the end.
+  no hard wrapping, and the PR attribution line at the end. A diagram uses
+  Tier 1 glyphs in a fenced block, or Mermaid; see
+  [`unicode-diagrams`](../unicode-diagrams).
 - **Titles follow [`commit-messages`](../commit-messages):** free-form,
   unless you or the repo say it squash-merges; then a Conventional Commits
   subject.

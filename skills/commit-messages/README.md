@@ -18,7 +18,8 @@ format. Your repo's own convention always wins.
 - **Adds a scope** only when one part, such as a skill, clearly owns the
   change.
 - **Wraps the body at 72,** and puts what changed and why there, not in
-  long inline comments.
+  long inline comments. A diagram in the body is ASCII only; see
+  [`unicode-diagrams`](../unicode-diagrams).
 - **Marks breaking changes** with `!` and a `BREAKING CHANGE:` footer;
   where the repo versions its parts, exactly when the change needs a
   major bump.

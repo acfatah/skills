@@ -20,14 +20,16 @@ in-thread in one approved batch, and resolves the fixed threads.
   query for review threads, review summaries and your login, printed as
   compact JSON.
 - **Skips what needs no action:** resolved threads, outdated threads
-  (listed, not acted on), and threads where you replied last.
+  (listed, not acted on), and threads where you replied last after
+  someone else.
 - **Triages in one table:** thread, author, verdict (valid, invalid,
   unclear), action (fix, reply, push back, skip), and files. Nothing is
   edited before you approve it.
 - **Pushes back with evidence** when a claim is wrong.
 - **Works on the PR's head branch.** When you are on another branch, it
   enters or creates a worktree on the head branch, and never commits on
-  the default branch, `main` or `master`.
+  a protected branch: the default branch, `main` or `master`, as the
+  [`auto-commit`](../auto-commit) skill defines them.
 - **Commits by theme,** following the run mode: Pause, Auto-commit or
   Auto-PR.
 - **Replies in one approved batch,** citing the fix commit's SHA. A reply
@@ -53,8 +55,8 @@ in-thread in one approved batch, and resolves the fixed threads.
 - **You want a review of your changes** → run `/code-review`, and
   `/code-review --comment` to post its findings to the PR.
 - **CI is failing on the PR** → no skill covers this yet.
-- **The comments are on a fork PR** → check out the fork's branch and fix
-  them by hand.
+- **The comments are on a fork PR** → handle them outside the skill; it
+  stops, because the head branch is not on `origin`.
 
 **Negative example:** "Review PR 64" will not use this skill; it is a
 request for `/code-review`.
@@ -85,10 +87,10 @@ ln -sfn "$PWD/skills/handle-pr-comments" ~/.claude/skills/handle-pr-comments
 - **By description match:** "address review comments", "handle review
   comments", "handle PR comments", or "reply to reviewers".
 - **By name, always:** `/handle-pr-comments`, with an optional PR number.
-- **What Claude asks back:** approval of the triage table, where you may
-  edit rows; the run mode, when there are two or more fixes; approval
-  before posting the replies; and approval before resolving the fixed
-  threads.
+- **What Claude asks back:** whether to go on when the PR is merged or
+  closed; approval of the triage table, where you may edit rows; the run
+  mode, when there are two or more fixes; approval before posting the
+  replies; and approval before resolving the fixed threads.
 
 ### Example prompts
 

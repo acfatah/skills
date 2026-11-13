@@ -1,17 +1,21 @@
 # unicode-diagrams
 
 An [agent skill](https://skills.sh) that gives Claude Code one design system
-for text diagrams in chat: a tiered set of Unicode glyphs from the Arrows,
-Box Drawing, Block Elements and Geometric Shapes blocks, fixed meanings for
-line styles and status glyphs, templates, and a bundled Bun checker that
-catches unsafe glyphs, lines over 80 columns, and box edges that do not
-connect.
+for text diagrams in chat, and in markdown documents when you ask: a
+tiered set of Unicode glyphs, mostly from the Arrows, Box Drawing, Block
+Elements and Geometric Shapes blocks, fixed meanings for line styles and
+status glyphs, templates, and a bundled Bun checker that catches unsafe
+glyphs, lines over 80 columns, and box edges that do not connect.
 
 ## What it is
 
 - **Picks a glyph tier** from the output target, the terminal and your
   word: ASCII, Tier 1 (light, heavy and double lines, arrows, blocks,
   shapes) or Tier 2 (adds rounded corners, dashed lines and `✓ ✗`).
+- **Caps the tier by target:** Tier 2 for a chat reply when the
+  environment allows it, Tier 1 in a fenced block for a PR, issue body or
+  markdown document, and ASCII for a commit message, log line or code
+  comment. A repo whose existing diagrams are ASCII only keeps ASCII.
 - **Gives line styles fixed meanings:** light is normal, heavy is
   emphasis, double is a boundary, dashed is optional or async, rounded is a
   process or actor, square is data.
@@ -64,7 +68,7 @@ ln -sfn "$PWD/skills/unicode-diagrams" ~/.claude/skills/unicode-diagrams
 ```
 
 The skill pre-approves its checker through `allowed-tools`, so the check
-runs without a permission prompt in the turn that loads it.
+runs without a permission prompt.
 
 ## Requirements
 
